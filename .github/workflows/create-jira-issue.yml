@@ -1,0 +1,129 @@
+permissions:
+  contents: read
+  issues: write
+
+name: Create Jira issue
+on:
+  issues:
+    types:
+      - opened
+jobs:
+  create-issue:
+    name: Create Jira issue
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login
+        uses: atlassian/gajira-login@v3
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+
+      - name: Checkout main code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set Issue Data Based on Title
+        id: set-data
+        shell: bash
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          echo "Detected issue title: $ISSUE_TITLE"
+          if echo "$ISSUE_TITLE" | grep -Fqi '[🚨 BUG]'; then
+            echo "ISSUE_TYPE=Bug" >> $GITHUB_ENV
+            echo "TEMPLATE_PATH=.github/ISSUE_TEMPLATE/bug-report.yml" >> $GITHUB_ENV
+            echo "Bug issue detected based on title."
+          elif echo "$ISSUE_TITLE" | grep -Fqi '[✨ Feature]'; then
+            echo "ISSUE_TYPE=Task" >> $GITHUB_ENV
+            echo "TEMPLATE_PATH=.github/ISSUE_TEMPLATE/feature-report.yml" >> $GITHUB_ENV
+            echo "Feature issue detected based on title."
+          elif echo "$ISSUE_TITLE" | grep -Fqi '[♻️ Refactor]'; then
+            echo "ISSUE_TYPE=Task" >> $GITHUB_ENV
+            echo "TEMPLATE_PATH=.github/ISSUE_TEMPLATE/refactor-report.yml" >> $GITHUB_ENV
+            echo "Refactor issue detected based on title."
+          elif echo "$ISSUE_TITLE" | grep -Fqi '[🔧 Chore]'; then
+            echo "ISSUE_TYPE=Task" >> $GITHUB_ENV
+            echo "TEMPLATE_PATH=.github/ISSUE_TEMPLATE/chore-report.yml" >> $GITHUB_ENV
+            echo "Chore issue detected based on title."
+          elif echo "$ISSUE_TITLE" | grep -Fqi '[⚙️ Infra]'; then
+            echo "ISSUE_TYPE=Task" >> $GITHUB_ENV
+            echo "TEMPLATE_PATH=.github/ISSUE_TEMPLATE/infra-report.yml" >> $GITHUB_ENV
+            echo "Infra issue detected based on title."
+          else
+            echo "ISSUE_TYPE=Task" >> $GITHUB_ENV
+            echo "TEMPLATE_PATH=.github/ISSUE_TEMPLATE/feature-report.yml" >> $GITHUB_ENV
+            echo "No specific issue type detected. Defaulting to Feature settings."
+          fi
+
+      - name: Issue Parser
+        uses: stefanbuck/github-issue-parser@v3
+        id: issue-parser
+        with:
+          template-path: ${{ env.TEMPLATE_PATH }}
+
+      - name: Log Issue Parser
+        env:
+          PARENT_KEY: ${{ steps.issue-parser.outputs.issueparser_parentKey }}
+          PARSER_RESULT: ${{ steps.issue-parser.outputs.jsonString }}
+        run: |
+          printf 'Parent Jira issue: %s\n' "$PARENT_KEY"
+          printf 'Issue parser result: %s\n' "$PARSER_RESULT"
+
+      - name: Convert markdown to Jira Syntax
+        uses: peter-evans/jira2md@v3
+        id: md2jira
+        with:
+          input-text: |
+            ### Github Issue Link
+            - ${{ github.event.issue.html_url }}
+
+            ${{ github.event.issue.body }}
+          mode: md2jira
+
+      - name: Create Issue
+        id: create
+        uses: atlassian/gajira-create@v3
+        with:
+          project: KAN
+          issuetype: ${{ env.ISSUE_TYPE }}
+          summary: "${{ github.event.issue.title }}"
+          description: "${{ steps.md2jira.outputs.output-text }}"
+          fields: |
+            {
+              "parent": {
+                "key": "${{ steps.issue-parser.outputs.issueparser_parentKey }}"
+              }
+            }
+
+      - name: Log created issue
+        env:
+          PARENT_KEY: ${{ steps.issue-parser.outputs.issueparser_parentKey }}
+          CREATED_ISSUE: ${{ steps.create.outputs.issue }}
+        run: printf 'Jira Issue %s/%s was created\n' "$PARENT_KEY" "$CREATED_ISSUE"
+
+      - name: Update GitHub issue with Jira details
+        uses: actions/github-script@v9
+        env:
+          JIRA_ISSUE: ${{ steps.create.outputs.issue }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          ORIGINAL_TITLE: ${{ github.event.issue.title }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const jiraIssue = process.env.JIRA_ISSUE;
+            const jiraBaseUrl = process.env.JIRA_BASE_URL.replace(/\/$/, '');
+            const originalTitle = process.env.ORIGINAL_TITLE;
+
+            await github.rest.issues.update({
+              ...context.repo,
+              issue_number: context.issue.number,
+              title: `[${jiraIssue}] ${originalTitle}`,
+            });
+
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: `Jira Issue Created: [${jiraIssue}](${jiraBaseUrl}/browse/${jiraIssue})`,
+            });
