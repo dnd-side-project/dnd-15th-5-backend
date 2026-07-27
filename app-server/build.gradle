@@ -1,0 +1,12 @@
+plugins {
+    id "dnd.spring-boot-application-conventions"
+}
+
+dependencies {
+    implementation project(":module-account")
+    implementation project(":module-receipt")
+    implementation project(":module-place")
+    implementation project(":module-core")
+
+    testImplementation testFixtures(project(":module-core"))
+}
