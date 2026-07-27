@@ -1,0 +1,16 @@
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+    }
+}
+
+rootProject.name = "dnd-15th-5-backend"
+
+include(
+        "app-server",
+        "module-account",
+        "module-receipt",
+        "module-place",
+        "module-core"
+)
