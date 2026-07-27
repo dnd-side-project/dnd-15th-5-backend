@@ -1,1 +1,10 @@
-description = "Executable Spring Boot application and module assembly"
+plugins {
+    id "dnd.spring-boot-application-conventions"
+}
+
+dependencies {
+    implementation project(":module-account")
+    implementation project(":module-receipt")
+    implementation project(":module-place")
+    implementation project(":module-core")
+}

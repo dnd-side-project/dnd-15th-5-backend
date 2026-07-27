@@ -1,1 +1,3 @@
-description = "Shared technical foundation module"
+plugins {
+    id "dnd.spring-module-conventions"
+}

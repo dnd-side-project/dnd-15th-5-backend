@@ -1,1 +1,7 @@
-description = "Receipt and OCR domain module"
+plugins {
+    id "dnd.spring-module-conventions"
+}
+
+dependencies {
+    implementation project(":module-core")
+}
