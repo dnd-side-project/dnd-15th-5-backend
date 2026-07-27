@@ -7,4 +7,6 @@ dependencies {
     implementation project(":module-receipt")
     implementation project(":module-place")
     implementation project(":module-core")
+
+    testImplementation testFixtures(project(":module-core"))
 }
