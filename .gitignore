@@ -16,3 +16,7 @@ out/
 .env
 .env.*
 !.env.example
+
+# Claude Code - personal-only rules/skills (not shared with team)
+.claude/
+CLAUDE.local.md
