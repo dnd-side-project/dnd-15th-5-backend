@@ -26,14 +26,31 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void BusinessException_발생_시_ErrorCode에_정의된_상태코드와_메시지로_응답한다() {
-
+        // given
         BusinessException exception = new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
 
-        ResponseEntity<ApiResponse<Void>> response = handler.handleBusinessException(exception);
+        // when
+        ResponseEntity<ApiResponse<Object>> response = handler.handleBusinessException(exception);
 
+        // then
         assertThat(response.getStatusCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getStatus());
         assertThat(response.getBody().code()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getCode());
         assertThat(response.getBody().message()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getMessage());
+        assertThat(response.getBody().data()).isNull();
+    }
+
+    @Test
+    void BusinessException가_data를_담고_있으면_응답_body에도_data가_그대로_실린다() {
+        // given
+        Object data = Map.of("field", "name");
+        BusinessException exception = new BusinessException(ErrorCode.INVALID_INPUT_VALUE, data);
+
+        // when
+        ResponseEntity<ApiResponse<Object>> response = handler.handleBusinessException(exception);
+
+        // then
+        assertThat(response.getStatusCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getStatus());
+        assertThat(response.getBody().data()).isEqualTo(data);
     }
 
     @Test

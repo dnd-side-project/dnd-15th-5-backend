@@ -23,11 +23,13 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
+    public ResponseEntity<ApiResponse<Object>> handleBusinessException(BusinessException e) {
         ErrorCode errorCode = e.getErrorCode();
         log.warn("[{}] BusinessException: {}", errorCode.getCode(), e.getMessage(), e);
-        return ResponseEntity.status(errorCode.getStatus())
-                .body(ApiResponse.fail(errorCode, e.getMessage()));
+        ApiResponse<Object> body = e.getData() != null
+                ? ApiResponse.failWithData(errorCode, e.getData())
+                : ApiResponse.fail(errorCode, e.getMessage());
+        return ResponseEntity.status(errorCode.getStatus()).body(body);
     }
 
     // @Valid 검증 실패시

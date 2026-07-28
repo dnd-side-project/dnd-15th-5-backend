@@ -22,11 +22,11 @@ public record ApiResponse<T>(
         return new ApiResponse<>(successCode.getCode(), successCode.getMessage(), data);
     }
 
-    public static ApiResponse<Void> fail(ErrorCode errorCode) {
+    public static <T> ApiResponse<T> fail(ErrorCode errorCode) {
         return new ApiResponse<>(errorCode.getCode(), errorCode.getMessage(), null);
     }
 
-    public static ApiResponse<Void> fail(ErrorCode errorCode, String message) {
+    public static <T> ApiResponse<T> fail(ErrorCode errorCode, String message) {
         return new ApiResponse<>(errorCode.getCode(), message, null);
     }
 
