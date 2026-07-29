@@ -19,3 +19,8 @@ chat:
 
 knowledge_base:
   opt_out: true
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - 'docs/conventions.md'
+      - 'docs/architecture.md'
