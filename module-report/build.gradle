@@ -1,0 +1,9 @@
+plugins {
+    id "chapchap.spring-module-conventions"
+}
+
+dependencies {
+    implementation project(":module-core")
+
+    testImplementation testFixtures(project(":module-core"))
+}

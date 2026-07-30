@@ -11,6 +11,7 @@ include(
         "app-server",
         "module-account",
         "module-receipt",
+        "module-report",
         "module-place",
         "module-core"
 )
