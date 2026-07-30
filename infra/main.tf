@@ -193,6 +193,28 @@ resource "aws_iam_instance_profile" "ec2_ssm" {
   role = aws_iam_role.ec2_ssm.name
 }
 
+# 영수증 이미지 업로드용 - receipts 버킷/객체로만 범위 제한
+resource "aws_iam_role_policy" "ec2_s3_receipts" {
+  name = "${var.project_name}-ec2-s3-receipts-policy"
+  role = aws_iam_role.ec2_ssm.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
+        Resource = "${aws_s3_bucket.receipts.arn}/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "s3:ListBucket"
+        Resource = aws_s3_bucket.receipts.arn
+      }
+    ]
+  })
+}
+
 resource "aws_instance" "app" {
   ami                    = data.aws_ami.amazon_linux.id
   instance_type          = "t4g.micro" # AWS 프리티어 무료 대상 (t4g.medium은 무료 대상 아님)
@@ -220,6 +242,11 @@ resource "aws_instance" "app" {
 
   tags = {
     Name = "${var.project_name}-app-server"
+  }
+
+  lifecycle {
+    # 새 AMI가 나와도 apply 때마다 인스턴스가 의도치 않게 교체되지 않도록 고정
+    ignore_changes = [ami]
   }
 }
 
