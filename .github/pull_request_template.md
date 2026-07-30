@@ -1,5 +1,5 @@
 ## Issue Number
-closed #이슈넘버
+- closed #이슈넘버
 
 ## 📌 작업 내용
 - 
