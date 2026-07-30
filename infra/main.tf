@@ -206,6 +206,11 @@ resource "aws_instance" "app" {
     encrypted   = true
   }
 
+  metadata_options {
+    http_tokens   = "required" # IMDSv2 강제 (SSRF로 인한 자격증명 탈취 방지)
+    http_endpoint = "enabled"
+  }
+
   user_data = <<-EOF
     #!/bin/bash
     dnf install -y docker
