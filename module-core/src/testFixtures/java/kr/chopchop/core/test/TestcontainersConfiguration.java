@@ -10,10 +10,11 @@ import org.testcontainers.utility.DockerImageName;
 @TestConfiguration(proxyBeanMethods = false)
 public class TestcontainersConfiguration {
 
-    private static final DockerImageName POSTGRESQL_IMAGE =
-            DockerImageName.parse("postgres:17-alpine");
-    private static final DockerImageName REDIS_IMAGE =
-            DockerImageName.parse("redis:7.4-alpine");
+    private static final DockerImageName POSTGRESQL_IMAGE = DockerImageName.parse("postgis/postgis:17-3.5-alpine")
+                                                                .asCompatibleSubstituteFor("postgres");
+
+    private static final DockerImageName REDIS_IMAGE = DockerImageName.parse("redis:7.4-alpine");
+
     private static final int REDIS_PORT = 6379;
 
     @Bean
