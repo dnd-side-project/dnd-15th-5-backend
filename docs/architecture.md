@@ -145,6 +145,7 @@ flowchart TB
 | app-server | Spring Boot 실행, 모듈 조립, Security 및 공통 Web 설정 |
 | module-account | 계정, 회원가입, 소셜 로그인, 토큰 발급 및 사용자 상태 관리 |
 | module-receipt | 영수증 이미지, OCR 처리 및 영수증 정보 관리 |
+| module-report | 주간·월간 소비 리포트 생성 및 조회 |
 | module-place | 장소 정보와 위치 기반 조회 |
 | module-core | 공통 응답과 공통 예외 등 기술적 공통 요소 |
 
@@ -158,6 +159,7 @@ flowchart TB
         direction LR
         Account["module-account<br/>계정 및 인증"]
         Receipt["module-receipt<br/>영수증 및 OCR"]
+        Report["module-report<br/>소비 리포트"]
         Place["module-place<br/>장소 및 위치 조회"]
     end
 
@@ -165,11 +167,13 @@ flowchart TB
 
     App --> Account
     App --> Receipt
+    App --> Report
     App --> Place
     App --> Core
 
     Account --> Core
     Receipt --> Core
+    Report --> Core
     Place --> Core
 ```
 
@@ -241,6 +245,7 @@ module-{domain}
 각 도메인 모듈은 module- 접두사를 제외한 도메인명을 기본 패키지로 사용한다.
 module-account → kr.chapchap.account
 module-receipt → kr.chapchap.receipt
+module-report → kr.chapchap.report
 module-place → kr.chapchap.place
 ```
 
@@ -293,6 +298,7 @@ Controller
 | --- | --- | --- | --- |
 | Account Context | module-account | 회원가입, 소셜 로그인, 계정 상태 및 인증 주체 관리 | Account, SocialAccount |
 | Receipt Context | module-receipt | 영수증 이미지 등록, OCR 처리, OCR 결과 수정 및 영수증 확정 | Receipt, ReceiptItem, OCR 처리 상태 |
+| Report Context | module-report | 주간·월간 소비 리포트 생성 및 조회 | Report, 기간별 집계 결과 |
 | Place Context | module-place | 장소 정보 관리, 위치 정보 및 주변 장소 조회 | Place, Address, Location |
 - Bounded Context 간에 동일한 용어가 존재하더라도 각 Context의 목적에 맞는 별도 모델을 사용한다.
 - Account Context는 사용자의 인증 및 계정 상태를 책임진다.
