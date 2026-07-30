@@ -8,6 +8,7 @@ COPY buildSrc buildSrc
 COPY app-server app-server
 COPY module-account module-account
 COPY module-receipt module-receipt
+COPY module-report module-report
 COPY module-place module-place
 COPY module-core module-core
 

@@ -5,6 +5,7 @@ plugins {
 dependencies {
     implementation project(":module-account")
     implementation project(":module-receipt")
+    implementation project(":module-report")
     implementation project(":module-place")
     implementation project(":module-core")
 
