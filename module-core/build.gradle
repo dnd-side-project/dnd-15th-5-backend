@@ -1,5 +1,5 @@
 plugins {
-    id "dnd.spring-module-conventions"
+    id "chopchop.spring-module-conventions"
     id "java-test-fixtures"
 }
 

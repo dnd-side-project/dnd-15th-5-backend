@@ -5,7 +5,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "dnd-15th-5-backend"
+rootProject.name = "chopchop-backend"
 
 include(
         "app-server",

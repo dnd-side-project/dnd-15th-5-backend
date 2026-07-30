@@ -1,5 +1,5 @@
 plugins {
-    id "dnd.spring-boot-application-conventions"
+    id "chopchop.spring-boot-application-conventions"
 }
 
 dependencies {

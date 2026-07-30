@@ -1,0 +1,20 @@
+plugins {
+    id "chopchop.spring-module-conventions"
+    id "org.springframework.boot"
+}
+
+dependencies {
+    implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${libs.versions.springdoc.get()}"
+    implementation "org.springframework.boot:spring-boot-starter-actuator"
+    implementation "org.flywaydb:flyway-core"
+    runtimeOnly "org.flywaydb:flyway-database-postgresql"
+    runtimeOnly "org.postgresql:postgresql"
+}
+
+tasks.named("bootJar") {
+    enabled = true
+}
+
+tasks.named("jar") {
+    enabled = false
+}

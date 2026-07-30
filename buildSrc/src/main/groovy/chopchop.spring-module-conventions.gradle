@@ -1,0 +1,69 @@
+plugins {
+    id "java-library"
+}
+
+group = "kr.chopchop"
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(
+                libs.versions.java.get().toInteger()
+        )
+    }
+}
+
+dependencies {
+    def springBootBom = platform(
+            "org.springframework.boot:spring-boot-dependencies:${libs.versions.spring.boot.get()}"
+    )
+
+    implementation springBootBom
+    annotationProcessor springBootBom
+    testImplementation springBootBom
+    testAnnotationProcessor springBootBom
+
+    implementation "org.springframework.boot:spring-boot-starter-web"
+    implementation "org.springframework.boot:spring-boot-starter-validation"
+    implementation "org.springframework.boot:spring-boot-starter-data-jpa"
+    implementation "org.springframework.boot:spring-boot-starter-data-redis"
+    implementation "org.springframework.boot:spring-boot-starter-security"
+    implementation "org.springframework.boot:spring-boot-starter-oauth2-client"
+    implementation "org.springframework.boot:spring-boot-starter-cache"
+    implementation "com.github.ben-manes.caffeine:caffeine"
+
+    implementation("com.querydsl:querydsl-jpa") {
+        artifact {
+            classifier = "jakarta"
+        }
+    }
+    annotationProcessor("com.querydsl:querydsl-apt") {
+        artifact {
+            classifier = "jakarta"
+        }
+    }
+    annotationProcessor "jakarta.annotation:jakarta.annotation-api"
+    annotationProcessor "jakarta.persistence:jakarta.persistence-api"
+
+    def jjwtVersion = libs.versions.jjwt.get()
+    implementation "io.jsonwebtoken:jjwt-api:${jjwtVersion}"
+    runtimeOnly "io.jsonwebtoken:jjwt-impl:${jjwtVersion}"
+    runtimeOnly "io.jsonwebtoken:jjwt-jackson:${jjwtVersion}"
+
+    compileOnly "org.projectlombok:lombok"
+    annotationProcessor "org.projectlombok:lombok"
+    testCompileOnly "org.projectlombok:lombok"
+    testAnnotationProcessor "org.projectlombok:lombok"
+
+    testImplementation "org.springframework.boot:spring-boot-starter-test"
+    testImplementation "org.springframework.security:spring-security-test"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    options.compilerArgs.add("-parameters")
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}

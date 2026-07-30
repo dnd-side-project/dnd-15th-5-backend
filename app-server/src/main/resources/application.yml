@@ -1,6 +1,6 @@
 spring:
   application:
-    name: dnd-app-server
+    name: chopchop-app-server
 
   jpa:
     hibernate:
