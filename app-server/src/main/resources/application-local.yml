@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5433/chopchop
-    username: chopchop
-    password: chopchop
+    url: jdbc:postgresql://localhost:5433/chapchap
+    username: chapchap
+    password: chapchap
 
   data:
     redis:

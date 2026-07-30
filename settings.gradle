@@ -5,7 +5,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "chopchop-backend"
+rootProject.name = "chapchap-backend"
 
 include(
         "app-server",

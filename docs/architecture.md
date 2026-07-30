@@ -204,7 +204,7 @@ flowchart TB
 ```
 module-{domain}
 └── src/main/java
-    └── kr.chopchop.{domain}
+    └── kr.chapchap.{domain}
         ├── api
         │   ├── controller
         │   ├── request
@@ -239,9 +239,9 @@ module-{domain}
 
 ```
 각 도메인 모듈은 module- 접두사를 제외한 도메인명을 기본 패키지로 사용한다.
-module-account → kr.chopchop.account
-module-receipt → kr.chopchop.receipt
-module-place → kr.chopchop.place
+module-account → kr.chapchap.account
+module-receipt → kr.chapchap.receipt
+module-place → kr.chapchap.place
 ```
 
 **3.3.3 계층 의존 관계**
