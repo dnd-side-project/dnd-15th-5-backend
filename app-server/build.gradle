@@ -9,6 +9,14 @@ dependencies {
     implementation project(":module-place")
     implementation project(":module-core")
 
+    implementation "jakarta.persistence:jakarta.persistence-api"
+    implementation "org.springframework.data:spring-data-jpa"
+    implementation("com.querydsl:querydsl-jpa") {
+        artifact {
+            classifier = "jakarta"
+        }
+    }
+
     testImplementation testFixtures(project(":module-core"))
 
     testImplementation "org.springframework.boot:spring-boot-starter-data-redis"
