@@ -1,0 +1,22 @@
+plugins {
+    id "java"
+}
+
+group = "kr.chapchap"
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(
+                libs.versions.java.get().toInteger()
+        )
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    options.compilerArgs.add("-parameters")
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}

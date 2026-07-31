@@ -1,6 +1,6 @@
-package kr.chapchap.core.api.response;
+package kr.chapchap.core.web.response;
 
-import kr.chapchap.core.domain.exception.ErrorCode;
+import kr.chapchap.core.exception.ErrorCode;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;

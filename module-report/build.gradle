@@ -1,5 +1,5 @@
 plugins {
-    id "chapchap.spring-module-conventions"
+    id "chapchap.spring-library-conventions"
 }
 
 dependencies {

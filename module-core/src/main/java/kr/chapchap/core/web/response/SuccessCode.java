@@ -1,4 +1,4 @@
-package kr.chapchap.core.api.response;
+package kr.chapchap.core.web.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

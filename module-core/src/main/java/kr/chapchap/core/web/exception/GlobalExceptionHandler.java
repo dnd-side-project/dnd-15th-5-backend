@@ -1,8 +1,8 @@
-package kr.chapchap.core.api.exception;
+package kr.chapchap.core.web.exception;
 
-import kr.chapchap.core.api.response.ApiResponse;
-import kr.chapchap.core.domain.exception.BusinessException;
-import kr.chapchap.core.domain.exception.ErrorCode;
+import kr.chapchap.core.web.response.ApiResponse;
+import kr.chapchap.core.exception.BusinessException;
+import kr.chapchap.core.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
