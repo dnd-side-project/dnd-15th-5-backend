@@ -10,4 +10,6 @@ dependencies {
     implementation project(":module-core")
 
     testImplementation testFixtures(project(":module-core"))
+
+    testImplementation "org.springframework.boot:spring-boot-starter-data-redis"
 }
