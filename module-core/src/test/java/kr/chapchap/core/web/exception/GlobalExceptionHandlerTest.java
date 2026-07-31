@@ -1,8 +1,8 @@
-package kr.chapchap.core.api.exception;
+package kr.chapchap.core.web.exception;
 
-import kr.chapchap.core.api.response.ApiResponse;
-import kr.chapchap.core.domain.exception.BusinessException;
-import kr.chapchap.core.domain.exception.ErrorCode;
+import kr.chapchap.core.web.response.ApiResponse;
+import kr.chapchap.core.exception.BusinessException;
+import kr.chapchap.core.exception.ErrorCode;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

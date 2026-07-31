@@ -1,4 +1,4 @@
-package kr.chapchap.core.domain.exception;
+package kr.chapchap.core.exception;
 
 import lombok.Getter;
 

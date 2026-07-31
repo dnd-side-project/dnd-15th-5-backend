@@ -1,7 +1,7 @@
-package kr.chapchap.core.api.response;
+package kr.chapchap.core.web.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import kr.chapchap.core.domain.exception.ErrorCode;
+import kr.chapchap.core.exception.ErrorCode;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ApiResponse<T>(
