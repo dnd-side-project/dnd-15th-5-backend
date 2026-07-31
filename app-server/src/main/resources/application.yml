@@ -11,6 +11,12 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+springdoc:
+  api-docs:
+    path: /api/v3/api-docs
+  swagger-ui:
+    path: /api/swagger-ui
+
 management:
   endpoints:
     web:
@@ -20,3 +26,7 @@ management:
     health:
       probes:
         enabled: true
+
+chapchap:
+  cors:
+    allowed-origin-patterns: []
