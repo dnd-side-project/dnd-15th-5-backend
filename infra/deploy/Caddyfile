@@ -1,0 +1,16 @@
+chapchap.kr {
+    handle_path /api/* {
+        import upstream.caddy
+    }
+
+    handle {
+        respond "Not Found" 404
+    }
+
+    encode gzip
+
+    # stdout으로 출력 -> Docker awslogs 드라이버가 잡아서 CloudWatch로 전송
+    log {
+        format json
+    }
+}
