@@ -238,6 +238,11 @@ resource "aws_instance" "app" {
     dnf install -y docker
     systemctl enable --now docker
     usermod -aG docker ec2-user
+
+    mkdir -p /usr/local/lib/docker/cli-plugins
+    curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64 \
+      -o /usr/local/lib/docker/cli-plugins/docker-compose
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
   EOF
 
   tags = {
@@ -438,7 +443,9 @@ resource "aws_iam_role" "github_actions" {
           "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
         }
         StringLike = {
-          "token.actions.githubusercontent.com:sub" = "repo:dnd-side-project/dnd-15th-5-backend:ref:refs/heads/main"
+          # GitHub이 조직/저장소 rename에 대비해 sub 뒤에 불변 ID(@숫자)를 붙여서 보냄
+          # (예: repo:dnd-side-project@71167956/dnd-15th-5-backend@1306467654:ref:refs/heads/main)
+          "token.actions.githubusercontent.com:sub" = "repo:dnd-side-project@*/dnd-15th-5-backend@*:ref:refs/heads/main"
         }
       }
     }]

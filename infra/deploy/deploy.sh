@@ -27,7 +27,9 @@ export ECR_IMAGE
 declare -x "$TAG_VAR=$TAG"
 
 # redis/caddy는 최초 배포 부트스트랩용. 이미 떠있으면 up -d가 아무 일도 안 함.
-docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" up -d redis caddy
+# --no-deps 필수: caddy의 depends_on(app-blue)까지 자동으로 끌려와서
+# 아직 태그가 안 정해진 쪽(BLUE_TAG 기본값 latest)을 pull하려다 실패하는 걸 방지.
+docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" up -d --no-deps redis caddy
 
 docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" pull "app-$STANDBY"
 docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" up -d --no-deps "app-$STANDBY"
