@@ -1,0 +1,18 @@
+plugins {
+    id "chapchap.spring-library-conventions"
+    id "java-test-fixtures"
+}
+
+dependencies {
+    implementation "org.springframework.security:spring-security-core"
+
+    testFixturesImplementation platform(
+            "org.springframework.boot:spring-boot-dependencies:${libs.versions.spring.boot.get()}"
+    )
+
+    testFixturesImplementation "org.springframework.boot:spring-boot-test"
+    testFixturesImplementation "org.springframework.boot:spring-boot-testcontainers"
+    testFixturesImplementation "org.testcontainers:postgresql"
+    testFixturesImplementation "org.testcontainers:testcontainers"
+    testFixturesRuntimeOnly "org.postgresql:postgresql"
+}
