@@ -438,7 +438,9 @@ resource "aws_iam_role" "github_actions" {
           "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
         }
         StringLike = {
-          "token.actions.githubusercontent.com:sub" = "repo:dnd-side-project/dnd-15th-5-backend:ref:refs/heads/main"
+          # GitHub이 조직/저장소 rename에 대비해 sub 뒤에 불변 ID(@숫자)를 붙여서 보냄
+          # (예: repo:dnd-side-project@71167956/dnd-15th-5-backend@1306467654:ref:refs/heads/main)
+          "token.actions.githubusercontent.com:sub" = "repo:dnd-side-project@*/dnd-15th-5-backend@*:ref:refs/heads/main"
         }
       }
     }]
