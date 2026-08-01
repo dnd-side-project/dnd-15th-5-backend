@@ -62,11 +62,15 @@ jobs:
           CADDYFILE_B64=$(base64 -w0 infra/deploy/Caddyfile)
   
           ENV_CONTENT="ECR_IMAGE=$ECR_URI
+          SPRING_PROFILES_ACTIVE=prod
           DB_HOST=${{ secrets.DB_HOST }}
           DB_PORT=5432
           DB_NAME=chapchap
           DB_USERNAME=chapchap
-          DB_PASSWORD=${{ secrets.DB_PASSWORD }}"
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          REDIS_HOST=redis
+          REDIS_PORT=6379
+          TZ=Asia/Seoul"
           ENV_B64=$(echo "$ENV_CONTENT" | base64 -w0)
 
           SYNC_SCRIPT="set -euo pipefail
