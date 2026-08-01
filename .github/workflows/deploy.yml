@@ -3,7 +3,6 @@ name: Deploy
 on:
   push:
     branches: [main]
-  workflow_dispatch:
 
 permissions:
   id-token: write # OIDC로 AWS 자격증명 발급
@@ -52,16 +51,13 @@ jobs:
           docker push "$ECR_URI:$IMAGE_TAG"
 
       # docker-compose.prod.yml / Caddyfile / .env는 매 배포마다 최신으로 덮어씀.
-      # .env는 GitHub Secrets에서 조립 — EC2에 사람이 직접 SSM 접속해서 만들 필요 없음.
       - name: Sync compose & Caddyfile & .env to EC2
         env:
           ECR_URI: ${{ steps.ecr-login.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}
         run: |
           COMPOSE_B64=$(base64 -w0 infra/deploy/docker-compose.prod.yml)
           CADDYFILE_B64=$(base64 -w0 infra/deploy/Caddyfile)
-
-          # DB_PORT/DB_NAME/DB_USERNAME은 infra/terraform/main.tf에도 이미 평문으로 있는 값이라
-          # 굳이 Secrets로 감출 필요 없음 (진짜 비밀은 DB_HOST/DB_PASSWORD뿐).
+  
           ENV_CONTENT="ECR_IMAGE=$ECR_URI
           DB_HOST=${{ secrets.DB_HOST }}
           DB_PORT=5432
@@ -83,7 +79,6 @@ jobs:
             --parameters "$(jq -n --arg s "$SYNC_SCRIPT" '{commands: [$s]}')" \
             --query "Command.CommandId" --output text)
 
-          # aws ssm wait command-executed는 최대 100초 고정이라 배포처럼 오래 걸리는 작업엔 짧음.
           # 종료 상태(Success/Failed/Cancelled/TimedOut)가 나올 때까지 직접 폴링 (최대 10분).
           STATUS="InProgress"
           for i in $(seq 1 60); do
