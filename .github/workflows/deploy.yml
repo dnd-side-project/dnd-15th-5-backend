@@ -81,11 +81,17 @@ jobs:
             --parameters "$(jq -n --arg s "$SYNC_SCRIPT" '{commands: [$s]}')" \
             --query "Command.CommandId" --output text)
 
-          aws ssm wait command-executed \
-            --command-id "$COMMAND_ID" \
-            --instance-id "${{ secrets.EC2_INSTANCE_ID }}" || true
+          # aws ssm wait command-executed는 최대 100초 고정이라 배포처럼 오래 걸리는 작업엔 짧음.
+          # 종료 상태(Success/Failed/Cancelled/TimedOut)가 나올 때까지 직접 폴링 (최대 10분).
+          STATUS="InProgress"
+          for i in $(seq 1 60); do
+            STATUS=$(aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}" --query Status --output text 2>/dev/null || echo "Pending")
+            case "$STATUS" in
+              Success|Failed|Cancelled|TimedOut) break ;;
+            esac
+            sleep 10
+          done
 
-          STATUS=$(aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}" --query Status --output text)
           if [ "$STATUS" != "Success" ]; then
             aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}" --query StandardErrorContent --output text
             echo "설정 동기화 실패: $STATUS"
@@ -108,11 +114,17 @@ jobs:
             --parameters "$(jq -n --arg s "$DEPLOY_SCRIPT" '{commands: [$s]}')" \
             --query "Command.CommandId" --output text)
 
-          aws ssm wait command-executed \
-            --command-id "$COMMAND_ID" \
-            --instance-id "${{ secrets.EC2_INSTANCE_ID }}" || true
+          # deploy.sh는 헬스체크(최대 60초)+ECR pull 시간까지 걸릴 수 있어 100초 고정 waiter로는 부족함.
+          # 종료 상태가 나올 때까지 직접 폴링 (최대 10분).
+          STATUS="InProgress"
+          for i in $(seq 1 60); do
+            STATUS=$(aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}" --query Status --output text 2>/dev/null || echo "Pending")
+            case "$STATUS" in
+              Success|Failed|Cancelled|TimedOut) break ;;
+            esac
+            sleep 10
+          done
 
-          STATUS=$(aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}" --query Status --output text)
           echo "=== stdout ==="
           aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}" --query StandardOutputContent --output text
           echo "=== stderr ==="

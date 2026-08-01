@@ -18,7 +18,7 @@ logs/
 
 # Local environment
 .env
-.env.example
+.env.*
 !.env.example
 
 # Claude Code - personal-only rules/skills (not shared with team)

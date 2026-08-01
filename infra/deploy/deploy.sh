@@ -16,6 +16,8 @@ if [ -f "$UPSTREAM_FILE" ] && grep -q "app-green" "$UPSTREAM_FILE"; then
 else
   ACTIVE=blue
   STANDBY=green
+  # 최초 배포 부트스트랩: upstream.caddy가 없으면 기본값으로 생성
+  [ -f "$UPSTREAM_FILE" ] || echo "reverse_proxy app-blue:8080" > "$UPSTREAM_FILE"
 fi
 
 echo "[deploy] 현재 활성: app-$ACTIVE / 배포 대상(standby): app-$STANDBY -> $ECR_IMAGE:$TAG"
@@ -23,6 +25,9 @@ echo "[deploy] 현재 활성: app-$ACTIVE / 배포 대상(standby): app-$STANDBY
 TAG_VAR="$(echo "$STANDBY" | tr '[:lower:]' '[:upper:]')_TAG"
 export ECR_IMAGE
 declare -x "$TAG_VAR=$TAG"
+
+# redis/caddy는 최초 배포 부트스트랩용. 이미 떠있으면 up -d가 아무 일도 안 함.
+docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" up -d redis caddy
 
 docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" pull "app-$STANDBY"
 docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" up -d --no-deps "app-$STANDBY"
