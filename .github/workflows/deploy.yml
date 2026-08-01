@@ -47,7 +47,9 @@ jobs:
           ECR_URI: ${{ steps.ecr-login.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t "$ECR_URI:$IMAGE_TAG" .
+          # EC2가 arm64(t4g.micro)라서 명시하지 않으면 러너 아키텍처(amd64)로 빌드되어
+          # "exec format error"가 남. Dockerfile에 RUN이 없어 에뮬레이션 없이도 크로스 빌드 가능.
+          docker build --platform linux/arm64 -t "$ECR_URI:$IMAGE_TAG" .
           docker push "$ECR_URI:$IMAGE_TAG"
 
       # docker-compose.prod.yml / Caddyfile / .env는 매 배포마다 최신으로 덮어씀.
