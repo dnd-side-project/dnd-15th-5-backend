@@ -331,3 +331,170 @@ resource "aws_cloudwatch_log_group" "app" {
     Name = "${var.project_name}-app-log-group"
   }
 }
+
+# Docker awslogs 로깅 드라이버(caddy/app-blue/app-green)가 이 로그 그룹에 쓸 수 있도록 허용
+resource "aws_iam_role_policy" "ec2_cloudwatch_logs" {
+  name = "${var.project_name}-ec2-cloudwatch-logs-policy"
+  role = aws_iam_role.ec2_ssm.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = "${aws_cloudwatch_log_group.app.arn}:*"
+      }
+    ]
+  })
+}
+
+# ECR — 백엔드 Docker 이미지 저장소
+resource "aws_ecr_repository" "backend" {
+  name                 = "${var.project_name}-backend"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  tags = {
+    Name = "${var.project_name}-backend"
+  }
+}
+
+# 오래된 이미지 자동 정리 (스토리지 비용/프리티어 초과 방지) — 최근 10개만 보관
+resource "aws_ecr_lifecycle_policy" "backend" {
+  repository = aws_ecr_repository.backend.name
+
+  policy = jsonencode({
+    rules = [{
+      rulePriority = 1
+      description  = "최근 10개 이미지만 보관"
+      selection = {
+        tagStatus   = "any"
+        countType   = "imageCountMoreThan"
+        countNumber = 10
+      }
+      action = { type = "expire" }
+    }]
+  })
+}
+
+# EC2가 ECR에서 이미지를 pull할 수 있도록 허용
+resource "aws_iam_role_policy" "ec2_ecr_pull" {
+  name = "${var.project_name}-ec2-ecr-pull-policy"
+  role = aws_iam_role.ec2_ssm.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "ecr:GetAuthorizationToken"
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage"
+        ]
+        Resource = aws_ecr_repository.backend.arn
+      }
+    ]
+  })
+}
+
+# GitHub Actions OIDC — 장기 AWS 액세스키 없이 GitHub Actions가 임시 자격증명을 발급받는 방식
+
+resource "aws_iam_openid_connect_provider" "github_actions" {
+  url             = "https://token.actions.githubusercontent.com"
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [
+    "6938fd4d98bab03faadb97b34396831e3780aea1",
+    "1c58a3a8518e8759bf075b76b750d4f2df264fcd",
+  ]
+}
+
+resource "aws_iam_role" "github_actions" {
+  name = "${var.project_name}-github-actions-role"
+
+  # main 브랜치로의 push에서 실행되는 워크플로우만 이 Role을 맡을 수 있음
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = aws_iam_openid_connect_provider.github_actions.arn }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+        }
+        StringLike = {
+          "token.actions.githubusercontent.com:sub" = "repo:dnd-side-project/dnd-15th-5-backend:ref:refs/heads/main"
+        }
+      }
+    }]
+  })
+}
+
+# GitHub Actions -> ECR push 권한
+resource "aws_iam_role_policy" "github_actions_ecr" {
+  name = "${var.project_name}-github-actions-ecr-policy"
+  role = aws_iam_role.github_actions.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "ecr:GetAuthorizationToken"
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:PutImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload",
+          "ecr:BatchGetImage"
+        ]
+        Resource = aws_ecr_repository.backend.arn
+      }
+    ]
+  })
+}
+
+# GitHub Actions -> EC2에 SSM으로 배포 명령 전송 권한
+resource "aws_iam_role_policy" "github_actions_ssm_deploy" {
+  name = "${var.project_name}-github-actions-ssm-policy"
+  role = aws_iam_role.github_actions.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = "ssm:SendCommand"
+        Resource = [
+          aws_instance.app.arn,
+          "arn:aws:ssm:${var.aws_region}::document/AWS-RunShellScript"
+        ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["ssm:GetCommandInvocation", "ssm:ListCommandInvocations"]
+        Resource = "*"
+      }
+    ]
+  })
+}

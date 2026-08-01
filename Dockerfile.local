@@ -1,0 +1,18 @@
+FROM eclipse-temurin:21-jdk-alpine
+WORKDIR /workspace
+
+COPY gradlew settings.gradle ./
+COPY gradle gradle
+COPY buildSrc buildSrc
+COPY app-server app-server
+COPY module-account module-account
+COPY module-receipt module-receipt
+COPY module-report module-report
+COPY module-place module-place
+COPY module-core module-core
+
+RUN sed -i 's/\r$//' gradlew && chmod +x gradlew
+
+EXPOSE 8080
+ENV SPRING_PROFILES_ACTIVE=local
+ENTRYPOINT ["./gradlew", ":app-server:bootRun", "--continuous"]

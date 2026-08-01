@@ -1,0 +1,136 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write # OIDC로 AWS 자격증명 발급
+  contents: read
+
+env:
+  AWS_REGION: ap-northeast-2
+  APP_DIR: /app/chapchap
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Build jar
+        run: |
+          chmod +x gradlew
+          ./gradlew :app-server:bootJar -x test
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          ECR_URI: ${{ steps.ecr-login.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t "$ECR_URI:$IMAGE_TAG" .
+          docker push "$ECR_URI:$IMAGE_TAG"
+
+      # docker-compose.prod.yml / Caddyfile / .env는 매 배포마다 최신으로 덮어씀.
+      # .env는 GitHub Secrets에서 조립 — EC2에 사람이 직접 SSM 접속해서 만들 필요 없음.
+      - name: Sync compose & Caddyfile & .env to EC2
+        env:
+          ECR_URI: ${{ steps.ecr-login.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}
+        run: |
+          COMPOSE_B64=$(base64 -w0 infra/deploy/docker-compose.prod.yml)
+          CADDYFILE_B64=$(base64 -w0 infra/deploy/Caddyfile)
+
+          # DB_PORT/DB_NAME/DB_USERNAME은 infra/terraform/main.tf에도 이미 평문으로 있는 값이라
+          # 굳이 Secrets로 감출 필요 없음 (진짜 비밀은 DB_HOST/DB_PASSWORD뿐).
+          ENV_CONTENT="ECR_IMAGE=$ECR_URI
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_PORT=5432
+          DB_NAME=chapchap
+          DB_USERNAME=chapchap
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}"
+          ENV_B64=$(echo "$ENV_CONTENT" | base64 -w0)
+
+          SYNC_SCRIPT="set -euo pipefail
+          mkdir -p \"$APP_DIR\"
+          echo \"$COMPOSE_B64\" | base64 -d > \"$APP_DIR/docker-compose.prod.yml\"
+          echo \"$CADDYFILE_B64\" | base64 -d > \"$APP_DIR/Caddyfile\"
+          echo \"$ENV_B64\" | base64 -d > \"$APP_DIR/.env\"
+          chmod 600 \"$APP_DIR/.env\""
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "$(jq -n --arg s "$SYNC_SCRIPT" '{commands: [$s]}')" \
+            --query "Command.CommandId" --output text)
+
+          # aws ssm wait command-executed는 최대 100초 고정이라 배포처럼 오래 걸리는 작업엔 짧음.
+          # 종료 상태(Success/Failed/Cancelled/TimedOut)가 나올 때까지 직접 폴링 (최대 10분).
+          STATUS="InProgress"
+          for i in $(seq 1 60); do
+            STATUS=$(aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}" --query Status --output text 2>/dev/null || echo "Pending")
+            case "$STATUS" in
+              Success|Failed|Cancelled|TimedOut) break ;;
+            esac
+            sleep 10
+          done
+
+          if [ "$STATUS" != "Success" ]; then
+            aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}" --query StandardErrorContent --output text
+            echo "설정 동기화 실패: $STATUS"
+            exit 1
+          fi
+
+      # 새 이미지를 standby 컨테이너에 배포하고,
+      - name: Deploy (blue/green switch) via SSM
+        env:
+          ECR_URI: ${{ steps.ecr-login.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          DEPLOY_SCRIPT="export ECR_IMAGE=\"$ECR_URI\"
+          export TAG=\"$IMAGE_TAG\"
+          $(cat infra/deploy/deploy.sh)"
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "$(jq -n --arg s "$DEPLOY_SCRIPT" '{commands: [$s]}')" \
+            --query "Command.CommandId" --output text)
+
+          # deploy.sh는 헬스체크(최대 60초)+ECR pull 시간까지 걸릴 수 있어 100초 고정 waiter로는 부족함.
+          # 종료 상태가 나올 때까지 직접 폴링 (최대 10분).
+          STATUS="InProgress"
+          for i in $(seq 1 60); do
+            STATUS=$(aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}" --query Status --output text 2>/dev/null || echo "Pending")
+            case "$STATUS" in
+              Success|Failed|Cancelled|TimedOut) break ;;
+            esac
+            sleep 10
+          done
+
+          echo "=== stdout ==="
+          aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}" --query StandardOutputContent --output text
+          echo "=== stderr ==="
+          aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}" --query StandardErrorContent --output text
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "배포 실패: $STATUS"
+            exit 1
+          fi
