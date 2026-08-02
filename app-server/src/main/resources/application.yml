@@ -11,11 +11,14 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+server:
+  forward-headers-strategy: framework
+
 springdoc:
   api-docs:
-    path: /api/v3/api-docs
+    path: /v3/api-docs
   swagger-ui:
-    path: /api/swagger-ui
+    path: /swagger-ui
 
 management:
   endpoints:
