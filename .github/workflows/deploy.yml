@@ -63,6 +63,7 @@ jobs:
   
           ENV_CONTENT="ECR_IMAGE=$ECR_URI
           SPRING_PROFILES_ACTIVE=prod
+          CORS_ALLOWED_ORIGIN_PATTERNS=*
           DB_HOST=${{ secrets.DB_HOST }}
           DB_PORT=5432
           DB_NAME=chapchap
