@@ -41,16 +41,7 @@ services:
   app-blue:
     image: ${ECR_IMAGE}:${BLUE_TAG:-latest}
     container_name: app-blue
-    environment:
-      SPRING_PROFILES_ACTIVE: prod
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      DB_NAME: ${DB_NAME}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      REDIS_HOST: redis
-      REDIS_PORT: "6379"
-      TZ: Asia/Seoul
+    env_file: .env
     networks:
       - app-net
     depends_on:
@@ -74,16 +65,7 @@ services:
   app-green:
     image: ${ECR_IMAGE}:${GREEN_TAG:-latest}
     container_name: app-green
-    environment:
-      SPRING_PROFILES_ACTIVE: prod
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      DB_NAME: ${DB_NAME}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      REDIS_HOST: redis
-      REDIS_PORT: "6379"
-      TZ: Asia/Seoul
+    env_file: .env
     networks:
       - app-net
     depends_on:
