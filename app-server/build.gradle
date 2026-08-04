@@ -19,5 +19,6 @@ dependencies {
 
     testImplementation testFixtures(project(":module-core"))
 
+    testImplementation "com.tngtech.archunit:archunit-junit5:${libs.versions.archunit.get()}"
     testImplementation "org.springframework.boot:spring-boot-starter-data-redis"
 }
