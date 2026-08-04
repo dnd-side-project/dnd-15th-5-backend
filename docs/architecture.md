@@ -280,6 +280,20 @@ Controller
                 → 외부 솔루션
 ```
 
+**3.3.4 Application Service 구성 원칙**
+
+- Application Service는 상태 변경을 담당하는 CommandService와 조회를 담당하는 QueryService로 구분하는 것을 기본으로 한다.
+- CommandService는 생성·수정·삭제, QueryService는 조회를 담당한다.
+- 각 Service에는 단순 처리와 여러 Domain 객체 및 Port를 조합하는 유스케이스 메서드를 함께 둘 수 있다.
+- Service가 커지거나 유스케이스 흐름이 복잡해지면 해당 유스케이스를 담당하는 전용 Application Service로 분리한다.
+- CommandService도 외부 연동이 필요하면 Application Port를 사용할 수 있다.
+- Port 사용 여부는 Command와 Query의 구분 기준이 아니다.
+- Application Command는 Domain 계층에 직접 전달하지 않는다.
+- Application Service가 필요한 값을 꺼내 Domain Entity, Value Object 또는 Domain Service에 전달한다.
+- Application Service는 단순 저장·조회에 Domain Repository를 직접 사용할 수 있다.
+- Entity의 상태 변경은 Entity 메서드를 통해 수행한다.
+- Domain Service는 Entity나 Value Object에 두기 어려운 도메인 규칙을 담당한다.
+
 #### **3.4 Domain-Driven Design**
 
 **3.4.1 DDD 적용 원칙**
@@ -302,6 +316,6 @@ Controller
 | Place Context | module-place | 장소 정보 관리, 위치 정보 및 주변 장소 조회 | Place, Address, Location |
 - Bounded Context 간에 동일한 용어가 존재하더라도 각 Context의 목적에 맞는 별도 모델을 사용한다.
 - Account Context는 사용자의 인증 및 계정 상태를 책임진다.
-- Receipt Context는 인증된 사용자의 식별자인 `accountId`만 사용하며 Account Entity를 직접 참조하지 않는다.
-- Receipt Context는 장소를 연결할 때 `placeId`만 보관하며 Place Entity를 직접 참조하지 않는다.
+- Receipt Context는 인증된 사용자의 식별자인 accountId만 사용하며 Account Entity를 직접 참조하지 않는다.
+- Receipt Context는 장소를 연결할 때 placeId만 보관하며 Place Entity를 직접 참조하지 않는다.
 - OCR, Object Storage, OAuth, 지도 API는 도메인 모델이 아닌 외부 시스템으로 취급하고 각 Context의 Infra 계층에서 연동한다.
