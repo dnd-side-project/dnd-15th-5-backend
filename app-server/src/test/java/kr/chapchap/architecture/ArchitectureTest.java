@@ -23,7 +23,7 @@ class ArchitectureTest {
 
     private static final List<String> DOMAIN_MODULE_PACKAGES = List.of(
             "kr.chapchap.account",
-            "kr.chapchap.receipt",
+            "kr.chapchap.consumption",
             "kr.chapchap.report",
             "kr.chapchap.place"
     );

@@ -144,7 +144,7 @@ flowchart TB
 | --- | --- |
 | app-server | Spring Boot 실행, 모듈 조립, Security 및 공통 Web 설정 |
 | module-account | 계정, 회원가입, 소셜 로그인, 토큰 발급 및 사용자 상태 관리 |
-| module-receipt | 영수증 이미지, OCR 처리 및 영수증 정보 관리 |
+| module-consumption | 소비기록 관리와 수기·영수증 OCR 기반 등록 |
 | module-report | 주간·월간 소비 리포트 생성 및 조회 |
 | module-place | 장소 정보와 위치 기반 조회 |
 | module-core | 공통 응답과 공통 예외 등 기술적 공통 요소 |
@@ -158,7 +158,7 @@ flowchart TB
     subgraph DomainModules["도메인 모듈"]
         direction LR
         Account["module-account<br/>계정 및 인증"]
-        Receipt["module-receipt<br/>영수증 및 OCR"]
+        Consumption["module-consumption<br/>소비기록 관리 및 등록"]
         Report["module-report<br/>소비 리포트"]
         Place["module-place<br/>장소 및 위치 조회"]
     end
@@ -166,13 +166,13 @@ flowchart TB
     Core["module-core<br/>기술적 공통 요소"]
 
     App --> Account
-    App --> Receipt
+    App --> Consumption
     App --> Report
     App --> Place
     App --> Core
 
     Account --> Core
-    Receipt --> Core
+    Consumption --> Core
     Report --> Core
     Place --> Core
 ```
@@ -244,7 +244,7 @@ module-{domain}
 ```
 각 도메인 모듈은 module- 접두사를 제외한 도메인명을 기본 패키지로 사용한다.
 module-account → kr.chapchap.account
-module-receipt → kr.chapchap.receipt
+module-consumption → kr.chapchap.consumption
 module-report → kr.chapchap.report
 module-place → kr.chapchap.place
 ```
@@ -311,11 +311,12 @@ Controller
 | Bounded Context | 담당 모듈 | 주요 책임 | 소유 데이터 |
 | --- | --- | --- | --- |
 | Account Context | module-account | 회원가입, 소셜 로그인, 계정 상태 및 인증 주체 관리 | Account, SocialAccount |
-| Receipt Context | module-receipt | 영수증 이미지 등록, OCR 처리, OCR 결과 수정 및 영수증 확정 | Receipt, ReceiptItem, OCR 처리 상태 |
+| Consumption Context | module-consumption | 소비기록 관리와 수기·영수증 OCR 기반 등록 | Consumption, 영수증 이미지 참조 |
 | Report Context | module-report | 주간·월간 소비 리포트 생성 및 조회 | Report, 기간별 집계 결과 |
 | Place Context | module-place | 장소 정보 관리, 위치 정보 및 주변 장소 조회 | Place, Address, Location |
 - Bounded Context 간에 동일한 용어가 존재하더라도 각 Context의 목적에 맞는 별도 모델을 사용한다.
 - Account Context는 사용자의 인증 및 계정 상태를 책임진다.
-- Receipt Context는 인증된 사용자의 식별자인 accountId만 사용하며 Account Entity를 직접 참조하지 않는다.
-- Receipt Context는 장소를 연결할 때 placeId만 보관하며 Place Entity를 직접 참조하지 않는다.
+- Consumption Context는 인증된 사용자의 식별자인 accountId만 사용하며 Account Entity를 직접 참조하지 않는다.
+- Consumption Context는 장소를 연결할 때 placeId만 보관하며 Place Entity를 직접 참조하지 않는다.
+- 영수증 이미지와 OCR 결과는 소비기록 생성을 위한 중간 자료로 취급하며, 별도의 Bounded Context로 분리하지 않는다.
 - OCR, Object Storage, OAuth, 지도 API는 도메인 모델이 아닌 외부 시스템으로 취급하고 각 Context의 Infra 계층에서 연동한다.

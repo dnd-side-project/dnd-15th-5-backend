@@ -16,7 +16,7 @@ gradlew.bat
 buildSrc
 settings.gradle
 module-account
-module-receipt
+module-consumption
 module-report
 module-place
 module-core
