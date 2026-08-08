@@ -22,6 +22,9 @@ public class SecurityConfig {
                                 "/actuator/health",
                                 "/actuator/health/**",
                                 "/accounts/test",
+                                // TODO: module-account 인증 붙으면 제거
+                                "/consumptions",
+                                "/consumptions/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui",
                                 "/swagger-ui/**"
