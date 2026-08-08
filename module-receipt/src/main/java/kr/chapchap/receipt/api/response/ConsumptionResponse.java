@@ -8,6 +8,7 @@ import java.time.LocalTime;
 public record ConsumptionResponse(
         Long id,
         Long placeId,
+        String placeName,
         String category,
         Long amount,
         LocalDate purchaseDate,
@@ -18,6 +19,7 @@ public record ConsumptionResponse(
         return new ConsumptionResponse(
                 info.id(),
                 info.placeId(),
+                info.placeName(),
                 info.category(),
                 info.amount(),
                 info.purchaseDate(),

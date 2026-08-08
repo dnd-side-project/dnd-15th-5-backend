@@ -8,16 +8,18 @@ import java.time.LocalTime;
 public record ConsumptionInfo(
         Long id,
         Long placeId,
+        String placeName,
         String category,
         Long amount,
         LocalDate purchaseDate,
         LocalTime purchaseTime
 ) {
 
-    public static ConsumptionInfo from(Consumption consumption) {
+    public static ConsumptionInfo of(Consumption consumption, String placeName) {
         return new ConsumptionInfo(
                 consumption.getId(),
                 consumption.getPlaceId(),
+                placeName,
                 consumption.getCategory(),
                 consumption.getAmount(),
                 consumption.getPurchaseDate(),
