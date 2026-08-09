@@ -1,6 +1,7 @@
 package kr.chapchap.consumption.application.service;
 
 import kr.chapchap.consumption.application.command.ConsumptionSearchCommand;
+import kr.chapchap.consumption.application.info.ConsumptionActivityInfo;
 import kr.chapchap.consumption.application.info.ConsumptionInfo;
 import kr.chapchap.consumption.application.info.ConsumptionScrollInfo;
 import kr.chapchap.consumption.application.port.PlaceNameLookupPort;
@@ -63,5 +64,11 @@ public class ConsumptionQueryService {
                 last != null ? last.getPurchaseTime() : null,
                 last != null ? last.getId() : null
         );
+    }
+
+    public List<ConsumptionActivityInfo> getActivities(Long userId, LocalDate from, LocalDate toExclusive) {
+        return consumptionQueryRepository.findAllByUserAndDateRange(userId, from, toExclusive).stream()
+                .map(ConsumptionActivityInfo::from)
+                .toList();
     }
 }
