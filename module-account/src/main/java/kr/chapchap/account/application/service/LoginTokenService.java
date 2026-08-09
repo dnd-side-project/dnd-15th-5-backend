@@ -52,10 +52,7 @@ public class LoginTokenService {
             String refreshToken,
             OAuthClientType expectedClientType
     ) {
-        RefreshTokenClaims claims = tokenProvider.parseRefreshToken(refreshToken);
-        if (claims.clientType() != expectedClientType) {
-            throw new BusinessException(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS);
-        }
+        RefreshTokenClaims claims = parseRefreshToken(refreshToken, expectedClientType);
         if (!refreshTokenStore.consume(claims.userId(), claims.tokenId())) {
             throw new BusinessException(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS);
         }
@@ -66,6 +63,14 @@ public class LoginTokenService {
         }
 
         return issueUserTokens(claims.userId(), claims.clientType());
+    }
+
+    public void logout(
+            String refreshToken,
+            OAuthClientType expectedClientType
+    ) {
+        RefreshTokenClaims claims = parseRefreshToken(refreshToken, expectedClientType);
+        refreshTokenStore.consume(claims.userId(), claims.tokenId());
     }
 
     private AuthenticationInfo issueUserTokens(
@@ -86,5 +91,16 @@ public class LoginTokenService {
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS
                 ));
+    }
+
+    private RefreshTokenClaims parseRefreshToken(
+            String refreshToken,
+            OAuthClientType expectedClientType
+    ) {
+        RefreshTokenClaims claims = tokenProvider.parseRefreshToken(refreshToken);
+        if (claims.clientType() != expectedClientType) {
+            throw new BusinessException(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS);
+        }
+        return claims;
     }
 }

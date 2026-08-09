@@ -195,6 +195,71 @@ class LoginTokenServiceTest {
         then(tokenProvider).shouldHaveNoMoreInteractions();
     }
 
+    @Test
+    void 로그아웃하면_Refresh_Token_ID를_소비한다() {
+        // given
+        String refreshToken = "refresh-token";
+        RefreshTokenClaims claims = new RefreshTokenClaims(
+                USER_ID,
+                OLD_REFRESH_TOKEN_ID,
+                OAuthClientType.WEB
+        );
+        given(tokenProvider.parseRefreshToken(refreshToken)).willReturn(claims);
+        given(refreshTokenStore.consume(USER_ID, OLD_REFRESH_TOKEN_ID)).willReturn(true);
+
+        // when
+        loginTokenService.logout(refreshToken, OAuthClientType.WEB);
+
+        // then
+        then(tokenProvider).should().parseRefreshToken(refreshToken);
+        then(refreshTokenStore).should().consume(USER_ID, OLD_REFRESH_TOKEN_ID);
+        then(userRepository).shouldHaveNoInteractions();
+        then(tokenProvider).shouldHaveNoMoreInteractions();
+    }
+
+    @Test
+    void 이미_소비한_Refresh_Token으로_로그아웃해도_성공한다() {
+        // given
+        String refreshToken = "used-refresh-token";
+        RefreshTokenClaims claims = new RefreshTokenClaims(
+                USER_ID,
+                OLD_REFRESH_TOKEN_ID,
+                OAuthClientType.APP
+        );
+        given(tokenProvider.parseRefreshToken(refreshToken)).willReturn(claims);
+        given(refreshTokenStore.consume(USER_ID, OLD_REFRESH_TOKEN_ID)).willReturn(false);
+
+        // when
+        loginTokenService.logout(refreshToken, OAuthClientType.APP);
+
+        // then
+        then(refreshTokenStore).should().consume(USER_ID, OLD_REFRESH_TOKEN_ID);
+        then(userRepository).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void Refresh_Token의_clientType과_로그아웃_경로가_다르면_토큰을_소비하지_않는다() {
+        // given
+        String refreshToken = "app-refresh-token";
+        RefreshTokenClaims claims = new RefreshTokenClaims(
+                USER_ID,
+                OLD_REFRESH_TOKEN_ID,
+                OAuthClientType.APP
+        );
+        given(tokenProvider.parseRefreshToken(refreshToken)).willReturn(claims);
+
+        // when & then
+        assertThatThrownBy(() -> loginTokenService.logout(
+                refreshToken,
+                OAuthClientType.WEB
+        )).isInstanceOfSatisfying(BusinessException.class, exception ->
+                assertThat(exception.getErrorCode())
+                        .isEqualTo(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
+        );
+        then(refreshTokenStore).shouldHaveNoInteractions();
+        then(userRepository).shouldHaveNoInteractions();
+    }
+
     private User createActiveUser() {
         User user = User.create("참참이");
         user.completeTermsAgreement();
