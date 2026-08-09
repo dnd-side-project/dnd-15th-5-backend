@@ -3,9 +3,13 @@ spring:
     name: chapchap-app-server
 
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: none
-    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
 
   flyway:
     enabled: true
@@ -34,3 +38,4 @@ management:
 chapchap:
   cors:
     allowed-origin-patterns: []
+
