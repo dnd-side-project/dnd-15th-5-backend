@@ -16,3 +16,13 @@ chapchap:
   cors:
     allowed-origin-patterns:
       - "*"
+  oauth:
+    kakao:
+      client-id: local-kakao-client-id
+      client-secret: local-kakao-client-secret
+      redirect-uri: http://localhost:8080/oauth/kakao/callback
+    client:
+      web-redirect-uri: http://localhost:3000/oauth/callback
+      app-redirect-uri: chapchap://oauth/callback
+  jwt:
+    secret: local-development-jwt-secret-key-32-bytes-minimum

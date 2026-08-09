@@ -12,6 +12,13 @@ chapchap.kr {
 
     # stdout으로 출력 Docker awslogs 드라이버가 잡아서 CloudWatch로 전송
     log {
-        format json
+        format filter {
+            request>uri query {
+                replace code REDACTED
+                replace state REDACTED
+            }
+            resp_headers>Location delete
+            wrap json
+        }
     }
 }

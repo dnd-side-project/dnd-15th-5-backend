@@ -13,6 +13,8 @@ public enum ErrorCode {
     MISSING_REQUIRED_FIELD(HttpStatus.BAD_REQUEST, "C003", "필수 요청 파라미터가 누락되었습니다."),
     AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "C004", "인증이 필요합니다."),
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "C005", "접근 권한이 없습니다."),
+    INVALID_AUTHENTICATION_CREDENTIALS(HttpStatus.UNAUTHORIZED, "C006", "유효하지 않은 인증 정보입니다."),
+    EXTERNAL_SERVICE_UNAVAILABLE(HttpStatus.BAD_GATEWAY, "C007", "외부 서비스 연동에 실패했습니다."),
     ;
 
     private final HttpStatus status;
