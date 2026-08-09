@@ -4,6 +4,9 @@ spring:
     username: chapchap
     password: chapchap
 
+  flyway:
+    locations: classpath:db/migration,classpath:db/dev-data
+
   data:
     redis:
       host: localhost
