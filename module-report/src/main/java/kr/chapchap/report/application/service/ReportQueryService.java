@@ -15,8 +15,10 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -49,9 +51,10 @@ public class ReportQueryService {
 
         List<Integer> weeklyCounts = calculateWeeklyCounts(activities, weekStart);
         int monthlyCount = calculateMonthlyCount(activities, monthStart, monthEndInclusive);
+        Map<String, Integer> monthlyCategoryCounts = calculateMonthlyCategoryCounts(activities, monthStart, monthEndInclusive);
         String recentDiscoveryMessage = buildRecentDiscoveryMessage(activities, today, trendStart);
 
-        return new CurrentStatusInfo(yearMonth, weeklyCounts, monthlyCount, recentDiscoveryMessage);
+        return new CurrentStatusInfo(yearMonth, weeklyCounts, monthlyCount, monthlyCategoryCounts, recentDiscoveryMessage);
     }
 
     // 일(0) ~ 토(6) 순서로 반환
@@ -72,6 +75,22 @@ public class ReportQueryService {
                 .filter(activity -> !activity.purchaseDate().isBefore(monthStart)
                         && !activity.purchaseDate().isAfter(monthEndInclusive))
                 .count();
+    }
+
+
+    private Map<String, Integer> calculateMonthlyCategoryCounts(List<ConsumptionActivity> activities, LocalDate monthStart, LocalDate monthEndInclusive) {
+        return activities.stream()
+                .filter(activity -> !activity.purchaseDate().isBefore(monthStart)
+                        && !activity.purchaseDate().isAfter(monthEndInclusive))
+                .collect(Collectors.groupingBy(ConsumptionActivity::category, Collectors.summingInt(activity -> 1)))
+                .entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (a, b) -> a,
+                        LinkedHashMap::new
+                ));
     }
 
     private String buildRecentDiscoveryMessage(List<ConsumptionActivity> activities, LocalDate today, LocalDate trendStart) {

@@ -7,6 +7,7 @@ import java.time.LocalTime;
 
 public record ConsumptionActivityInfo(
         Long placeId,
+        String category,
         LocalDate purchaseDate,
         LocalTime purchaseTime
 ) {
@@ -14,6 +15,7 @@ public record ConsumptionActivityInfo(
     public static ConsumptionActivityInfo from(Consumption consumption) {
         return new ConsumptionActivityInfo(
                 consumption.getPlaceId(),
+                consumption.getCategory(),
                 consumption.getPurchaseDate(),
                 consumption.getPurchaseTime()
         );

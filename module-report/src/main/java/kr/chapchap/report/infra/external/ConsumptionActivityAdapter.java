@@ -24,6 +24,6 @@ public class ConsumptionActivityAdapter implements ConsumptionActivityPort {
     }
 
     private ConsumptionActivity toConsumptionActivity(ConsumptionActivityInfo info) {
-        return new ConsumptionActivity(info.placeId(), info.purchaseDate(), info.purchaseTime());
+        return new ConsumptionActivity(info.placeId(), info.category(), info.purchaseDate(), info.purchaseTime());
     }
 }
