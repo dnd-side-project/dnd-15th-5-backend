@@ -12,7 +12,8 @@
 | API | REST API | — |
 | API Documentation | springdoc-openapi + Swagger UI | — |
 | Validation | Jakarta Bean Validation | Spring Boot BOM |
-| Authentication | Spring Security OAuth 2.0 Client | Spring Boot BOM |
+| Social Authentication | Kakao OAuth 2.0 REST API | — |
+| API Authentication | Spring Security OAuth 2.0 Resource Server | Spring Boot BOM |
 | Authorization Token | JWT | — |
 | External API Client | Spring RestClient | Spring Boot BOM |
 | Persistence | Spring Data JPA | Spring Boot BOM |
@@ -67,7 +68,8 @@
 
 ```mermaid
 flowchart TB
-    Client["Mobile App<br/>(WebView)"]
+    Web["Web Client"]
+    AppClient["Mobile App"]
     GitHubActions["GitHub Actions"]
 
     subgraph AWS["AWS"]
@@ -97,7 +99,8 @@ flowchart TB
         Map["NAVER Maps"]
     end
 
-    Client -->|"HTTPS 요청"| Caddy
+    Web -->|"HTTPS 요청"| Caddy
+    AppClient -->|"HTTPS 요청"| Caddy
 
     Caddy -->|"현재 트래픽"| Active
     Caddy -.->|"배포 전환 대상"| Standby
