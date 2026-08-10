@@ -1,0 +1,11 @@
+chapchap:
+  oauth:
+    kakao:
+      client-id: test-client-id
+      client-secret: test-client-secret
+      redirect-uri: https://example.com/oauth/kakao
+    client:
+      web-redirect-uri: https://web.example.com/oauth/callback
+      app-redirect-uri: chapchap://oauth/callback
+  jwt:
+    secret: test-jwt-secret-key-with-at-least-32-bytes

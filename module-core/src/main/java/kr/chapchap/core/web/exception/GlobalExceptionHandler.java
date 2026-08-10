@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -26,11 +27,26 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Object>> handleBusinessException(BusinessException e) {
         ErrorCode errorCode = e.getErrorCode();
-        log.warn("[{}] BusinessException: {}", errorCode.getCode(), e.getMessage(), e);
+        if (e.getCause() == null) {
+            log.warn("[{}] BusinessException: {}", errorCode.getCode(), e.getMessage());
+        } else {
+            log.warn(
+                    "[{}] BusinessException: {} (cause={})", errorCode.getCode(), e.getMessage(), e.getCause().getClass().getSimpleName()
+            );
+        }
         ApiResponse<Object> body = e.getData() != null
                 ? ApiResponse.failWithData(errorCode, e.getData())
                 : ApiResponse.fail(errorCode, e.getMessage());
         return ResponseEntity.status(errorCode.getStatus()).body(body);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(
+            HttpMessageNotReadableException e
+    ) {
+        log.warn("요청 본문을 읽을 수 없습니다.");
+        return ResponseEntity.status(ErrorCode.INVALID_INPUT_VALUE.getStatus())
+                .body(ApiResponse.fail(ErrorCode.INVALID_INPUT_VALUE));
     }
 
     // @Valid 검증 실패시

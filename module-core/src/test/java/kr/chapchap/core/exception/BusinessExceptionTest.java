@@ -29,4 +29,20 @@ class BusinessExceptionTest {
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE);
         assertThat(exception.getData()).isEqualTo(data);
     }
+
+    @Test
+    void cause와_함께_생성하면_원본_예외가_보존된다() {
+        // given
+        RuntimeException cause = new RuntimeException("외부 연동 실패");
+
+        // when
+        BusinessException exception = new BusinessException(
+                ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE,
+                cause
+        );
+
+        // then
+        assertThat(exception.getCause()).isSameAs(cause);
+        assertThat(exception.getData()).isNull();
+    }
 }
