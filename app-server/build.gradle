@@ -16,6 +16,8 @@ dependencies {
             classifier = "jakarta"
         }
     }
+    implementation platform("software.amazon.awssdk:bom:${libs.versions.aws.sdk.get()}")
+    implementation "software.amazon.awssdk:s3"
 
     testImplementation testFixtures(project(":module-core"))
 

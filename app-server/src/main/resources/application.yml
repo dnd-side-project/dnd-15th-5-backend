@@ -36,6 +36,9 @@ management:
         enabled: true
 
 chapchap:
+  aws:
+    s3:
+      region: ap-northeast-2
   auth:
     refresh-cookie:
       secure: true
