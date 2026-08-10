@@ -13,6 +13,11 @@ output "s3_bucket_name" {
   value       = aws_s3_bucket.receipts.bucket
 }
 
+output "profile_s3_bucket_name" {
+  description = "프로필 S3 버킷 이름"
+  value       = aws_s3_bucket.profiles.bucket
+}
+
 output "ecr_repository_url" {
   description = "ECR 리포지토리 URL (docker-compose.prod.yml의 IMAGE 값으로 사용)"
   value       = aws_ecr_repository.backend.repository_url
