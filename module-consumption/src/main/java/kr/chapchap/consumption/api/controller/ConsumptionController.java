@@ -2,7 +2,9 @@ package kr.chapchap.consumption.api.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import kr.chapchap.core.web.auth.ChapChapUserId;
 import kr.chapchap.core.web.response.ApiResponse;
 import kr.chapchap.consumption.api.response.ConsumptionScrollResponse;
 import kr.chapchap.consumption.application.command.ConsumptionSearchCommand;
@@ -19,6 +21,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
 
+@SecurityRequirement(name = "bearerAuth")
 @Tag(name = "Consumption", description = "소비내역 API")
 @RequiredArgsConstructor
 @RestController
@@ -27,7 +30,6 @@ public class ConsumptionController {
 
     private final ConsumptionQueryService consumptionQueryService;
 
-    // TODO: module-account 인증 완료 후 유저 교체.
     @Operation(
             summary = "월별 소비내역 무한스크롤 조회",
             description = "계정과 연월(yyyy-MM) 기준으로 소비내역을 최신순 커서 기반으로 조회합니다. "
@@ -35,7 +37,7 @@ public class ConsumptionController {
     )
     @GetMapping
     public ApiResponse<ConsumptionScrollResponse> getConsumptions(
-            @Parameter(description = "유저 ID") @RequestParam Long userId,
+            @ChapChapUserId Long userId,
             @Parameter(description = "조회할 연월, 예: 2026-07") @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth,
             @Parameter(description = "이전 응답의 nextCursorPurchaseDate (첫 조회 시 생략)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate cursorPurchaseDate,
