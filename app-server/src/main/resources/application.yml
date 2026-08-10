@@ -3,9 +3,13 @@ spring:
     name: chapchap-app-server
 
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: none
-    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
 
   flyway:
     enabled: true
@@ -32,5 +36,20 @@ management:
         enabled: true
 
 chapchap:
+  auth:
+    refresh-cookie:
+      secure: true
   cors:
     allowed-origin-patterns: []
+
+  oauth:
+    kakao:
+      authorization-uri: https://kauth.kakao.com/oauth/authorize
+      token-uri: https://kauth.kakao.com/oauth/token
+      user-info-uri: https://kapi.kakao.com/v2/user/me
+      connect-timeout: 3s
+      read-timeout: 5s
+  jwt:
+    signup-expiration: 15m
+    access-expiration: 30m
+    refresh-expiration: 14d

@@ -63,7 +63,7 @@ jobs:
   
           ENV_CONTENT="ECR_IMAGE=$ECR_URI
           SPRING_PROFILES_ACTIVE=prod
-          CORS_ALLOWED_ORIGIN_PATTERNS=*
+          CORS_ALLOWED_ORIGIN_PATTERNS=${{ vars.CORS_ALLOWED_ORIGIN_PATTERNS }}
           DB_HOST=${{ secrets.DB_HOST }}
           DB_PORT=5432
           DB_NAME=chapchap
@@ -71,6 +71,12 @@ jobs:
           DB_PASSWORD=${{ secrets.DB_PASSWORD }}
           REDIS_HOST=redis
           REDIS_PORT=6379
+          KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
+          KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
+          KAKAO_REDIRECT_URI=${{ vars.KAKAO_REDIRECT_URI }}
+          OAUTH_WEB_REDIRECT_URI=${{ vars.OAUTH_WEB_REDIRECT_URI }}
+          OAUTH_APP_REDIRECT_URI=${{ vars.OAUTH_APP_REDIRECT_URI }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
           TZ=Asia/Seoul"
           ENV_B64=$(echo "$ENV_CONTENT" | base64 -w0)
 

@@ -10,7 +10,7 @@ rootProject.name = "chapchap-backend"
 include(
         "app-server",
         "module-account",
-        "module-receipt",
+        "module-consumption",
         "module-report",
         "module-place",
         "module-core"

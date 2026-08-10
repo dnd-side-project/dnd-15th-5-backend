@@ -12,7 +12,8 @@
 | API | REST API | — |
 | API Documentation | springdoc-openapi + Swagger UI | — |
 | Validation | Jakarta Bean Validation | Spring Boot BOM |
-| Authentication | Spring Security OAuth 2.0 Client | Spring Boot BOM |
+| Social Authentication | Kakao OAuth 2.0 REST API | — |
+| API Authentication | Spring Security OAuth 2.0 Resource Server | Spring Boot BOM |
 | Authorization Token | JWT | — |
 | External API Client | Spring RestClient | Spring Boot BOM |
 | Persistence | Spring Data JPA | Spring Boot BOM |
@@ -67,7 +68,8 @@
 
 ```mermaid
 flowchart TB
-    Client["Mobile App<br/>(WebView)"]
+    Web["Web Client"]
+    AppClient["Mobile App"]
     GitHubActions["GitHub Actions"]
 
     subgraph AWS["AWS"]
@@ -97,7 +99,8 @@ flowchart TB
         Map["NAVER Maps"]
     end
 
-    Client -->|"HTTPS 요청"| Caddy
+    Web -->|"HTTPS 요청"| Caddy
+    AppClient -->|"HTTPS 요청"| Caddy
 
     Caddy -->|"현재 트래픽"| Active
     Caddy -.->|"배포 전환 대상"| Standby
@@ -144,7 +147,7 @@ flowchart TB
 | --- | --- |
 | app-server | Spring Boot 실행, 모듈 조립, Security 및 공통 Web 설정 |
 | module-account | 계정, 회원가입, 소셜 로그인, 토큰 발급 및 사용자 상태 관리 |
-| module-receipt | 영수증 이미지, OCR 처리 및 영수증 정보 관리 |
+| module-consumption | 소비기록 관리와 수기·영수증 OCR 기반 등록 |
 | module-report | 주간·월간 소비 리포트 생성 및 조회 |
 | module-place | 장소 정보와 위치 기반 조회 |
 | module-core | 공통 응답과 공통 예외 등 기술적 공통 요소 |
@@ -158,7 +161,7 @@ flowchart TB
     subgraph DomainModules["도메인 모듈"]
         direction LR
         Account["module-account<br/>계정 및 인증"]
-        Receipt["module-receipt<br/>영수증 및 OCR"]
+        Consumption["module-consumption<br/>소비기록 관리 및 등록"]
         Report["module-report<br/>소비 리포트"]
         Place["module-place<br/>장소 및 위치 조회"]
     end
@@ -166,13 +169,13 @@ flowchart TB
     Core["module-core<br/>기술적 공통 요소"]
 
     App --> Account
-    App --> Receipt
+    App --> Consumption
     App --> Report
     App --> Place
     App --> Core
 
     Account --> Core
-    Receipt --> Core
+    Consumption --> Core
     Report --> Core
     Place --> Core
 ```
@@ -244,7 +247,7 @@ module-{domain}
 ```
 각 도메인 모듈은 module- 접두사를 제외한 도메인명을 기본 패키지로 사용한다.
 module-account → kr.chapchap.account
-module-receipt → kr.chapchap.receipt
+module-consumption → kr.chapchap.consumption
 module-report → kr.chapchap.report
 module-place → kr.chapchap.place
 ```
@@ -280,6 +283,20 @@ Controller
                 → 외부 솔루션
 ```
 
+**3.3.4 Application Service 구성 원칙**
+
+- Application Service는 상태 변경을 담당하는 CommandService와 조회를 담당하는 QueryService로 구분하는 것을 기본으로 한다.
+- CommandService는 생성·수정·삭제, QueryService는 조회를 담당한다.
+- 각 Service에는 단순 처리와 여러 Domain 객체 및 Port를 조합하는 유스케이스 메서드를 함께 둘 수 있다.
+- Service가 커지거나 유스케이스 흐름이 복잡해지면 해당 유스케이스를 담당하는 전용 Application Service로 분리한다.
+- CommandService도 외부 연동이 필요하면 Application Port를 사용할 수 있다.
+- Port 사용 여부는 Command와 Query의 구분 기준이 아니다.
+- Application Command는 Domain 계층에 직접 전달하지 않는다.
+- Application Service가 필요한 값을 꺼내 Domain Entity, Value Object 또는 Domain Service에 전달한다.
+- Application Service는 단순 저장·조회에 Domain Repository를 직접 사용할 수 있다.
+- Entity의 상태 변경은 Entity 메서드를 통해 수행한다.
+- Domain Service는 Entity나 Value Object에 두기 어려운 도메인 규칙을 담당한다.
+
 #### **3.4 Domain-Driven Design**
 
 **3.4.1 DDD 적용 원칙**
@@ -297,11 +314,12 @@ Controller
 | Bounded Context | 담당 모듈 | 주요 책임 | 소유 데이터 |
 | --- | --- | --- | --- |
 | Account Context | module-account | 회원가입, 소셜 로그인, 계정 상태 및 인증 주체 관리 | Account, SocialAccount |
-| Receipt Context | module-receipt | 영수증 이미지 등록, OCR 처리, OCR 결과 수정 및 영수증 확정 | Receipt, ReceiptItem, OCR 처리 상태 |
+| Consumption Context | module-consumption | 소비기록 관리와 수기·영수증 OCR 기반 등록 | Consumption, 영수증 이미지 참조 |
 | Report Context | module-report | 주간·월간 소비 리포트 생성 및 조회 | Report, 기간별 집계 결과 |
 | Place Context | module-place | 장소 정보 관리, 위치 정보 및 주변 장소 조회 | Place, Address, Location |
 - Bounded Context 간에 동일한 용어가 존재하더라도 각 Context의 목적에 맞는 별도 모델을 사용한다.
 - Account Context는 사용자의 인증 및 계정 상태를 책임진다.
-- Receipt Context는 인증된 사용자의 식별자인 `accountId`만 사용하며 Account Entity를 직접 참조하지 않는다.
-- Receipt Context는 장소를 연결할 때 `placeId`만 보관하며 Place Entity를 직접 참조하지 않는다.
+- Consumption Context는 인증된 사용자의 식별자인 accountId만 사용하며 Account Entity를 직접 참조하지 않는다.
+- Consumption Context는 장소를 연결할 때 placeId만 보관하며 Place Entity를 직접 참조하지 않는다.
+- 영수증 이미지와 OCR 결과는 소비기록 생성을 위한 중간 자료로 취급하며, 별도의 Bounded Context로 분리하지 않는다.
 - OCR, Object Storage, OAuth, 지도 API는 도메인 모델이 아닌 외부 시스템으로 취급하고 각 Context의 Infra 계층에서 연동한다.

@@ -7,12 +7,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -25,11 +27,26 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Object>> handleBusinessException(BusinessException e) {
         ErrorCode errorCode = e.getErrorCode();
-        log.warn("[{}] BusinessException: {}", errorCode.getCode(), e.getMessage(), e);
+        if (e.getCause() == null) {
+            log.warn("[{}] BusinessException: {}", errorCode.getCode(), e.getMessage());
+        } else {
+            log.warn(
+                    "[{}] BusinessException: {} (cause={})", errorCode.getCode(), e.getMessage(), e.getCause().getClass().getSimpleName()
+            );
+        }
         ApiResponse<Object> body = e.getData() != null
                 ? ApiResponse.failWithData(errorCode, e.getData())
                 : ApiResponse.fail(errorCode, e.getMessage());
         return ResponseEntity.status(errorCode.getStatus()).body(body);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(
+            HttpMessageNotReadableException e
+    ) {
+        log.warn("요청 본문을 읽을 수 없습니다.");
+        return ResponseEntity.status(ErrorCode.INVALID_INPUT_VALUE.getStatus())
+                .body(ApiResponse.fail(ErrorCode.INVALID_INPUT_VALUE));
     }
 
     // @Valid 검증 실패시
@@ -52,6 +69,15 @@ public class GlobalExceptionHandler {
         log.warn("필수 요청 파라미터 누락: {}", errors);
         return ResponseEntity.status(ErrorCode.MISSING_REQUIRED_FIELD.getStatus())
                 .body(ApiResponse.failWithData(ErrorCode.MISSING_REQUIRED_FIELD, errors));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleMethodArgumentTypeMismatch(
+            MethodArgumentTypeMismatchException e) {
+        Map<String, String> errors = Map.of(e.getName(), "요청 형식이 올바르지 않습니다.");
+        log.warn("파라미터 타입 변환 실패: {}", errors);
+        return ResponseEntity.status(ErrorCode.INVALID_INPUT_VALUE.getStatus())
+                .body(ApiResponse.failWithData(ErrorCode.INVALID_INPUT_VALUE, errors));
     }
 
     @ExceptionHandler(AuthenticationException.class)

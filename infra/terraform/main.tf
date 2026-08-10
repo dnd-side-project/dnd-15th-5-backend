@@ -217,7 +217,7 @@ resource "aws_iam_role_policy" "ec2_s3_receipts" {
 
 resource "aws_instance" "app" {
   ami                    = data.aws_ami.amazon_linux.id
-  instance_type          = "t4g.micro" # AWS 프리티어 무료 대상 (t4g.medium은 무료 대상 아님)
+  instance_type          = "t4g.medium" # Blue/Green 동시 기동을 위한 4 GiB 메모리
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.ec2.id]
   iam_instance_profile   = aws_iam_instance_profile.ec2_ssm.name
