@@ -34,7 +34,7 @@ public class KakaoOAuthController {
 
     @Operation(
             summary = "카카오 로그인 시작",
-            description = "클라이언트 유형과 PKCE codeChallenge를 저장한 뒤 "
+            description = "클라이언트 유형과 PKCE codeChallenge를 저장한 뒤\n\n"
                     + "브라우저를 카카오 인증 화면으로 이동시킵니다."
     )
     @ApiResponses({
@@ -72,7 +72,7 @@ public class KakaoOAuthController {
 
     @Operation(
             summary = "카카오 로그인 콜백",
-            description = "카카오가 호출하는 콜백입니다. 인증 결과를 처리한 뒤 WEB 또는 APP 리디렉션 URI로 "
+            description = "카카오가 호출하는 콜백입니다. 인증 결과를 처리한 뒤 WEB 또는 APP 리디렉션 URI로\n\n"
                     + "일회용 loginCode를 전달합니다. 취소하거나 처리에 실패하면 error를 전달합니다."
     )
     @ApiResponses({
