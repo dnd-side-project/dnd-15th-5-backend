@@ -30,8 +30,8 @@ public class User extends BaseTimeEntity {
     @Column(name = "nickname", nullable = false, length = MAX_NICKNAME_LENGTH)
     private String nickname;
 
-    @Column(name = "profile_image_url", length = 500)
-    private String profileImageUrl;
+    @Column(name = "profile_image_key", length = 1024)
+    private String profileImageKey;
 
     // TODO: 이메일 수집 미확정, 현재 소셜 제공자의 이메일 동의항목은 사용하지 않음
     @Column(name = "email", length = 320)
