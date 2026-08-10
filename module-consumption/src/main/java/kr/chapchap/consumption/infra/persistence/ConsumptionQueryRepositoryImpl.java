@@ -51,4 +51,18 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
                 .limit(fetchSize)
                 .fetch();
     }
+
+    @Override
+    public List<Consumption> findAllByUserAndDateRange(Long userId, LocalDate from, LocalDate toExclusive) {
+        QConsumption consumption = QConsumption.consumption;
+
+        return queryFactory
+                .selectFrom(consumption)
+                .where(
+                        consumption.userId.eq(userId),
+                        consumption.purchaseDate.goe(from),
+                        consumption.purchaseDate.lt(toExclusive)
+                )
+                .fetch();
+    }
 }

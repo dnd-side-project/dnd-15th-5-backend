@@ -22,4 +22,9 @@ public class PlaceQueryService {
         return placeRepository.findAllById(placeIds).stream()
                 .collect(Collectors.toMap(Place::getId, Place::getName));
     }
+
+    public Map<Long, String> findDongNamesByIds(List<Long> placeIds) {
+        return placeRepository.findAllById(placeIds).stream()
+                .collect(Collectors.toMap(Place::getId, Place::getAdministrativeDongName));
+    }
 }

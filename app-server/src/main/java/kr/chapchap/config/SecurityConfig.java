@@ -71,6 +71,12 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/actuator/health",
                                 "/actuator/health/**",
+                                "/accounts/test",
+                                // TODO: module-account 인증 붙으면 제거
+                                "/consumptions",
+                                "/consumptions/**",
+                                "/reports",
+                                "/reports/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui",
                                 "/swagger-ui/**"

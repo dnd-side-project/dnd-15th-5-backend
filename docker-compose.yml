@@ -8,6 +8,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/chapchap
       SPRING_DATA_REDIS_HOST: redis
+      TZ: Asia/Seoul
     volumes:
       - .:/workspace
       - gradle-cache:/root/.gradle

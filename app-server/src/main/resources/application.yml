@@ -3,9 +3,13 @@ spring:
     name: chapchap-app-server
 
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: none
-    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
 
   flyway:
     enabled: true
@@ -37,6 +41,7 @@ chapchap:
       secure: true
   cors:
     allowed-origin-patterns: []
+
   oauth:
     kakao:
       authorization-uri: https://kauth.kakao.com/oauth/authorize

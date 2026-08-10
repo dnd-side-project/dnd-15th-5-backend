@@ -11,4 +11,6 @@ public interface ConsumptionQueryRepository {
     List<Consumption> searchByCursor(Long userId, LocalDate monthStart, LocalDate monthEndExclusive,
                                       LocalDate cursorPurchaseDate, LocalTime cursorPurchaseTime, Long cursorId,
                                       int fetchSize);
+
+    List<Consumption> findAllByUserAndDateRange(Long userId, LocalDate from, LocalDate toExclusive);
 }
