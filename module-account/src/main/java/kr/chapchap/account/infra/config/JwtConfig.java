@@ -2,10 +2,12 @@ package kr.chapchap.account.infra.config;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.nimbusds.jose.proc.SecurityContext;
+import kr.chapchap.account.infra.security.ActiveUserJwtValidator;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
@@ -35,7 +37,11 @@ public class JwtConfig {
     }
 
     @Bean
-    public JwtDecoder jwtDecoder(JwtProperties properties, Clock jwtClock) {
+    public JwtDecoder jwtDecoder(
+            JwtProperties properties,
+            Clock jwtClock,
+            ActiveUserJwtValidator activeUserJwtValidator
+    ) {
         SecretKey secretKey = createSecretKey(properties.secret());
         NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withSecretKey(secretKey)
                 .macAlgorithm(MacAlgorithm.HS256)
@@ -43,7 +49,10 @@ public class JwtConfig {
 
         JwtTimestampValidator timestampValidator = new JwtTimestampValidator();
         timestampValidator.setClock(jwtClock);
-        jwtDecoder.setJwtValidator(timestampValidator);
+        jwtDecoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+                timestampValidator,
+                activeUserJwtValidator
+        ));
         return jwtDecoder;
     }
 
