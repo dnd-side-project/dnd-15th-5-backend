@@ -1,6 +1,7 @@
 package kr.chapchap.account;
 
 import kr.chapchap.account.api.controller.AccountController;
+import kr.chapchap.account.api.response.AuthenticationResponseHandler;
 import kr.chapchap.account.application.command.AccountUpdateCommand;
 import kr.chapchap.account.application.info.AccountInfo;
 import kr.chapchap.account.application.service.AccountCommandService;
@@ -14,21 +15,27 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.mock.web.MockMultipartFile;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static kr.chapchap.account.api.response.AuthenticationResponseHandler.REFRESH_TOKEN_COOKIE_NAME;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -36,7 +43,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         SecurityConfig.class,
         CorsConfig.class,
         WebMvcConfig.class,
-        GlobalExceptionHandler.class
+        GlobalExceptionHandler.class,
+        AuthenticationResponseHandler.class
 })
 @WebMvcTest(AccountController.class)
 class AccountApiTest {
@@ -189,6 +197,52 @@ class AccountApiTest {
                                 .authorities(new SimpleGrantedAuthority("SCOPE_user"))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("C001"));
+
+        then(accountCommandService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void user_scope로_내_계정을_탈퇴한다() throws Exception {
+        // when & then
+        mockMvc.perform(delete("/accounts/me")
+                        .with(jwt()
+                                .jwt(jwt -> jwt.subject(USER_ID.toString()))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_user"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("S001"))
+                .andExpect(jsonPath("$.data").doesNotExist())
+                .andExpect(cookie().value(REFRESH_TOKEN_COOKIE_NAME, ""))
+                .andExpect(cookie().httpOnly(REFRESH_TOKEN_COOKIE_NAME, true))
+                .andExpect(cookie().secure(REFRESH_TOKEN_COOKIE_NAME, true))
+                .andExpect(cookie().path(REFRESH_TOKEN_COOKIE_NAME, "/"))
+                .andExpect(cookie().maxAge(REFRESH_TOKEN_COOKIE_NAME, 0))
+                .andExpect(header().string(
+                        HttpHeaders.SET_COOKIE,
+                        containsString("SameSite=Lax")
+                ));
+
+        then(accountCommandService).should().withdrawAccount(USER_ID);
+    }
+
+    @Test
+    void Access_Token이_없으면_회원_탈퇴를_요청할_수_없다() throws Exception {
+        // when & then
+        mockMvc.perform(delete("/accounts/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("C004"));
+
+        then(accountCommandService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void signup_scope로_회원_탈퇴를_요청할_수_없다() throws Exception {
+        // when & then
+        mockMvc.perform(delete("/accounts/me")
+                        .with(jwt()
+                                .jwt(jwt -> jwt.subject(USER_ID.toString()))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_signup"))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("C005"));
 
         then(accountCommandService).shouldHaveNoInteractions();
     }

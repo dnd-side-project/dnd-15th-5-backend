@@ -20,6 +20,7 @@ chapchap:
     kakao:
       client-id: local-kakao-client-id
       client-secret: local-kakao-client-secret
+      admin-key: local-kakao-admin-key
       redirect-uri: http://localhost:8080/oauth/kakao/callback
     client:
       web-redirect-uri: http://localhost:3000/oauth/callback

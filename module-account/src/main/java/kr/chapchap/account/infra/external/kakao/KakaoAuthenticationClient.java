@@ -5,6 +5,7 @@ import kr.chapchap.account.infra.config.KakaoOAuthProperties;
 import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.core.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
@@ -22,6 +23,9 @@ import java.net.URI;
 public class KakaoAuthenticationClient implements KakaoAuthenticationPort {
 
     private static final String AUTHORIZATION_CODE_GRANT = "authorization_code";
+    private static final String KAKAO_ADMIN_KEY_PREFIX = "KakaoAK ";
+    private static final String USER_ID_TARGET_TYPE = "user_id";
+    private static final int ALREADY_UNLINKED_ERROR_CODE = -101;
 
     private final RestClient kakaoRestClient;
     private final KakaoOAuthProperties properties;
@@ -46,6 +50,24 @@ public class KakaoAuthenticationClient implements KakaoAuthenticationPort {
     public String authenticate(String authorizationCode) {
         String accessToken = requestAccessToken(authorizationCode);
         return requestProviderUserId(accessToken);
+    }
+
+    @Override
+    public void unlink(String providerUserId) {
+        if (!StringUtils.hasText(providerUserId)) {
+            throw new IllegalArgumentException("카카오 사용자 식별값은 비어 있을 수 없습니다.");
+        }
+
+        try {
+            requestUnlink(providerUserId);
+        } catch (RestClientResponseException exception) {
+            if (isAlreadyUnlinked(exception)) {
+                return;
+            }
+            throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
+        } catch (RestClientException exception) {
+            throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
+        }
     }
 
     private String requestAccessToken(String authorizationCode) {
@@ -105,12 +127,42 @@ public class KakaoAuthenticationClient implements KakaoAuthenticationPort {
         }
     }
 
+    private void requestUnlink(String providerUserId) {
+        MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+        formData.add("target_id_type", USER_ID_TARGET_TYPE);
+        formData.add("target_id", providerUserId);
+
+        kakaoRestClient.post()
+                .uri(properties.unlinkUri())
+                .header(
+                        HttpHeaders.AUTHORIZATION,
+                        KAKAO_ADMIN_KEY_PREFIX + properties.adminKey()
+                )
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .body(formData)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
     private boolean isInvalidAuthorizationCode(RestClientResponseException exception) {
         try {
             KakaoOAuthErrorResponse response = exception.getResponseBodyAs(
                     KakaoOAuthErrorResponse.class
             );
             return response != null && response.isInvalidAuthorizationCode();
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    private boolean isAlreadyUnlinked(RestClientResponseException exception) {
+        try {
+            KakaoApiErrorResponse response = exception.getResponseBodyAs(
+                    KakaoApiErrorResponse.class
+            );
+            return response != null
+                    && response.code() != null
+                    && response.code() == ALREADY_UNLINKED_ERROR_CODE;
         } catch (RuntimeException ignored) {
             return false;
         }

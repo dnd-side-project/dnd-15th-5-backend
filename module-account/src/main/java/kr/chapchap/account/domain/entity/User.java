@@ -14,6 +14,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -67,6 +68,19 @@ public class User extends BaseTimeEntity {
         }
 
         this.status = UserStatus.ACTIVE;
+    }
+
+    public void withdraw(LocalDateTime withdrawnAt) {
+        LocalDateTime requiredWithdrawnAt = Objects.requireNonNull(
+                withdrawnAt,
+                "탈퇴 시각은 필수입니다."
+        );
+        if (!isActive()) {
+            throw new IllegalStateException("활성 상태에서만 탈퇴할 수 있습니다.");
+        }
+
+        this.status = UserStatus.WITHDRAWN;
+        this.withdrawnAt = requiredWithdrawnAt;
     }
 
     public void updateNickname(String nickname) {

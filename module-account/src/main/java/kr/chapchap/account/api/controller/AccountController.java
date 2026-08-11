@@ -6,9 +6,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import kr.chapchap.account.api.request.AccountUpdateRequest;
 import kr.chapchap.account.api.response.AccountResponse;
+import kr.chapchap.account.api.response.AuthenticationResponseHandler;
 import kr.chapchap.account.application.info.AccountInfo;
 import kr.chapchap.account.application.service.AccountCommandService;
 import kr.chapchap.account.application.service.AccountQueryService;
@@ -16,6 +18,7 @@ import kr.chapchap.core.web.auth.ChapChapUserId;
 import kr.chapchap.core.web.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -31,6 +34,7 @@ public class AccountController {
 
     private final AccountQueryService accountQueryService;
     private final AccountCommandService accountCommandService;
+    private final AuthenticationResponseHandler authenticationResponseHandler;
 
     @Operation(
             summary = "내 정보 조회",
@@ -106,5 +110,45 @@ public class AccountController {
     ) {
         AccountInfo info = accountCommandService.updateAccount(request.toCommand(userId));
         return ApiResponse.success(AccountResponse.from(info));
+    }
+
+    @Operation(
+            summary = "회원 탈퇴",
+            description = """
+                    계정을 탈퇴 상태로 변경하고 카카오 연결 및 인증 토큰을 정리합니다.
+                    WEB은 Refresh Token 쿠키가 만료되며, WEB과 APP은 성공 응답 후 보관 중인 Access Token을 삭제해야 합니다.
+                    APP은 로컬에 저장된 Refresh Token도 함께 삭제해야 합니다.
+                    """
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "회원 탈퇴 성공",
+                    useReturnTypeSchema = true
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 정보가 없거나 유효하지 않음 (C004, C006)",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "탈퇴할 수 없는 사용자 상태 또는 권한 (C005)",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "502",
+                    description = "카카오 연결 해제 실패 (C007)",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class))
+            )
+    })
+    @DeleteMapping("/me")
+    public ApiResponse<Void> withdrawMyAccount(
+            @ChapChapUserId Long userId,
+            HttpServletResponse response
+    ) {
+        accountCommandService.withdrawAccount(userId);
+        authenticationResponseHandler.clearRefreshTokenCookie(response);
+        return ApiResponse.ok();
     }
 }

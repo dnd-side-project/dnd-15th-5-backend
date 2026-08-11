@@ -2,6 +2,8 @@ package kr.chapchap.account.domain.entity;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -28,6 +30,32 @@ class UserTest {
         // then
         assertThat(user.isPendingTerms()).isFalse();
         assertThat(user.isActive()).isTrue();
+    }
+
+    @Test
+    void 활성_사용자가_탈퇴하면_상태와_탈퇴_시각을_기록한다() {
+        // given
+        User user = User.create("찹찹이");
+        user.completeTermsAgreement();
+        LocalDateTime withdrawnAt = LocalDateTime.of(2026, 8, 11, 12, 0);
+
+        // when
+        user.withdraw(withdrawnAt);
+
+        // then
+        assertThat(user.getStatus()).isEqualTo(UserStatus.WITHDRAWN);
+        assertThat(user.getWithdrawnAt()).isEqualTo(withdrawnAt);
+    }
+
+    @Test
+    void 활성_상태가_아닌_사용자는_탈퇴할_수_없다() {
+        // given
+        User user = User.create("찹찹이");
+
+        // when & then
+        assertThatThrownBy(() -> user.withdraw(LocalDateTime.now()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("활성 상태에서만 탈퇴할 수 있습니다.");
     }
 
     @Test

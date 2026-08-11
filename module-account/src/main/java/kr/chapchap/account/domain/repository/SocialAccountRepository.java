@@ -12,5 +12,10 @@ public interface SocialAccountRepository {
             String providerUserId
     );
 
+    Optional<SocialAccount> findByUserIdAndProvider(
+            Long userId,
+            SocialProvider provider
+    );
+
     SocialAccount save(SocialAccount socialAccount);
 }
