@@ -89,7 +89,7 @@ public class AccountController {
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "413",
-                    description = "프로필 이미지 크기 제한 초과 (C008)",
+                    description = "프로필 이미지 또는 서버 업로드 크기 제한 초과 (A007, C008)",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class))
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
