@@ -2,6 +2,11 @@ spring:
   application:
     name: chapchap-app-server
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   jpa:
     open-in-view: false
     hibernate:
@@ -36,6 +41,13 @@ management:
         enabled: true
 
 chapchap:
+  account:
+    profile-image:
+      bucket: chapchap-profile-images
+      read-url-expiration: 2m
+  aws:
+    s3:
+      region: ap-northeast-2
   auth:
     refresh-cookie:
       secure: true

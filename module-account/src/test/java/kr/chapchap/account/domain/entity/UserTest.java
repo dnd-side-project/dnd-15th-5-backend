@@ -48,13 +48,57 @@ class UserTest {
     }
 
     @Test
-    void 닉네임이_10자를_초과하면_사용자를_생성할_수_없다() {
+    void 닉네임이_2자_미만이거나_10자를_초과하면_사용자를_생성할_수_없다() {
         // given
         String nickname = "찹".repeat(11);
 
         // when & then
+        assertThatThrownBy(() -> User.create("찹"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("닉네임은 2자 이상이어야 합니다.");
         assertThatThrownBy(() -> User.create(nickname))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("닉네임은 10자를 초과할 수 없습니다.");
+    }
+
+    @Test
+    void 닉네임을_수정하면_앞뒤_공백을_제거한다() {
+        // given
+        User user = User.create("기존닉네임");
+
+        // when
+        user.updateNickname("  새닉네임  ");
+
+        // then
+        assertThat(user.getNickname()).isEqualTo("새닉네임");
+    }
+
+    @Test
+    void 닉네임은_빈_닉네임으로_수정할_수_없다() {
+        // given
+        User user = User.create("기존닉네임");
+
+        // when & then
+        assertThatThrownBy(() -> user.updateNickname(" "))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("닉네임은 비어 있을 수 없습니다.");
+    }
+
+    @Test
+    void 프로필_이미지_Key를_설정하고_삭제한다() {
+        // given
+        User user = User.create("찹찹이");
+
+        // when
+        user.updateProfileImageKey("profiles/1/profile-image");
+
+        // then
+        assertThat(user.getProfileImageKey()).isEqualTo("profiles/1/profile-image");
+
+        // when
+        user.deleteProfileImage();
+
+        // then
+        assertThat(user.getProfileImageKey()).isNull();
     }
 }

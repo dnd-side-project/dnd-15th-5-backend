@@ -12,6 +12,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.List;
 import java.util.Map;
@@ -111,6 +112,20 @@ class GlobalExceptionHandlerTest {
         // then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(response.getBody().code()).isEqualTo(ErrorCode.ACCESS_DENIED.getCode());
+    }
+
+    @Test
+    void 업로드_파일_크기_제한을_초과하면_400으로_응답한다() {
+        // given
+        MaxUploadSizeExceededException exception = new MaxUploadSizeExceededException(5L);
+
+        // when
+        ResponseEntity<ApiResponse<Void>> response =
+                handler.handleMaxUploadSizeExceededException(exception);
+
+        // then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().code()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getCode());
     }
 
     @Test

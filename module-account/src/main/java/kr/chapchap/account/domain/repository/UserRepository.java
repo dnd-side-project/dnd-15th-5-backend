@@ -8,5 +8,7 @@ public interface UserRepository {
 
     Optional<User> findById(Long id);
 
+    Optional<User> findByIdForUpdate(Long id);
+
     User save(User user);
 }

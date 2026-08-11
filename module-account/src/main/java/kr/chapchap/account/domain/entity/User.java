@@ -21,7 +21,9 @@ import java.time.LocalDateTime;
 @Table(name = "users")
 public class User extends BaseTimeEntity {
 
+    private static final int MIN_NICKNAME_LENGTH = 2;
     private static final int MAX_NICKNAME_LENGTH = 10;
+    private static final int MAX_PROFILE_IMAGE_KEY_LENGTH = 1024;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,8 +32,8 @@ public class User extends BaseTimeEntity {
     @Column(name = "nickname", nullable = false, length = MAX_NICKNAME_LENGTH)
     private String nickname;
 
-    @Column(name = "profile_image_url", length = 500)
-    private String profileImageUrl;
+    @Column(name = "profile_image_key", length = 1024)
+    private String profileImageKey;
 
     // TODO: 이메일 수집 미확정, 현재 소셜 제공자의 이메일 동의항목은 사용하지 않음
     @Column(name = "email", length = 320)
@@ -67,12 +69,34 @@ public class User extends BaseTimeEntity {
         this.status = UserStatus.ACTIVE;
     }
 
+    public void updateNickname(String nickname) {
+        this.nickname = validateNickname(nickname);
+    }
+
+    public void updateProfileImageKey(String profileImageKey) {
+        if (profileImageKey == null || profileImageKey.isBlank()) {
+            throw new IllegalArgumentException("프로필 이미지 Object Key는 비어 있을 수 없습니다.");
+        }
+        if (profileImageKey.length() > MAX_PROFILE_IMAGE_KEY_LENGTH) {
+            throw new IllegalArgumentException("프로필 이미지 Object Key는 1024자를 초과할 수 없습니다.");
+        }
+
+        this.profileImageKey = profileImageKey;
+    }
+
+    public void deleteProfileImage() {
+        this.profileImageKey = null;
+    }
+
     private static String validateNickname(String nickname) {
         if (nickname == null || nickname.isBlank()) {
             throw new IllegalArgumentException("닉네임은 비어 있을 수 없습니다.");
         }
 
         String trimmedNickname = nickname.trim();
+        if (trimmedNickname.length() < MIN_NICKNAME_LENGTH) {
+            throw new IllegalArgumentException("닉네임은 2자 이상이어야 합니다.");
+        }
         if (trimmedNickname.length() > MAX_NICKNAME_LENGTH) {
             throw new IllegalArgumentException("닉네임은 10자를 초과할 수 없습니다.");
         }
