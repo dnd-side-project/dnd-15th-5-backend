@@ -21,7 +21,9 @@ import java.time.LocalDateTime;
 @Table(name = "users")
 public class User extends BaseTimeEntity {
 
+    private static final int MIN_NICKNAME_LENGTH = 2;
     private static final int MAX_NICKNAME_LENGTH = 10;
+    private static final int MAX_PROFILE_IMAGE_KEY_LENGTH = 1024;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -67,12 +69,34 @@ public class User extends BaseTimeEntity {
         this.status = UserStatus.ACTIVE;
     }
 
+    public void updateNickname(String nickname) {
+        this.nickname = validateNickname(nickname);
+    }
+
+    public void updateProfileImageKey(String profileImageKey) {
+        if (profileImageKey == null || profileImageKey.isBlank()) {
+            throw new IllegalArgumentException("프로필 이미지 Object Key는 비어 있을 수 없습니다.");
+        }
+        if (profileImageKey.length() > MAX_PROFILE_IMAGE_KEY_LENGTH) {
+            throw new IllegalArgumentException("프로필 이미지 Object Key는 1024자를 초과할 수 없습니다.");
+        }
+
+        this.profileImageKey = profileImageKey;
+    }
+
+    public void deleteProfileImage() {
+        this.profileImageKey = null;
+    }
+
     private static String validateNickname(String nickname) {
         if (nickname == null || nickname.isBlank()) {
             throw new IllegalArgumentException("닉네임은 비어 있을 수 없습니다.");
         }
 
         String trimmedNickname = nickname.trim();
+        if (trimmedNickname.length() < MIN_NICKNAME_LENGTH) {
+            throw new IllegalArgumentException("닉네임은 2자 이상이어야 합니다.");
+        }
         if (trimmedNickname.length() > MAX_NICKNAME_LENGTH) {
             throw new IllegalArgumentException("닉네임은 10자를 초과할 수 없습니다.");
         }

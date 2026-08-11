@@ -15,6 +15,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -78,6 +79,15 @@ public class GlobalExceptionHandler {
         log.warn("파라미터 타입 변환 실패: {}", errors);
         return ResponseEntity.status(ErrorCode.INVALID_INPUT_VALUE.getStatus())
                 .body(ApiResponse.failWithData(ErrorCode.INVALID_INPUT_VALUE, errors));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceededException(
+            MaxUploadSizeExceededException e
+    ) {
+        log.warn("업로드 파일 크기 제한을 초과했습니다.");
+        return ResponseEntity.status(ErrorCode.INVALID_INPUT_VALUE.getStatus())
+                .body(ApiResponse.fail(ErrorCode.INVALID_INPUT_VALUE));
     }
 
     @ExceptionHandler(AuthenticationException.class)
