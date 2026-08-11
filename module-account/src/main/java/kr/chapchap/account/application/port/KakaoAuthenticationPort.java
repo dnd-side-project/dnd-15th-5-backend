@@ -7,4 +7,6 @@ public interface KakaoAuthenticationPort {
     URI createAuthorizationUri(String state);
 
     String authenticate(String authorizationCode);
+
+    void unlink(String providerUserId);
 }
