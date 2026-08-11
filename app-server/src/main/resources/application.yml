@@ -36,6 +36,10 @@ management:
         enabled: true
 
 chapchap:
+  account:
+    profile-image:
+      bucket: chapchap-profile-images
+      read-url-expiration: 2m
   aws:
     s3:
       region: ap-northeast-2
