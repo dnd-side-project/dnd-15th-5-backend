@@ -12,8 +12,9 @@ import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.entity.UserStatus;
 import kr.chapchap.account.domain.repository.SocialAccountRepository;
 import kr.chapchap.account.domain.repository.UserRepository;
+import kr.chapchap.account.exception.AccountErrorCode;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -165,7 +166,8 @@ class AccountCommandServiceTest {
         // when & then
         assertThatThrownBy(() -> accountCommandService.updateAccount(command))
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE)
+                        assertThat(exception.getErrorCode())
+                                .isEqualTo(AccountErrorCode.PROFILE_IMAGE_UPDATE_CONFLICT)
                 );
         then(userRepository).shouldHaveNoInteractions();
         then(profileImageStorage).shouldHaveNoInteractions();
@@ -185,7 +187,8 @@ class AccountCommandServiceTest {
         // when & then
         assertThatThrownBy(() -> accountCommandService.updateAccount(command))
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE)
+                        assertThat(exception.getErrorCode())
+                                .isEqualTo(AccountErrorCode.ACCOUNT_UPDATE_VALUE_REQUIRED)
                 );
         then(userRepository).shouldHaveNoInteractions();
         then(profileImageStorage).shouldHaveNoInteractions();
@@ -197,7 +200,7 @@ class AccountCommandServiceTest {
         // given
         byte[] invalidImage = new byte[]{1, 2, 3};
         given(profileImageValidator.validateAndGetContentType(invalidImage))
-                .willThrow(new BusinessException(ErrorCode.INVALID_INPUT_VALUE));
+                .willThrow(new BusinessException(AccountErrorCode.INVALID_PROFILE_IMAGE));
         AccountUpdateCommand command = new AccountUpdateCommand(
                 USER_ID,
                 null,
@@ -208,7 +211,8 @@ class AccountCommandServiceTest {
         // when & then
         assertThatThrownBy(() -> accountCommandService.updateAccount(command))
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE)
+                        assertThat(exception.getErrorCode())
+                                .isEqualTo(AccountErrorCode.INVALID_PROFILE_IMAGE)
                 );
         then(userRepository).shouldHaveNoInteractions();
         then(profileImageStorage).shouldHaveNoInteractions();
@@ -230,7 +234,7 @@ class AccountCommandServiceTest {
         assertThatThrownBy(() -> accountCommandService.updateAccount(command))
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
                         assertThat(exception.getErrorCode())
-                                .isEqualTo(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
+                                .isEqualTo(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
         );
         then(profileImageStorage).shouldHaveNoInteractions();
         then(eventPublisher).shouldHaveNoInteractions();
@@ -252,7 +256,7 @@ class AccountCommandServiceTest {
         // when & then
         assertThatThrownBy(() -> accountCommandService.updateAccount(command))
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ACCESS_DENIED)
+                        assertThat(exception.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED)
         );
         then(profileImageStorage).shouldHaveNoInteractions();
         then(eventPublisher).shouldHaveNoInteractions();
@@ -295,7 +299,7 @@ class AccountCommandServiceTest {
         assertThatThrownBy(() -> accountCommandService.withdrawAccount(USER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
                         assertThat(exception.getErrorCode())
-                                .isEqualTo(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
+                                .isEqualTo(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
                 );
         then(socialAccountRepository).shouldHaveNoInteractions();
         then(kakaoAuthenticationPort).shouldHaveNoInteractions();
@@ -312,7 +316,7 @@ class AccountCommandServiceTest {
         // when & then
         assertThatThrownBy(() -> accountCommandService.withdrawAccount(USER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ACCESS_DENIED)
+                        assertThat(exception.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED)
                 );
         then(socialAccountRepository).shouldHaveNoInteractions();
         then(kakaoAuthenticationPort).shouldHaveNoInteractions();
@@ -333,7 +337,7 @@ class AccountCommandServiceTest {
                 USER_ID,
                 SocialProvider.KAKAO
         )).willReturn(Optional.of(socialAccount));
-        willThrow(new BusinessException(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE))
+        willThrow(new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE))
                 .given(kakaoAuthenticationPort)
                 .unlink(KAKAO_PROVIDER_USER_ID);
 
@@ -341,7 +345,7 @@ class AccountCommandServiceTest {
         assertThatThrownBy(() -> accountCommandService.withdrawAccount(USER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
                         assertThat(exception.getErrorCode())
-                                .isEqualTo(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE)
+                                .isEqualTo(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE)
                 );
         assertThat(user.getStatus()).isEqualTo(UserStatus.ACTIVE);
         assertThat(user.getWithdrawnAt()).isNull();

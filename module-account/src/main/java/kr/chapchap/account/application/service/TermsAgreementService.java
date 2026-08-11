@@ -8,7 +8,7 @@ import kr.chapchap.account.domain.entity.UserTermsAgreement;
 import kr.chapchap.account.domain.repository.UserRepository;
 import kr.chapchap.account.domain.repository.UserTermsAgreementRepository;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,15 +30,15 @@ public class TermsAgreementService {
     @Transactional
     public AuthenticationInfo agree(TermsAgreementCommand command) {
         if (!command.serviceTermsAgreed() || !command.privacyPolicyAgreed()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT_VALUE);
         }
 
         User user = userRepository.findById(command.userId())
                 .orElseThrow(() -> new BusinessException(
-                        ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS
+                        CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS
                 ));
         if (!user.isPendingTerms()) {
-            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
         }
 
         LocalDateTime agreedAt = LocalDateTime.now();

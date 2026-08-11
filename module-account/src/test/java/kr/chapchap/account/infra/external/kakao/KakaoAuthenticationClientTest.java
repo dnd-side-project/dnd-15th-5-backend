@@ -2,7 +2,7 @@ package kr.chapchap.account.infra.external.kakao;
 
 import kr.chapchap.account.infra.config.KakaoOAuthProperties;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -147,7 +147,7 @@ class KakaoAuthenticationClientTest {
         assertThatThrownBy(() -> kakaoAuthenticationClient.authenticate("invalid-code"))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {
                     assertThat(exception.getErrorCode())
-                            .isEqualTo(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS);
+                            .isEqualTo(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS);
                     assertThat(exception.getCause()).isInstanceOf(RestClientResponseException.class);
                 });
         server.verify();
@@ -172,7 +172,7 @@ class KakaoAuthenticationClientTest {
         assertThatThrownBy(() -> kakaoAuthenticationClient.authenticate("authorization-code"))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {
                     assertThat(exception.getErrorCode())
-                            .isEqualTo(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
+                            .isEqualTo(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
                     assertThat(exception.getCause()).isInstanceOf(RestClientResponseException.class);
                 });
         server.verify();
@@ -233,7 +233,7 @@ class KakaoAuthenticationClientTest {
         assertThatThrownBy(() -> kakaoAuthenticationClient.unlink("123456789"))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {
                     assertThat(exception.getErrorCode())
-                            .isEqualTo(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
+                            .isEqualTo(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
                     assertThat(exception.getCause()).isInstanceOf(
                             RestClientResponseException.class
                     );

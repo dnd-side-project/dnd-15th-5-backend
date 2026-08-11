@@ -9,7 +9,7 @@ import kr.chapchap.account.application.port.OAuthClientRedirectPort;
 import kr.chapchap.account.application.port.OAuthSessionStore;
 import kr.chapchap.account.domain.entity.SocialProvider;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
@@ -141,7 +141,7 @@ class KakaoOAuthFlowServiceTest {
         given(oauthSessionStore.consumeState("state"))
                 .willReturn(Optional.of(authorizationSession));
         given(kakaoAuthenticationPort.authenticate("authorization-code"))
-                .willThrow(new BusinessException(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE));
+                .willThrow(new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE));
         given(oauthClientRedirectPort.createErrorRedirect(
                 OAuthClientType.WEB,
                 "oauth_failed"

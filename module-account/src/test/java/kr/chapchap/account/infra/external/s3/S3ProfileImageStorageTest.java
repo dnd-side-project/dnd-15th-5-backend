@@ -2,7 +2,7 @@ package kr.chapchap.account.infra.external.s3;
 
 import kr.chapchap.account.infra.config.ProfileImageStorageProperties;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -127,7 +127,7 @@ class S3ProfileImageStorageTest {
         assertThatThrownBy(() -> profileImageStorage.store(1L, new byte[]{1}, "image/png"))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {
                     assertThat(exception.getErrorCode())
-                            .isEqualTo(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
+                            .isEqualTo(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
                     assertThat(exception.getCause()).isSameAs(cause);
                 });
     }

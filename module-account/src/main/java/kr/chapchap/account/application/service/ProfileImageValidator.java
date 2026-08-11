@@ -1,7 +1,7 @@
 package kr.chapchap.account.application.service;
 
+import kr.chapchap.account.exception.AccountErrorCode;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
 import org.springframework.stereotype.Component;
 
 import javax.imageio.ImageIO;
@@ -21,20 +21,23 @@ public class ProfileImageValidator {
     private static final String PNG_CONTENT_TYPE = "image/png";
 
     public String validateAndGetContentType(byte[] content) {
-        if (content == null || content.length == 0 || content.length > MAX_PROFILE_IMAGE_SIZE) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        if (content == null || content.length == 0) {
+            throw new BusinessException(AccountErrorCode.INVALID_PROFILE_IMAGE);
+        }
+        if (content.length > MAX_PROFILE_IMAGE_SIZE) {
+            throw new BusinessException(AccountErrorCode.PROFILE_IMAGE_SIZE_EXCEEDED);
         }
 
         try (ImageInputStream inputStream = ImageIO.createImageInputStream(
                 new ByteArrayInputStream(content)
         )) {
             if (inputStream == null) {
-                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+                throw new BusinessException(AccountErrorCode.INVALID_PROFILE_IMAGE);
             }
 
             Iterator<ImageReader> readers = ImageIO.getImageReaders(inputStream);
             if (!readers.hasNext()) {
-                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+                throw new BusinessException(AccountErrorCode.INVALID_PROFILE_IMAGE);
             }
 
             ImageReader reader = readers.next();
@@ -47,7 +50,7 @@ public class ProfileImageValidator {
                         || height <= 0
                         || width > MAX_PROFILE_IMAGE_DIMENSION
                         || height > MAX_PROFILE_IMAGE_DIMENSION) {
-                    throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+                    throw new BusinessException(AccountErrorCode.PROFILE_IMAGE_DIMENSION_EXCEEDED);
                 }
                 reader.read(0);
                 return contentType;
@@ -57,7 +60,7 @@ public class ProfileImageValidator {
         } catch (BusinessException exception) {
             throw exception;
         } catch (IOException | RuntimeException exception) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, exception);
+            throw new BusinessException(AccountErrorCode.INVALID_PROFILE_IMAGE, exception);
         }
     }
 
@@ -65,7 +68,7 @@ public class ProfileImageValidator {
         return switch (formatName.toLowerCase(Locale.ROOT)) {
             case "jpeg", "jpg" -> JPEG_CONTENT_TYPE;
             case "png" -> PNG_CONTENT_TYPE;
-            default -> throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            default -> throw new BusinessException(AccountErrorCode.UNSUPPORTED_PROFILE_IMAGE_FORMAT);
         };
     }
 }

@@ -7,7 +7,7 @@ import kr.chapchap.account.domain.repository.SocialAccountRepository;
 import kr.chapchap.account.domain.repository.UserRepository;
 import kr.chapchap.account.domain.service.NicknameGenerator;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,14 +68,14 @@ public class SocialLoginService {
     private User findUser(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(
-                        ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS
+                        CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS
                 ));
     }
 
     private Long toUserId(User user) {
         return switch (user.getStatus()) {
             case PENDING_TERMS, ACTIVE -> user.getId();
-            case SUSPENDED, WITHDRAWN -> throw new BusinessException(ErrorCode.ACCESS_DENIED);
+            case SUSPENDED, WITHDRAWN -> throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
         };
     }
 

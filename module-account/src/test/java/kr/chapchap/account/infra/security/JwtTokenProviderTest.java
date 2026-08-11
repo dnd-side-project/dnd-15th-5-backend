@@ -6,7 +6,7 @@ import kr.chapchap.account.application.info.TokenPair;
 import kr.chapchap.account.infra.config.JwtConfig;
 import kr.chapchap.account.infra.config.JwtProperties;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
@@ -122,7 +122,7 @@ class JwtTokenProviderTest {
                 tokenPair.accessToken()
         )).isInstanceOfSatisfying(BusinessException.class, exception ->
                 assertThat(exception.getErrorCode())
-                        .isEqualTo(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
+                        .isEqualTo(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
         );
     }
 
@@ -150,7 +150,7 @@ class JwtTokenProviderTest {
                 tokenPair.refreshToken()
         )).isInstanceOfSatisfying(BusinessException.class, exception ->
                 assertThat(exception.getErrorCode())
-                        .isEqualTo(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
+                        .isEqualTo(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
         );
     }
 }

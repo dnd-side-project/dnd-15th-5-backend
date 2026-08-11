@@ -1,5 +1,7 @@
 package kr.chapchap.account.domain.entity;
 
+import kr.chapchap.account.exception.AccountErrorCode;
+import kr.chapchap.core.exception.BusinessException;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
@@ -33,6 +35,20 @@ class UserTest {
     }
 
     @Test
+    void 약관_동의_대기_상태가_아니면_가입을_완료할_수_없다() {
+        // given
+        User user = User.create("찹찹이");
+        user.completeTermsAgreement();
+
+        // when & then
+        assertThatThrownBy(user::completeTermsAgreement)
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode())
+                                .isEqualTo(AccountErrorCode.TERMS_AGREEMENT_NOT_ALLOWED)
+                );
+    }
+
+    @Test
     void 활성_사용자가_탈퇴하면_상태와_탈퇴_시각을_기록한다() {
         // given
         User user = User.create("찹찹이");
@@ -54,8 +70,10 @@ class UserTest {
 
         // when & then
         assertThatThrownBy(() -> user.withdraw(LocalDateTime.now()))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("활성 상태에서만 탈퇴할 수 있습니다.");
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode())
+                                .isEqualTo(AccountErrorCode.ACCOUNT_WITHDRAWAL_NOT_ALLOWED)
+                );
     }
 
     @Test
@@ -71,8 +89,10 @@ class UserTest {
     void 닉네임이_비어_있으면_사용자를_생성할_수_없다() {
         // when & then
         assertThatThrownBy(() -> User.create(" "))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("닉네임은 비어 있을 수 없습니다.");
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode())
+                                .isEqualTo(AccountErrorCode.NICKNAME_REQUIRED)
+                );
     }
 
     @Test
@@ -82,11 +102,15 @@ class UserTest {
 
         // when & then
         assertThatThrownBy(() -> User.create("찹"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("닉네임은 2자 이상이어야 합니다.");
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode())
+                                .isEqualTo(AccountErrorCode.NICKNAME_TOO_SHORT)
+                );
         assertThatThrownBy(() -> User.create(nickname))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("닉네임은 10자를 초과할 수 없습니다.");
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode())
+                                .isEqualTo(AccountErrorCode.NICKNAME_TOO_LONG)
+                );
     }
 
     @Test
@@ -108,8 +132,10 @@ class UserTest {
 
         // when & then
         assertThatThrownBy(() -> user.updateNickname(" "))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("닉네임은 비어 있을 수 없습니다.");
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode())
+                                .isEqualTo(AccountErrorCode.NICKNAME_REQUIRED)
+                );
     }
 
     @Test

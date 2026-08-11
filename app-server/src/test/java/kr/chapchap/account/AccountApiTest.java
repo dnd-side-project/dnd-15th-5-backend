@@ -6,9 +6,11 @@ import kr.chapchap.account.application.command.AccountUpdateCommand;
 import kr.chapchap.account.application.info.AccountInfo;
 import kr.chapchap.account.application.service.AccountCommandService;
 import kr.chapchap.account.application.service.AccountQueryService;
+import kr.chapchap.account.exception.AccountErrorCode;
 import kr.chapchap.config.CorsConfig;
 import kr.chapchap.config.SecurityConfig;
 import kr.chapchap.config.WebMvcConfig;
+import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.core.web.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -199,6 +201,22 @@ class AccountApiTest {
                 .andExpect(jsonPath("$.code").value("C001"));
 
         then(accountCommandService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 수정할_값이_없으면_계정_도메인_오류를_반환한다() throws Exception {
+        // given
+        given(accountCommandService.updateAccount(any(AccountUpdateCommand.class)))
+                .willThrow(new BusinessException(AccountErrorCode.ACCOUNT_UPDATE_VALUE_REQUIRED));
+
+        // when & then
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/accounts/me")
+                        .with(jwt()
+                                .jwt(jwt -> jwt.subject(USER_ID.toString()))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_user"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("A004"))
+                .andExpect(jsonPath("$.message").value("수정할 값을 하나 이상 입력해야 합니다."));
     }
 
     @Test
