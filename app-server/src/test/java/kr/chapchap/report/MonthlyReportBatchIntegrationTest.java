@@ -19,7 +19,7 @@ import java.time.YearMonth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-// 배치가 consumptions 원본 데이터를 집계해 report* 테이블을 채우고,
+// consumptions 원본 데이터를 집계해 report* 테이블을 채우고,
 // 이미 구현되어 있던 조회 API(MonthlyReportQueryService)가 그 결과를 정확히 읽어오는지 엔드투엔드로 검증한다.
 @ActiveProfiles("test")
 @Import(TestcontainersConfiguration.class)
