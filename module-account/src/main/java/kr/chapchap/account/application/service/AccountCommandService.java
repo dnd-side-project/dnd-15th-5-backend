@@ -3,8 +3,13 @@ package kr.chapchap.account.application.service;
 import kr.chapchap.account.application.command.AccountUpdateCommand;
 import kr.chapchap.account.application.event.ProfileImageCleanupEvent;
 import kr.chapchap.account.application.info.AccountInfo;
+import kr.chapchap.account.application.port.KakaoAuthenticationPort;
 import kr.chapchap.account.application.port.ProfileImageStorage;
+import kr.chapchap.account.application.port.RefreshTokenStore;
+import kr.chapchap.account.domain.entity.SocialAccount;
+import kr.chapchap.account.domain.entity.SocialProvider;
 import kr.chapchap.account.domain.entity.User;
+import kr.chapchap.account.domain.repository.SocialAccountRepository;
 import kr.chapchap.account.domain.repository.UserRepository;
 import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.core.exception.ErrorCode;
@@ -12,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @RequiredArgsConstructor
 @Service
@@ -21,6 +28,9 @@ public class AccountCommandService {
     private final ProfileImageStorage profileImageStorage;
     private final ProfileImageValidator profileImageValidator;
     private final ApplicationEventPublisher eventPublisher;
+    private final SocialAccountRepository socialAccountRepository;
+    private final KakaoAuthenticationPort kakaoAuthenticationPort;
+    private final RefreshTokenStore refreshTokenStore;
 
     @Transactional
     public AccountInfo updateAccount(AccountUpdateCommand command) {
@@ -37,6 +47,23 @@ public class AccountCommandService {
                 ? null
                 : profileImageStorage.createReadUrl(user.getProfileImageKey());
         return AccountInfo.from(user, profileImageUrl);
+    }
+
+    @Transactional
+    public void withdrawAccount(Long userId) {
+        User user = getActiveUser(userId);
+
+        SocialAccount kakaoAccount = socialAccountRepository.findByUserIdAndProvider(
+                        userId,
+                        SocialProvider.KAKAO
+                )
+                .orElseThrow(() -> new BusinessException(
+                        ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS
+                ));
+
+        kakaoAuthenticationPort.unlink(kakaoAccount.getProviderUserId());
+        refreshTokenStore.revokeAll(userId);
+        user.withdraw(LocalDateTime.now());
     }
 
     private void validateCommand(AccountUpdateCommand command) {

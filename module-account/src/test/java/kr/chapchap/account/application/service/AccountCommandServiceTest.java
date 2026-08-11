@@ -3,8 +3,14 @@ package kr.chapchap.account.application.service;
 import kr.chapchap.account.application.command.AccountUpdateCommand;
 import kr.chapchap.account.application.event.ProfileImageCleanupEvent;
 import kr.chapchap.account.application.info.AccountInfo;
+import kr.chapchap.account.application.port.KakaoAuthenticationPort;
 import kr.chapchap.account.application.port.ProfileImageStorage;
+import kr.chapchap.account.application.port.RefreshTokenStore;
+import kr.chapchap.account.domain.entity.SocialAccount;
+import kr.chapchap.account.domain.entity.SocialProvider;
 import kr.chapchap.account.domain.entity.User;
+import kr.chapchap.account.domain.entity.UserStatus;
+import kr.chapchap.account.domain.repository.SocialAccountRepository;
 import kr.chapchap.account.domain.repository.UserRepository;
 import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.core.exception.ErrorCode;
@@ -23,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 
 @ExtendWith(MockitoExtension.class)
 class AccountCommandServiceTest {
@@ -33,6 +40,7 @@ class AccountCommandServiceTest {
     private static final String PROFILE_IMAGE_KEY = "profiles/1/new-image-key";
     private static final String PREVIOUS_PROFILE_IMAGE_KEY = "profiles/1/previous-image-key";
     private static final String PROFILE_IMAGE_URL = "https://example.com/profile.png";
+    private static final String KAKAO_PROVIDER_USER_ID = "123456789";
     private static final byte[] PNG_IMAGE = Base64.getDecoder().decode(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
     );
@@ -48,6 +56,15 @@ class AccountCommandServiceTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private SocialAccountRepository socialAccountRepository;
+
+    @Mock
+    private KakaoAuthenticationPort kakaoAuthenticationPort;
+
+    @Mock
+    private RefreshTokenStore refreshTokenStore;
 
     @InjectMocks
     private AccountCommandService accountCommandService;
@@ -239,6 +256,96 @@ class AccountCommandServiceTest {
         );
         then(profileImageStorage).shouldHaveNoInteractions();
         then(eventPublisher).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 활성_사용자를_탈퇴시키고_카카오_연결과_Refresh_Token을_정리한다() {
+        // given
+        User user = createActiveUser(PREVIOUS_PROFILE_IMAGE_KEY);
+        SocialAccount socialAccount = SocialAccount.create(
+                USER_ID,
+                SocialProvider.KAKAO,
+                KAKAO_PROVIDER_USER_ID
+        );
+        given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
+        given(socialAccountRepository.findByUserIdAndProvider(
+                USER_ID,
+                SocialProvider.KAKAO
+        )).willReturn(Optional.of(socialAccount));
+
+        // when
+        accountCommandService.withdrawAccount(USER_ID);
+
+        // then
+        assertThat(user.getStatus()).isEqualTo(UserStatus.WITHDRAWN);
+        assertThat(user.getWithdrawnAt()).isNotNull();
+        assertThat(user.getProfileImageKey()).isEqualTo(PREVIOUS_PROFILE_IMAGE_KEY);
+        then(kakaoAuthenticationPort).should().unlink(KAKAO_PROVIDER_USER_ID);
+        then(refreshTokenStore).should().revokeAll(USER_ID);
+        then(profileImageStorage).shouldHaveNoInteractions();
+        then(eventPublisher).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 인증_정보에_해당하는_사용자가_없으면_탈퇴할_수_없다() {
+        // given
+        given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> accountCommandService.withdrawAccount(USER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode())
+                                .isEqualTo(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
+                );
+        then(socialAccountRepository).shouldHaveNoInteractions();
+        then(kakaoAuthenticationPort).shouldHaveNoInteractions();
+        then(refreshTokenStore).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 활성_상태가_아닌_사용자는_탈퇴할_수_없다() {
+        // given
+        User user = User.create(NICKNAME);
+        ReflectionTestUtils.setField(user, "id", USER_ID);
+        given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
+
+        // when & then
+        assertThatThrownBy(() -> accountCommandService.withdrawAccount(USER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ACCESS_DENIED)
+                );
+        then(socialAccountRepository).shouldHaveNoInteractions();
+        then(kakaoAuthenticationPort).shouldHaveNoInteractions();
+        then(refreshTokenStore).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 카카오_연결_해제에_실패하면_탈퇴와_토큰_정리를_진행하지_않는다() {
+        // given
+        User user = createActiveUser(null);
+        SocialAccount socialAccount = SocialAccount.create(
+                USER_ID,
+                SocialProvider.KAKAO,
+                KAKAO_PROVIDER_USER_ID
+        );
+        given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
+        given(socialAccountRepository.findByUserIdAndProvider(
+                USER_ID,
+                SocialProvider.KAKAO
+        )).willReturn(Optional.of(socialAccount));
+        willThrow(new BusinessException(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE))
+                .given(kakaoAuthenticationPort)
+                .unlink(KAKAO_PROVIDER_USER_ID);
+
+        // when & then
+        assertThatThrownBy(() -> accountCommandService.withdrawAccount(USER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode())
+                                .isEqualTo(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE)
+                );
+        assertThat(user.getStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(user.getWithdrawnAt()).isNull();
+        then(refreshTokenStore).shouldHaveNoInteractions();
     }
 
     private User createActiveUser(String profileImageKey) {
