@@ -8,6 +8,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import kr.chapchap.account.exception.AccountErrorCode;
+import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.core.persistence.BaseTimeEntity;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -64,7 +66,7 @@ public class User extends BaseTimeEntity {
 
     public void completeTermsAgreement() {
         if (!isPendingTerms()) {
-            throw new IllegalStateException("약관 동의 대기 상태에서만 가입을 완료할 수 있습니다.");
+            throw new BusinessException(AccountErrorCode.TERMS_AGREEMENT_NOT_ALLOWED);
         }
 
         this.status = UserStatus.ACTIVE;
@@ -76,7 +78,7 @@ public class User extends BaseTimeEntity {
                 "탈퇴 시각은 필수입니다."
         );
         if (!isActive()) {
-            throw new IllegalStateException("활성 상태에서만 탈퇴할 수 있습니다.");
+            throw new BusinessException(AccountErrorCode.ACCOUNT_WITHDRAWAL_NOT_ALLOWED);
         }
 
         this.status = UserStatus.WITHDRAWN;
@@ -104,15 +106,15 @@ public class User extends BaseTimeEntity {
 
     private static String validateNickname(String nickname) {
         if (nickname == null || nickname.isBlank()) {
-            throw new IllegalArgumentException("닉네임은 비어 있을 수 없습니다.");
+            throw new BusinessException(AccountErrorCode.NICKNAME_REQUIRED);
         }
 
         String trimmedNickname = nickname.trim();
         if (trimmedNickname.length() < MIN_NICKNAME_LENGTH) {
-            throw new IllegalArgumentException("닉네임은 2자 이상이어야 합니다.");
+            throw new BusinessException(AccountErrorCode.NICKNAME_TOO_SHORT);
         }
         if (trimmedNickname.length() > MAX_NICKNAME_LENGTH) {
-            throw new IllegalArgumentException("닉네임은 10자를 초과할 수 없습니다.");
+            throw new BusinessException(AccountErrorCode.NICKNAME_TOO_LONG);
         }
 
         return trimmedNickname;

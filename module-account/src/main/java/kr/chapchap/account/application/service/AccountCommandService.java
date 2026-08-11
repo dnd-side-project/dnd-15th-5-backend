@@ -11,8 +11,9 @@ import kr.chapchap.account.domain.entity.SocialProvider;
 import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.repository.SocialAccountRepository;
 import kr.chapchap.account.domain.repository.UserRepository;
+import kr.chapchap.account.exception.AccountErrorCode;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -58,7 +59,7 @@ public class AccountCommandService {
                         SocialProvider.KAKAO
                 )
                 .orElseThrow(() -> new BusinessException(
-                        ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS
+                        CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS
                 ));
 
         kakaoAuthenticationPort.unlink(kakaoAccount.getProviderUserId());
@@ -70,20 +71,20 @@ public class AccountCommandService {
         if (command.nickname() == null
                 && !command.hasProfileImage()
                 && !command.deleteProfileImage()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(AccountErrorCode.ACCOUNT_UPDATE_VALUE_REQUIRED);
         }
         if (command.hasProfileImage() && command.deleteProfileImage()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(AccountErrorCode.PROFILE_IMAGE_UPDATE_CONFLICT);
         }
     }
 
     private User getActiveUser(Long userId) {
         User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new BusinessException(
-                        ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS
+                        CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS
                 ));
         if (!user.isActive()) {
-            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
         }
         return user;
     }
@@ -93,11 +94,7 @@ public class AccountCommandService {
             return;
         }
 
-        try {
-            user.updateNickname(nickname);
-        } catch (IllegalArgumentException exception) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, exception);
-        }
+        user.updateNickname(nickname);
     }
 
     private void updateProfileImage(

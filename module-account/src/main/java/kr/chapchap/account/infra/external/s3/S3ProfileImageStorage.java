@@ -3,7 +3,7 @@ package kr.chapchap.account.infra.external.s3;
 import kr.chapchap.account.application.port.ProfileImageStorage;
 import kr.chapchap.account.infra.config.ProfileImageStorageProperties;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -46,7 +46,7 @@ public class S3ProfileImageStorage implements ProfileImageStorage {
                     .url()
                     .toString();
         } catch (SdkException exception) {
-            throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
+            throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
         }
     }
 
@@ -77,7 +77,7 @@ public class S3ProfileImageStorage implements ProfileImageStorage {
             s3Client.putObject(putObjectRequest, RequestBody.fromBytes(content));
             return objectKey;
         } catch (SdkException exception) {
-            throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
+            throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
         }
     }
 
@@ -93,7 +93,7 @@ public class S3ProfileImageStorage implements ProfileImageStorage {
         try {
             s3Client.deleteObject(deleteObjectRequest);
         } catch (SdkException exception) {
-            throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
+            throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
         }
     }
 

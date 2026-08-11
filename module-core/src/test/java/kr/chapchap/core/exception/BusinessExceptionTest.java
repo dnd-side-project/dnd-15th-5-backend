@@ -9,11 +9,11 @@ class BusinessExceptionTest {
     @Test
     void ErrorCode만으로_생성하면_메시지는_ErrorCode의_기본_메시지를_따르고_data는_null이다() {
         // when
-        BusinessException exception = new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        BusinessException exception = new BusinessException(CommonErrorCode.INVALID_INPUT_VALUE);
 
         // then
-        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE);
-        assertThat(exception.getMessage()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getMessage());
+        assertThat(exception.getErrorCode()).isEqualTo(CommonErrorCode.INVALID_INPUT_VALUE);
+        assertThat(exception.getMessage()).isEqualTo(CommonErrorCode.INVALID_INPUT_VALUE.getMessage());
         assertThat(exception.getData()).isNull();
     }
 
@@ -23,10 +23,10 @@ class BusinessExceptionTest {
         Object data = "invalid-field";
 
         // when
-        BusinessException exception = new BusinessException(ErrorCode.INVALID_INPUT_VALUE, data);
+        BusinessException exception = new BusinessException(CommonErrorCode.INVALID_INPUT_VALUE, data);
 
         // then
-        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE);
+        assertThat(exception.getErrorCode()).isEqualTo(CommonErrorCode.INVALID_INPUT_VALUE);
         assertThat(exception.getData()).isEqualTo(data);
     }
 
@@ -37,7 +37,7 @@ class BusinessExceptionTest {
 
         // when
         BusinessException exception = new BusinessException(
-                ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE,
+                CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE,
                 cause
         );
 

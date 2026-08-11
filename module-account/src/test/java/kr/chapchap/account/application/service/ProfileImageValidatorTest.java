@@ -1,7 +1,7 @@
 package kr.chapchap.account.application.service;
 
+import kr.chapchap.account.exception.AccountErrorCode;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
 import org.junit.jupiter.api.Test;
 
 import javax.imageio.ImageIO;
@@ -49,8 +49,8 @@ class ProfileImageValidatorTest {
         byte[] oversizedImage = new byte[MAX_PROFILE_IMAGE_SIZE + 1];
 
         // when & then
-        assertInvalidImage(new byte[0]);
-        assertInvalidImage(oversizedImage);
+        assertImageError(new byte[0], AccountErrorCode.INVALID_PROFILE_IMAGE);
+        assertImageError(oversizedImage, AccountErrorCode.PROFILE_IMAGE_SIZE_EXCEEDED);
     }
 
     @Test
@@ -61,7 +61,7 @@ class ProfileImageValidatorTest {
         };
 
         // when & then
-        assertInvalidImage(corruptedImage);
+        assertImageError(corruptedImage, AccountErrorCode.INVALID_PROFILE_IMAGE);
     }
 
     @Test
@@ -70,7 +70,7 @@ class ProfileImageValidatorTest {
         byte[] gifImage = createImage("gif", 1, 1);
 
         // when & then
-        assertInvalidImage(gifImage);
+        assertImageError(gifImage, AccountErrorCode.UNSUPPORTED_PROFILE_IMAGE_FORMAT);
     }
 
     @Test
@@ -79,13 +79,16 @@ class ProfileImageValidatorTest {
         byte[] oversizedImage = createImage("png", 4097, 1);
 
         // when & then
-        assertInvalidImage(oversizedImage);
+        assertImageError(oversizedImage, AccountErrorCode.PROFILE_IMAGE_DIMENSION_EXCEEDED);
     }
 
-    private void assertInvalidImage(byte[] content) {
+    private void assertImageError(
+            byte[] content,
+            AccountErrorCode expectedErrorCode
+    ) {
         assertThatThrownBy(() -> profileImageValidator.validateAndGetContentType(content))
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE)
+                        assertThat(exception.getErrorCode()).isEqualTo(expectedErrorCode)
                 );
     }
 

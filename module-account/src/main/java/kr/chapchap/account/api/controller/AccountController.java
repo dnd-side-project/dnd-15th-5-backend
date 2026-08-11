@@ -84,7 +84,12 @@ public class AccountController {
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
-                    description = "수정할 값이 없거나 요청 값이 유효하지 않음 (C001)",
+                    description = "요청 또는 계정 수정 값이 유효하지 않음 (C001, A004~A006, A008, A009)",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "413",
+                    description = "프로필 이미지 크기 제한 초과 (C008)",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class))
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(

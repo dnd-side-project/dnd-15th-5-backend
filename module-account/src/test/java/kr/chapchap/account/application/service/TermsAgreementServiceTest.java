@@ -10,7 +10,7 @@ import kr.chapchap.account.domain.entity.UserTermsAgreement;
 import kr.chapchap.account.domain.repository.UserRepository;
 import kr.chapchap.account.domain.repository.UserTermsAgreementRepository;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -111,7 +111,7 @@ class TermsAgreementServiceTest {
         // when & then
         assertThatThrownBy(() -> termsAgreementService.agree(command))
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE)
+                        assertThat(exception.getErrorCode()).isEqualTo(CommonErrorCode.INVALID_INPUT_VALUE)
                 );
         then(userRepository).shouldHaveNoInteractions();
         then(userTermsAgreementRepository).shouldHaveNoInteractions();
@@ -135,7 +135,7 @@ class TermsAgreementServiceTest {
         // when & then
         assertThatThrownBy(() -> termsAgreementService.agree(command))
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ACCESS_DENIED)
+                        assertThat(exception.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED)
                 );
         then(userTermsAgreementRepository).shouldHaveNoInteractions();
         then(loginTokenService).shouldHaveNoInteractions();

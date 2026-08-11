@@ -5,7 +5,7 @@ import kr.chapchap.account.application.port.ProfileImageStorage;
 import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.repository.UserRepository;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,10 +20,10 @@ public class AccountQueryService {
 
     public AccountInfo getAccount(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS));
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS));
 
         if (!user.isActive()) {
-            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
         }
 
         String profileImageUrl = user.getProfileImageKey() == null

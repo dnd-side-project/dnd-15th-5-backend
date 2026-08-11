@@ -9,7 +9,7 @@ import kr.chapchap.account.application.port.TokenProvider;
 import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.repository.UserRepository;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
@@ -162,7 +162,7 @@ class LoginTokenServiceTest {
                 OAuthClientType.APP
         )).isInstanceOfSatisfying(BusinessException.class, exception ->
                 assertThat(exception.getErrorCode())
-                        .isEqualTo(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
+                        .isEqualTo(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
         );
         then(refreshTokenStore).should().consume(USER_ID, OLD_REFRESH_TOKEN_ID);
         then(userRepository).shouldHaveNoInteractions();
@@ -187,7 +187,7 @@ class LoginTokenServiceTest {
                 OAuthClientType.WEB
         )).isInstanceOfSatisfying(BusinessException.class, exception ->
                 assertThat(exception.getErrorCode())
-                        .isEqualTo(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
+                        .isEqualTo(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
         );
         then(refreshTokenStore).shouldHaveNoInteractions();
         then(userRepository).shouldHaveNoInteractions();
@@ -254,7 +254,7 @@ class LoginTokenServiceTest {
                 OAuthClientType.WEB
         )).isInstanceOfSatisfying(BusinessException.class, exception ->
                 assertThat(exception.getErrorCode())
-                        .isEqualTo(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
+                        .isEqualTo(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
         );
         then(refreshTokenStore).shouldHaveNoInteractions();
         then(userRepository).shouldHaveNoInteractions();

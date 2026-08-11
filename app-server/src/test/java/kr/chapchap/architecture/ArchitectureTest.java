@@ -11,8 +11,10 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
@@ -32,12 +34,14 @@ class ArchitectureTest {
             .map(packageName -> packageName + "..")
             .toArray(String[]::new);
 
-    private static final String[] DOMAIN_LAYER_PACKAGE_PATTERNS = {
-            "..api..",
-            "..application..",
-            "..domain..",
-            "..infra.."
-    };
+    private static final String[] DOMAIN_EXCEPTION_PACKAGE_PATTERNS = DOMAIN_MODULE_PACKAGES.stream()
+            .map(packageName -> packageName + ".exception..")
+            .toArray(String[]::new);
+
+    private static final String[] DOMAIN_LAYER_PACKAGE_PATTERNS = Stream.concat(
+            Stream.of("..api..", "..application..", "..domain..", "..infra.."),
+            Arrays.stream(DOMAIN_EXCEPTION_PACKAGE_PATTERNS)
+    ).toArray(String[]::new);
 
     private static final JavaClasses DOMAIN_MODULE_CLASSES = new ClassFileImporter()
             .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
@@ -48,11 +52,11 @@ class ArchitectureTest {
             .importPackages("kr.chapchap");
 
     @Test
-    void 도메인_모듈의_클래스는_API_Application_Domain_Infra_계층_중_하나에_위치해야_한다() {
+    void 도메인_모듈의_클래스는_허용된_계층에_위치해야_한다() {
         // given
         ArchRule rule = classes()
                 .should().resideInAnyPackage(DOMAIN_LAYER_PACKAGE_PATTERNS)
-                .as("도메인 모듈의 클래스는 API, Application, Domain, Infra 계층 중 하나에 위치해야 한다");
+                .as("도메인 모듈의 클래스는 API, Application, Domain, Infra, Exception 계층 중 하나에 위치해야 한다");
 
         // when & then
         rule.check(DOMAIN_MODULE_CLASSES);
@@ -67,11 +71,13 @@ class ArchitectureTest {
                 .optionalLayer("Application").definedBy("..application..")
                 .optionalLayer("Domain").definedBy("..domain..")
                 .optionalLayer("Infra").definedBy("..infra..")
+                .optionalLayer("Exception").definedBy(DOMAIN_EXCEPTION_PACKAGE_PATTERNS)
                 .whereLayer("API").mayNotBeAccessedByAnyLayer()
                 .whereLayer("Application").mayOnlyBeAccessedByLayers("API", "Infra")
                 .whereLayer("Domain").mayOnlyBeAccessedByLayers("Application", "Infra")
                 .whereLayer("Infra").mayNotBeAccessedByAnyLayer()
-                .as("API는 Application, Application은 Domain, Infra는 Application과 Domain만 참조해야 한다");
+                .whereLayer("Exception").mayOnlyBeAccessedByLayers("API", "Application", "Domain", "Infra")
+                .as("API는 Application, Application은 Domain, Infra는 Application과 Domain을 참조하고 Exception은 모든 계층에서 공유할 수 있다");
 
         // when & then
         rule.check(DOMAIN_MODULE_CLASSES);

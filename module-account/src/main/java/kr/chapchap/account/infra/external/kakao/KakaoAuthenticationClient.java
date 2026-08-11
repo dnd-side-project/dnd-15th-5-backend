@@ -3,7 +3,7 @@ package kr.chapchap.account.infra.external.kakao;
 import kr.chapchap.account.application.port.KakaoAuthenticationPort;
 import kr.chapchap.account.infra.config.KakaoOAuthProperties;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -64,9 +64,9 @@ public class KakaoAuthenticationClient implements KakaoAuthenticationPort {
             if (isAlreadyUnlinked(exception)) {
                 return;
             }
-            throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
+            throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
         } catch (RestClientException exception) {
-            throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
+            throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
         }
     }
 
@@ -76,14 +76,14 @@ public class KakaoAuthenticationClient implements KakaoAuthenticationPort {
         } catch (RestClientResponseException exception) {
             if (isInvalidAuthorizationCode(exception)) {
                 throw new BusinessException(
-                        ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS,
+                        CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS,
                         exception
                 );
             }
 
-            throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
+            throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
         } catch (RestClientException exception) {
-            throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
+            throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
         }
     }
 
@@ -103,7 +103,7 @@ public class KakaoAuthenticationClient implements KakaoAuthenticationPort {
                 .body(KakaoTokenResponse.class);
 
         if (response == null || !StringUtils.hasText(response.accessToken())) {
-            throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
+            throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
         }
 
         return response.accessToken();
@@ -118,12 +118,12 @@ public class KakaoAuthenticationClient implements KakaoAuthenticationPort {
                     .body(KakaoUserResponse.class);
 
             if (response == null || response.id() == null) {
-                throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
+                throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
             }
 
             return response.id().toString();
         } catch (RestClientException exception) {
-            throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
+            throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
         }
     }
 

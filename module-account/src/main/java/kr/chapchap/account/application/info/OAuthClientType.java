@@ -1,7 +1,7 @@
 package kr.chapchap.account.application.info;
 
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 
 public enum OAuthClientType {
     WEB,
@@ -12,7 +12,7 @@ public enum OAuthClientType {
             return OAuthClientType.valueOf(value);
         } catch (IllegalArgumentException | NullPointerException exception) {
             throw new BusinessException(
-                    ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS,
+                    CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS,
                     exception
             );
         }

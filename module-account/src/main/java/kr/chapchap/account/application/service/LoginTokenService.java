@@ -9,7 +9,7 @@ import kr.chapchap.account.application.port.TokenProvider;
 import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.repository.UserRepository;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -30,7 +30,7 @@ public class LoginTokenService {
             );
         }
         if (!user.isActive()) {
-            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
         }
 
         return issueUserTokens(userId, clientType);
@@ -42,7 +42,7 @@ public class LoginTokenService {
     ) {
         User user = findUser(userId);
         if (!user.isActive()) {
-            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
         }
 
         return issueUserTokens(userId, clientType);
@@ -54,12 +54,12 @@ public class LoginTokenService {
     ) {
         RefreshTokenClaims claims = parseRefreshToken(refreshToken, expectedClientType);
         if (!refreshTokenStore.consume(claims.userId(), claims.tokenId())) {
-            throw new BusinessException(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS);
+            throw new BusinessException(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS);
         }
 
         User user = findUser(claims.userId());
         if (!user.isActive()) {
-            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
         }
 
         return issueUserTokens(claims.userId(), claims.clientType());
@@ -89,7 +89,7 @@ public class LoginTokenService {
     private User findUser(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(
-                        ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS
+                        CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS
                 ));
     }
 
@@ -99,7 +99,7 @@ public class LoginTokenService {
     ) {
         RefreshTokenClaims claims = tokenProvider.parseRefreshToken(refreshToken);
         if (claims.clientType() != expectedClientType) {
-            throw new BusinessException(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS);
+            throw new BusinessException(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS);
         }
         return claims;
     }

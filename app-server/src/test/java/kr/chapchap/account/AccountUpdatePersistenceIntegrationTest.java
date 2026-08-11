@@ -6,7 +6,7 @@ import kr.chapchap.account.application.service.AccountCommandService;
 import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.repository.UserRepository;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import kr.chapchap.core.test.TestcontainersConfiguration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -99,7 +99,7 @@ class AccountUpdatePersistenceIntegrationTest {
         given(profileImageStorage.store(user.getId(), PNG_IMAGE, "image/png"))
                 .willReturn(NEW_OBJECT_KEY);
         given(profileImageStorage.createReadUrl(NEW_OBJECT_KEY))
-                .willThrow(new BusinessException(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE));
+                .willThrow(new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE));
 
         // when & then
         assertThatThrownBy(() -> accountCommandService.updateAccount(new AccountUpdateCommand(

@@ -5,7 +5,7 @@ import kr.chapchap.account.application.port.ProfileImageStorage;
 import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.repository.UserRepository;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -81,7 +81,7 @@ class AccountQueryServiceTest {
         assertThatThrownBy(() -> accountQueryService.getAccount(USER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
                         assertThat(exception.getErrorCode())
-                                .isEqualTo(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
+                                .isEqualTo(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
                 );
     }
 
@@ -96,7 +96,7 @@ class AccountQueryServiceTest {
         assertThatThrownBy(() -> accountQueryService.getAccount(USER_ID))
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
                         assertThat(exception.getErrorCode())
-                                .isEqualTo(ErrorCode.ACCESS_DENIED)
+                                .isEqualTo(CommonErrorCode.ACCESS_DENIED)
                 );
         then(profileImageStorage).shouldHaveNoInteractions();
     }
