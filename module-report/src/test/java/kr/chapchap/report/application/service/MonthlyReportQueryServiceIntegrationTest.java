@@ -82,7 +82,7 @@ class MonthlyReportQueryServiceIntegrationTest {
         entityManager.createNativeQuery(
                 "INSERT INTO report (id, user_id, report_month, persona_type, score_exploration, score_town_expansion, "
                         + "score_daytime, score_impulsive, total_visit_count, new_town_count, new_place_count, new_sticker_count, created_at) "
-                        + "VALUES (1, 1, '2026-07-01', 'NIGHT_PILGRIM', 0.3, 0.2, 0.1, 0.8, 24, 5, 8, 3, now())"
+                        + "VALUES (1, 1, '2026-07-01', 'RHMP', 0.3, 0.2, 0.1, 0.8, 24, 5, 8, 3, now())"
         ).executeUpdate();
         entityManager.createNativeQuery(
                 "INSERT INTO report_category_stat (report_id, category, percentage) VALUES "
@@ -112,8 +112,8 @@ class MonthlyReportQueryServiceIntegrationTest {
 
         // then
         assertThat(info.reportId()).isEqualTo(1L);
-        assertThat(info.persona().type()).isEqualTo("NIGHT_PILGRIM");
-        assertThat(info.persona().typeName()).isEqualTo("밤의 순례자");
+        assertThat(info.persona().type()).isEqualTo("RHMP");
+        assertThat(info.persona().typeName()).isEqualTo("단골형 · 한동네형 · 밤형 · 루틴형");
         assertThat(info.persona().scores().scoreExploration()).isEqualByComparingTo("0.30");
 
         assertThat(info.placeRanks()).hasSize(1);

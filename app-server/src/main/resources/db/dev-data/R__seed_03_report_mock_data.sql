@@ -3,9 +3,9 @@ TRUNCATE TABLE report RESTART IDENTITY CASCADE;
 
 INSERT INTO report (id, user_id, report_month, persona_type, score_exploration, score_town_expansion, score_daytime, score_impulsive, total_visit_count, new_town_count, new_place_count, new_sticker_count)
 VALUES
-    (1, 1, '2026-07-01', 'NIGHT_PILGRIM', 22.50, 15.00, 28.00, 34.00, 24, 5, 8, 3),
-    (2, 1, '2026-06-01', 'NEW_EXPLORER',  61.00, 40.00, 45.00, 30.00, 18, 3, 11, 4),
-    (3, 2, '2026-07-01', 'DAYTIME_SPENDER', 18.00, 20.00, 72.00, 15.00, 12, 2, 4, 1);
+    (1, 1, '2026-07-01', 'RHMP', 22.50, 15.00, 28.00, 34.00, 24, 5, 8, 3),
+    (2, 1, '2026-06-01', 'NWDF', 61.00, 40.00, 45.00, 30.00, 18, 3, 11, 4),
+    (3, 2, '2026-07-01', 'RHDP', 18.00, 20.00, 72.00, 15.00, 12, 2, 4, 1);
 
 INSERT INTO report_category_stat (report_id, category, percentage) VALUES
     (1, '카페', 60.00),

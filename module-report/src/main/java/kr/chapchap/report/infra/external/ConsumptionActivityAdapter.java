@@ -23,6 +23,11 @@ public class ConsumptionActivityAdapter implements ConsumptionActivityPort {
                 .toList();
     }
 
+    @Override
+    public List<Long> findActiveUserIds(LocalDate from, LocalDate toExclusive) {
+        return consumptionQueryService.getActiveUserIds(from, toExclusive);
+    }
+
     private ConsumptionActivity toConsumptionActivity(ConsumptionActivityInfo info) {
         return new ConsumptionActivity(info.placeId(), info.category(), info.purchaseDate(), info.purchaseTime());
     }

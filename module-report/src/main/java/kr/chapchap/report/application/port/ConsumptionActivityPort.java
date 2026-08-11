@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface ConsumptionActivityPort {
     List<ConsumptionActivity> findActivities(Long userId, LocalDate from, LocalDate toExclusive);
+
+    List<Long> findActiveUserIds(LocalDate from, LocalDate toExclusive);
 }

@@ -1,8 +1,9 @@
-package kr.chapchap.report.application.info;
+package kr.chapchap.report.domain.entity;
 
 import java.math.BigDecimal;
 
-public record ScoresInfo(
+public record PersonaScoreResult(
+        PersonaType personaType,
         BigDecimal scoreExploration,
         BigDecimal scoreTownExpansion,
         BigDecimal scoreDaytime,

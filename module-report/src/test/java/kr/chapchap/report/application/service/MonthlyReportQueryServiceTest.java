@@ -104,8 +104,8 @@ class MonthlyReportQueryServiceTest {
 
         // then
         assertThat(info.reportId()).isEqualTo(REPORT_ID);
-        assertThat(info.persona().type()).isEqualTo("NIGHT_PILGRIM");
-        assertThat(info.persona().typeName()).isEqualTo("밤의 순례자");
+        assertThat(info.persona().type()).isEqualTo("RHMP");
+        assertThat(info.persona().typeName()).isEqualTo("단골형 · 한동네형 · 밤형 · 루틴형");
         assertThat(info.placeRanks()).hasSize(1);
         assertThat(info.placeRanks().get(0).placeName()).isEqualTo("투썸 플레이스 뚝섬지점");
         assertThat(info.townRanks()).hasSize(1);
@@ -143,7 +143,7 @@ class MonthlyReportQueryServiceTest {
         Report report = Report.builder()
                 .userId(USER_ID)
                 .reportMonth(YEAR_MONTH.atDay(1))
-                .personaType(PersonaType.NIGHT_PILGRIM)
+                .personaType(PersonaType.RHMP)
                 .scoreExploration(BigDecimal.valueOf(0.3))
                 .scoreTownExpansion(BigDecimal.valueOf(0.2))
                 .scoreDaytime(BigDecimal.valueOf(0.1))

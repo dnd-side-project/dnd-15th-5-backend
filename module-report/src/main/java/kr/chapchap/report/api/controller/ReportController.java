@@ -48,7 +48,7 @@ public class ReportController {
 
     @Operation(
             summary = "월간 리포트 조회",
-            description = "연월(yyyy-MM) 기준으로 배치 집계된 월간 리포트를 조회한다."
+            description = "연월(yyyy-MM) 기준으로 집계된 월간 리포트를 조회한다."
     )
     @GetMapping("/monthly")
     public ApiResponse<MonthlyReportResponse> getMonthlyReport(
