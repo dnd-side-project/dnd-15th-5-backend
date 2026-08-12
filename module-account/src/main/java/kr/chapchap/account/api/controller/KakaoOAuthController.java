@@ -10,7 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.chapchap.account.application.info.OAuthClientType;
 import kr.chapchap.account.application.service.KakaoOAuthFlowService;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import kr.chapchap.core.web.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -112,7 +112,7 @@ public class KakaoOAuthController {
         try {
             return OAuthClientType.valueOf(client.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException exception) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT_VALUE);
         }
     }
 }

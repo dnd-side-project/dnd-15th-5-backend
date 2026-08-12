@@ -1,7 +1,7 @@
 package kr.chapchap.config;
 
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import kr.chapchap.core.web.auth.ChapChapUserId;
 import org.springframework.core.MethodParameter;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -29,14 +29,14 @@ public class ChapChapUserIdArgumentResolver implements HandlerMethodArgumentReso
     ) {
         Principal principal = webRequest.getUserPrincipal();
         if (principal == null) {
-            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+            throw new BusinessException(CommonErrorCode.AUTHENTICATION_REQUIRED);
         }
 
         try {
             return Long.valueOf(principal.getName());
         } catch (NumberFormatException exception) {
             throw new BusinessException(
-                    ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS,
+                    CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS,
                     exception
             );
         }

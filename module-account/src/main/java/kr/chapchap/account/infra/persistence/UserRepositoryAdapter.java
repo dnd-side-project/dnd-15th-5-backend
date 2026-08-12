@@ -19,6 +19,11 @@ public class UserRepositoryAdapter implements UserRepository {
     }
 
     @Override
+    public Optional<User> findByIdForUpdate(Long id) {
+        return userJpaRepository.findByIdForUpdate(id);
+    }
+
+    @Override
     public User save(User user) {
         return userJpaRepository.save(user);
     }

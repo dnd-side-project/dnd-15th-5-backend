@@ -228,10 +228,12 @@ module-{domain}
         │   ├── repository
         │   └── service
         │
-        └── infra
-            ├── persistence
-            ├── external
-            └── config
+        ├── infra
+        │   ├── persistence
+        │   ├── external
+        │   └── config
+        │
+        └── exception
 ```
 
 - request와 response는 API 계층에서 사용하는 HTTP 입출력 객체다.
@@ -243,6 +245,7 @@ module-{domain}
 - infra/persistence에는 JPA와 QueryDSL 기반 저장소 구현을 배치한다.
 - infra/external에는 외부 API, Object Storage 및 캐시 연동 구현을 배치한다.
 - infra/config에는 해당 도메인 모듈의 인프라 설정을 배치한다.
+- exception에는 해당 모듈의 모든 계층에서 공유하는 도메인별 ErrorCode를 배치한다.
 
 ```
 각 도메인 모듈은 module- 접두사를 제외한 도메인명을 기본 패키지로 사용한다.
@@ -260,18 +263,24 @@ flowchart LR
     Application["application<br/>Service · Command · Info · Port"]
     Domain["domain<br/>Entity · Repository · Domain Service"]
     Infra["infra<br/>Persistence · External · Config"]
+    Exception["exception<br/>Domain ErrorCode"]
 
     API --> Application
     Application --> Domain
     Infra --> Application
     Infra --> Domain
+    API --> Exception
+    Application --> Exception
+    Domain --> Exception
+    Infra --> Exception
 ```
 
 - 화살표는 코드의 의존 방향을 의미한다.
-- API 계층은 Application 계층만 참조한다.
-- Application 계층은 Domain 계층을 참조한다.
-- Infra 계층은 Application 계층의 Port와 Domain 계층의 Repository 인터페이스를 구현한다.
-- Domain 계층은 API, Application, Infra 계층을 참조하지 않는다.
+- API 계층은 Application 계층과 Exception 계층을 참조한다.
+- Application 계층은 Domain 계층과 Exception 계층을 참조한다.
+- Infra 계층은 Application 계층의 Port와 Domain 계층의 Repository 인터페이스를 구현하고 Exception 계층을 참조한다.
+- Exception 계층은 모듈 내 모든 계층에서 사용하는 도메인별 ErrorCode를 제공한다.
+- Domain 계층은 Exception 계층만 참조할 수 있으며 API, Application, Infra 계층을 참조하지 않는다.
 - Application 계층은 Infra 계층의 구체적인 구현체를 직접 참조하지 않는다.
 
 ```

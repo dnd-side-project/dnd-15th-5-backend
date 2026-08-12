@@ -2,7 +2,7 @@ package kr.chapchap.core.web.exception;
 
 import kr.chapchap.core.web.response.ApiResponse;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +12,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.List;
 import java.util.Map;
@@ -27,15 +28,15 @@ class GlobalExceptionHandlerTest {
     @Test
     void BusinessException_발생_시_ErrorCode에_정의된_상태코드와_메시지로_응답한다() {
         // given
-        BusinessException exception = new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        BusinessException exception = new BusinessException(CommonErrorCode.INVALID_INPUT_VALUE);
 
         // when
         ResponseEntity<ApiResponse<Object>> response = handler.handleBusinessException(exception);
 
         // then
-        assertThat(response.getStatusCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getStatus());
-        assertThat(response.getBody().code()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getCode());
-        assertThat(response.getBody().message()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getMessage());
+        assertThat(response.getStatusCode()).isEqualTo(CommonErrorCode.INVALID_INPUT_VALUE.getStatus());
+        assertThat(response.getBody().code()).isEqualTo(CommonErrorCode.INVALID_INPUT_VALUE.getCode());
+        assertThat(response.getBody().message()).isEqualTo(CommonErrorCode.INVALID_INPUT_VALUE.getMessage());
         assertThat(response.getBody().data()).isNull();
     }
 
@@ -43,13 +44,13 @@ class GlobalExceptionHandlerTest {
     void BusinessException가_data를_담고_있으면_응답_body에도_data가_그대로_실린다() {
         // given
         Object data = Map.of("field", "name");
-        BusinessException exception = new BusinessException(ErrorCode.INVALID_INPUT_VALUE, data);
+        BusinessException exception = new BusinessException(CommonErrorCode.INVALID_INPUT_VALUE, data);
 
         // when
         ResponseEntity<ApiResponse<Object>> response = handler.handleBusinessException(exception);
 
         // then
-        assertThat(response.getStatusCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getStatus());
+        assertThat(response.getStatusCode()).isEqualTo(CommonErrorCode.INVALID_INPUT_VALUE.getStatus());
         assertThat(response.getBody().data()).isEqualTo(data);
     }
 
@@ -68,7 +69,7 @@ class GlobalExceptionHandlerTest {
 
         // then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.getBody().code()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getCode());
+        assertThat(response.getBody().code()).isEqualTo(CommonErrorCode.INVALID_INPUT_VALUE.getCode());
         assertThat(response.getBody().data()).containsEntry("name", "must not be blank");
     }
 
@@ -97,7 +98,7 @@ class GlobalExceptionHandlerTest {
 
         // then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(response.getBody().code()).isEqualTo(ErrorCode.AUTHENTICATION_REQUIRED.getCode());
+        assertThat(response.getBody().code()).isEqualTo(CommonErrorCode.AUTHENTICATION_REQUIRED.getCode());
     }
 
     @Test
@@ -110,7 +111,22 @@ class GlobalExceptionHandlerTest {
 
         // then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
-        assertThat(response.getBody().code()).isEqualTo(ErrorCode.ACCESS_DENIED.getCode());
+        assertThat(response.getBody().code()).isEqualTo(CommonErrorCode.ACCESS_DENIED.getCode());
+    }
+
+    @Test
+    void 업로드_파일_크기_제한을_초과하면_413으로_응답한다() {
+        // given
+        MaxUploadSizeExceededException exception = new MaxUploadSizeExceededException(5L);
+
+        // when
+        ResponseEntity<ApiResponse<Void>> response =
+                handler.handleMaxUploadSizeExceededException(exception);
+
+        // then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE);
+        assertThat(response.getBody().code()).isEqualTo(CommonErrorCode.UPLOAD_SIZE_EXCEEDED.getCode());
+        assertThat(response.getBody().message()).isEqualTo(CommonErrorCode.UPLOAD_SIZE_EXCEEDED.getMessage());
     }
 
     @Test
@@ -123,6 +139,6 @@ class GlobalExceptionHandlerTest {
 
         // then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(response.getBody().code()).isEqualTo(ErrorCode.INTERNAL_SERVER_ERROR.getCode());
+        assertThat(response.getBody().code()).isEqualTo(CommonErrorCode.INTERNAL_SERVER_ERROR.getCode());
     }
 }

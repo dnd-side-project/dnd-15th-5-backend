@@ -6,9 +6,10 @@ import kr.chapchap.account.application.info.TokenPair;
 import kr.chapchap.account.infra.config.JwtConfig;
 import kr.chapchap.account.infra.config.JwtProperties;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
@@ -20,6 +21,9 @@ import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 
 class JwtTokenProviderTest {
 
@@ -31,9 +35,10 @@ class JwtTokenProviderTest {
     private JwtEncoder jwtEncoder;
     private JwtDecoder jwtDecoder;
     private JwtTokenProvider tokenProvider;
+    private ActiveUserJwtValidator activeUserJwtValidator;
 
     @BeforeEach
-    void 토큰_제공자를_생성한다() {
+    void setUp() {
         properties = new JwtProperties(
                 SECRET,
                 Duration.ofMinutes(10),
@@ -41,10 +46,13 @@ class JwtTokenProviderTest {
                 Duration.ofDays(14)
         );
         clock = Clock.fixed(NOW, ZoneOffset.UTC);
+        activeUserJwtValidator = mock(ActiveUserJwtValidator.class);
+        given(activeUserJwtValidator.validate(any(Jwt.class)))
+                .willReturn(OAuth2TokenValidatorResult.success());
 
         JwtConfig jwtConfig = new JwtConfig();
         jwtEncoder = jwtConfig.jwtEncoder(properties);
-        jwtDecoder = jwtConfig.jwtDecoder(properties, clock);
+        jwtDecoder = jwtConfig.jwtDecoder(properties, clock, activeUserJwtValidator);
         tokenProvider = new JwtTokenProvider(
                 jwtEncoder,
                 jwtDecoder,
@@ -114,7 +122,7 @@ class JwtTokenProviderTest {
                 tokenPair.accessToken()
         )).isInstanceOfSatisfying(BusinessException.class, exception ->
                 assertThat(exception.getErrorCode())
-                        .isEqualTo(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
+                        .isEqualTo(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
         );
     }
 
@@ -132,7 +140,7 @@ class JwtTokenProviderTest {
         JwtConfig jwtConfig = new JwtConfig();
         JwtTokenProvider expiredTokenProvider = new JwtTokenProvider(
                 jwtEncoder,
-                jwtConfig.jwtDecoder(properties, expiredClock),
+                jwtConfig.jwtDecoder(properties, expiredClock, activeUserJwtValidator),
                 properties,
                 expiredClock
         );
@@ -142,7 +150,7 @@ class JwtTokenProviderTest {
                 tokenPair.refreshToken()
         )).isInstanceOfSatisfying(BusinessException.class, exception ->
                 assertThat(exception.getErrorCode())
-                        .isEqualTo(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
+                        .isEqualTo(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
         );
     }
 }

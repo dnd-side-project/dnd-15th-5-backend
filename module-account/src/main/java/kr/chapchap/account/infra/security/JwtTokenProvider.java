@@ -6,7 +6,7 @@ import kr.chapchap.account.application.info.TokenPair;
 import kr.chapchap.account.application.port.TokenProvider;
 import kr.chapchap.account.infra.config.JwtProperties;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -82,7 +82,7 @@ public class JwtTokenProvider implements TokenProvider {
     @Override
     public RefreshTokenClaims parseRefreshToken(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS);
+            throw new BusinessException(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS);
         }
 
         try {
@@ -93,7 +93,7 @@ public class JwtTokenProvider implements TokenProvider {
                     || jwt.getId() == null
                     || jwt.getId().isBlank()
                     || jwt.getExpiresAt() == null) {
-                throw new BusinessException(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS);
+                throw new BusinessException(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS);
             }
 
             return new RefreshTokenClaims(
@@ -103,7 +103,7 @@ public class JwtTokenProvider implements TokenProvider {
             );
         } catch (JwtException | NumberFormatException exception) {
             throw new BusinessException(
-                    ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS,
+                    CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS,
                     exception
             );
         }

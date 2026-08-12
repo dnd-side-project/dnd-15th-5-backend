@@ -12,4 +12,9 @@ interface SocialAccountJpaRepository extends JpaRepository<SocialAccount, Long> 
             SocialProvider provider,
             String providerUserId
     );
+
+    Optional<SocialAccount> findByUserIdAndProvider(
+            Long userId,
+            SocialProvider provider
+    );
 }

@@ -215,6 +215,28 @@ resource "aws_iam_role_policy" "ec2_s3_receipts" {
   })
 }
 
+# 프로필 이미지 업로드용 - profiles 버킷/객체로만 범위 제한
+resource "aws_iam_role_policy" "ec2_s3_profiles" {
+  name = "${var.project_name}-ec2-s3-profiles-policy"
+  role = aws_iam_role.ec2_ssm.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
+        Resource = "${aws_s3_bucket.profiles.arn}/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "s3:ListBucket"
+        Resource = aws_s3_bucket.profiles.arn
+      }
+    ]
+  })
+}
+
 resource "aws_instance" "app" {
   ami                    = data.aws_ami.amazon_linux.id
   instance_type          = "t4g.medium" # Blue/Green 동시 기동을 위한 4 GiB 메모리
@@ -229,8 +251,10 @@ resource "aws_instance" "app" {
   }
 
   metadata_options {
-    http_tokens   = "required" # IMDSv2 강제 (SSRF로 인한 자격증명 탈취 방지)
-    http_endpoint = "enabled"
+    http_tokens                 = "required" # IMDSv2 강제 (SSRF로 인한 자격증명 탈취 방지)
+    http_endpoint               = "enabled"
+    # Docker 컨테이너에서 IMDSv2 접근 허용
+    http_put_response_hop_limit = 2
   }
 
   user_data = <<-EOF
@@ -306,7 +330,7 @@ resource "aws_db_instance" "main" {
 }
 
 
-# S3 — 영수증 이미지 저장
+# S3 — 이미지 저장
 
 
 resource "aws_s3_bucket" "receipts" {
@@ -319,6 +343,23 @@ resource "aws_s3_bucket" "receipts" {
 
 resource "aws_s3_bucket_public_access_block" "receipts" {
   bucket = aws_s3_bucket.receipts.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket" "profiles" {
+  bucket = "${var.project_name}-profile-images"
+
+  tags = {
+    Name = "${var.project_name}-profile-images"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "profiles" {
+  bucket = aws_s3_bucket.profiles.id
 
   block_public_acls       = true
   block_public_policy     = true

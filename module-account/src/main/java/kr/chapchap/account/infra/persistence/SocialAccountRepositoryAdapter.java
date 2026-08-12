@@ -23,6 +23,14 @@ public class SocialAccountRepositoryAdapter implements SocialAccountRepository {
     }
 
     @Override
+    public Optional<SocialAccount> findByUserIdAndProvider(
+            Long userId,
+            SocialProvider provider
+    ) {
+        return socialAccountJpaRepository.findByUserIdAndProvider(userId, provider);
+    }
+
+    @Override
     public SocialAccount save(SocialAccount socialAccount) {
         return socialAccountJpaRepository.save(socialAccount);
     }

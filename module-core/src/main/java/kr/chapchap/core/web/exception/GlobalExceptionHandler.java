@@ -2,6 +2,7 @@ package kr.chapchap.core.web.exception;
 
 import kr.chapchap.core.web.response.ApiResponse;
 import kr.chapchap.core.exception.BusinessException;
+import kr.chapchap.core.exception.CommonErrorCode;
 import kr.chapchap.core.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -45,8 +47,8 @@ public class GlobalExceptionHandler {
             HttpMessageNotReadableException e
     ) {
         log.warn("요청 본문을 읽을 수 없습니다.");
-        return ResponseEntity.status(ErrorCode.INVALID_INPUT_VALUE.getStatus())
-                .body(ApiResponse.fail(ErrorCode.INVALID_INPUT_VALUE));
+        return ResponseEntity.status(CommonErrorCode.INVALID_INPUT_VALUE.getStatus())
+                .body(ApiResponse.fail(CommonErrorCode.INVALID_INPUT_VALUE));
     }
 
     // @Valid 검증 실패시
@@ -58,8 +60,8 @@ public class GlobalExceptionHandler {
                 errors.put(fieldError.getField(), fieldError.getDefaultMessage())
         );
         log.warn("Validation 실패: {}", errors);
-        return ResponseEntity.status(ErrorCode.INVALID_INPUT_VALUE.getStatus())
-                .body(ApiResponse.failWithData(ErrorCode.INVALID_INPUT_VALUE, errors));
+        return ResponseEntity.status(CommonErrorCode.INVALID_INPUT_VALUE.getStatus())
+                .body(ApiResponse.failWithData(CommonErrorCode.INVALID_INPUT_VALUE, errors));
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
@@ -67,8 +69,8 @@ public class GlobalExceptionHandler {
             MissingServletRequestParameterException e) {
         Map<String, String> errors = Map.of(e.getParameterName(), "필수 요청 파라미터입니다.");
         log.warn("필수 요청 파라미터 누락: {}", errors);
-        return ResponseEntity.status(ErrorCode.MISSING_REQUIRED_FIELD.getStatus())
-                .body(ApiResponse.failWithData(ErrorCode.MISSING_REQUIRED_FIELD, errors));
+        return ResponseEntity.status(CommonErrorCode.MISSING_REQUIRED_FIELD.getStatus())
+                .body(ApiResponse.failWithData(CommonErrorCode.MISSING_REQUIRED_FIELD, errors));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
@@ -76,28 +78,37 @@ public class GlobalExceptionHandler {
             MethodArgumentTypeMismatchException e) {
         Map<String, String> errors = Map.of(e.getName(), "요청 형식이 올바르지 않습니다.");
         log.warn("파라미터 타입 변환 실패: {}", errors);
-        return ResponseEntity.status(ErrorCode.INVALID_INPUT_VALUE.getStatus())
-                .body(ApiResponse.failWithData(ErrorCode.INVALID_INPUT_VALUE, errors));
+        return ResponseEntity.status(CommonErrorCode.INVALID_INPUT_VALUE.getStatus())
+                .body(ApiResponse.failWithData(CommonErrorCode.INVALID_INPUT_VALUE, errors));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceededException(
+            MaxUploadSizeExceededException e
+    ) {
+        log.warn("업로드 파일 크기 제한을 초과했습니다.");
+        return ResponseEntity.status(CommonErrorCode.UPLOAD_SIZE_EXCEEDED.getStatus())
+                .body(ApiResponse.fail(CommonErrorCode.UPLOAD_SIZE_EXCEEDED));
     }
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiResponse<Void>> handleAuthenticationException(AuthenticationException e) {
         log.warn("AuthenticationException: {}", e.getMessage());
-        return ResponseEntity.status(ErrorCode.AUTHENTICATION_REQUIRED.getStatus())
-                .body(ApiResponse.fail(ErrorCode.AUTHENTICATION_REQUIRED));
+        return ResponseEntity.status(CommonErrorCode.AUTHENTICATION_REQUIRED.getStatus())
+                .body(ApiResponse.fail(CommonErrorCode.AUTHENTICATION_REQUIRED));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException e) {
         log.warn("AccessDeniedException: {}", e.getMessage());
-        return ResponseEntity.status(ErrorCode.ACCESS_DENIED.getStatus())
-                .body(ApiResponse.fail(ErrorCode.ACCESS_DENIED));
+        return ResponseEntity.status(CommonErrorCode.ACCESS_DENIED.getStatus())
+                .body(ApiResponse.fail(CommonErrorCode.ACCESS_DENIED));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
         log.error("Unhandled exception occurred", e);
-        return ResponseEntity.status(ErrorCode.INTERNAL_SERVER_ERROR.getStatus())
-                .body(ApiResponse.fail(ErrorCode.INTERNAL_SERVER_ERROR));
+        return ResponseEntity.status(CommonErrorCode.INTERNAL_SERVER_ERROR.getStatus())
+                .body(ApiResponse.fail(CommonErrorCode.INTERNAL_SERVER_ERROR));
     }
 }

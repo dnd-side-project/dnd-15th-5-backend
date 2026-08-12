@@ -2,7 +2,7 @@ package kr.chapchap.account.infra.external.kakao;
 
 import kr.chapchap.account.infra.config.KakaoOAuthProperties;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -34,22 +34,25 @@ class KakaoAuthenticationClientTest {
     private static final URI AUTHORIZATION_URI = URI.create("https://kauth.kakao.test/oauth/authorize");
     private static final URI TOKEN_URI = URI.create("https://kauth.kakao.test/oauth/token");
     private static final URI USER_INFO_URI = URI.create("https://kapi.kakao.test/v2/user/me");
+    private static final URI UNLINK_URI = URI.create("https://kapi.kakao.test/v1/user/unlink");
     private static final URI REDIRECT_URI = URI.create("https://client.example.com/oauth/kakao");
 
     private MockRestServiceServer server;
     private KakaoAuthenticationClient kakaoAuthenticationClient;
 
     @BeforeEach
-    void 카카오_클라이언트를_생성한다() {
+    void setUp() {
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
         KakaoOAuthProperties properties = new KakaoOAuthProperties(
                 "rest-api-key",
                 "client-secret",
+                "admin-key",
                 REDIRECT_URI,
                 AUTHORIZATION_URI,
                 TOKEN_URI,
                 USER_INFO_URI,
+                UNLINK_URI,
                 Duration.ofSeconds(3),
                 Duration.ofSeconds(5)
         );
@@ -144,7 +147,7 @@ class KakaoAuthenticationClientTest {
         assertThatThrownBy(() -> kakaoAuthenticationClient.authenticate("invalid-code"))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {
                     assertThat(exception.getErrorCode())
-                            .isEqualTo(ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS);
+                            .isEqualTo(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS);
                     assertThat(exception.getCause()).isInstanceOf(RestClientResponseException.class);
                 });
         server.verify();
@@ -169,8 +172,71 @@ class KakaoAuthenticationClientTest {
         assertThatThrownBy(() -> kakaoAuthenticationClient.authenticate("authorization-code"))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {
                     assertThat(exception.getErrorCode())
-                            .isEqualTo(ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
+                            .isEqualTo(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
                     assertThat(exception.getCause()).isInstanceOf(RestClientResponseException.class);
+                });
+        server.verify();
+    }
+
+    @Test
+    void 어드민_키와_카카오_사용자_ID로_연결을_해제한다() {
+        // given
+        server.expect(requestTo(UNLINK_URI))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "KakaoAK admin-key"))
+                .andExpect(content().contentTypeCompatibleWith(
+                        MediaType.APPLICATION_FORM_URLENCODED
+                ))
+                .andExpect(content().formDataContains(Map.of(
+                        "target_id_type", "user_id",
+                        "target_id", "123456789"
+                )))
+                .andRespond(withSuccess(
+                        "{\"id\": 123456789}",
+                        MediaType.APPLICATION_JSON
+                ));
+
+        // when
+        kakaoAuthenticationClient.unlink("123456789");
+
+        // then
+        server.verify();
+    }
+
+    @Test
+    void 이미_연결이_해제된_카카오_사용자는_성공으로_처리한다() {
+        // given
+        server.expect(requestTo(UNLINK_URI))
+                .andRespond(withBadRequest()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("""
+                                {
+                                  "code": -101,
+                                  "msg": "NotRegisteredUserException"
+                                }
+                                """));
+
+        // when
+        kakaoAuthenticationClient.unlink("123456789");
+
+        // then
+        server.verify();
+    }
+
+    @Test
+    void 카카오_연결_해제_실패를_외부_연동_ErrorCode로_변환한다() {
+        // given
+        server.expect(requestTo(UNLINK_URI))
+                .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
+
+        // when & then
+        assertThatThrownBy(() -> kakaoAuthenticationClient.unlink("123456789"))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.getErrorCode())
+                            .isEqualTo(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
+                    assertThat(exception.getCause()).isInstanceOf(
+                            RestClientResponseException.class
+                    );
                 });
         server.verify();
     }

@@ -13,10 +13,12 @@ import java.time.Duration;
 public record KakaoOAuthProperties(
         @NotBlank String clientId,
         @NotBlank String clientSecret,
+        @NotBlank String adminKey,
         @NotNull URI redirectUri,
         @NotNull URI authorizationUri,
         @NotNull URI tokenUri,
         @NotNull URI userInfoUri,
+        @NotNull URI unlinkUri,
         @NotNull Duration connectTimeout,
         @NotNull Duration readTimeout
 ) {

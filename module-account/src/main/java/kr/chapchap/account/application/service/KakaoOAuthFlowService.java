@@ -9,7 +9,7 @@ import kr.chapchap.account.application.port.OAuthClientRedirectPort;
 import kr.chapchap.account.application.port.OAuthSessionStore;
 import kr.chapchap.account.domain.entity.SocialProvider;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -40,7 +40,7 @@ public class KakaoOAuthFlowService {
 
     public URI createAuthorizationUri(OAuthClientType clientType, String codeChallenge) {
         if (codeChallenge == null || !CODE_CHALLENGE_PATTERN.matcher(codeChallenge).matches()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT_VALUE);
         }
 
         String state = oauthSessionStore.createState(clientType, codeChallenge);
@@ -86,7 +86,7 @@ public class KakaoOAuthFlowService {
         OAuthLoginSession loginSession = oauthSessionStore
                 .consumeLoginCode(loginCode, codeChallenge)
                 .orElseThrow(() -> new BusinessException(
-                        ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS
+                        CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS
                 ));
         return loginTokenService.issueForLogin(
                 loginSession.userId(),
@@ -97,7 +97,7 @@ public class KakaoOAuthFlowService {
     private OAuthAuthorizationSession consumeAuthorizationSession(String state) {
         return oauthSessionStore.consumeState(state)
                 .orElseThrow(() -> new BusinessException(
-                        ErrorCode.INVALID_AUTHENTICATION_CREDENTIALS
+                        CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS
                 ));
     }
 

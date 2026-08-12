@@ -3,6 +3,7 @@ chapchap:
     kakao:
       client-id: test-client-id
       client-secret: test-client-secret
+      admin-key: test-kakao-admin-key
       redirect-uri: https://example.com/oauth/kakao
     client:
       web-redirect-uri: https://web.example.com/oauth/callback

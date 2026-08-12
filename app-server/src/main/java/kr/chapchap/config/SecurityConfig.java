@@ -3,6 +3,7 @@ package kr.chapchap.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import kr.chapchap.core.exception.CommonErrorCode;
 import kr.chapchap.core.exception.ErrorCode;
 import kr.chapchap.core.web.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -43,7 +44,7 @@ public class SecurityConfig {
                                         request,
                                         response,
                                         objectMapper,
-                                        ErrorCode.AUTHENTICATION_REQUIRED
+                                        CommonErrorCode.AUTHENTICATION_REQUIRED
                                 )
                         )
                         .accessDeniedHandler((request, response, exception) ->
@@ -51,7 +52,7 @@ public class SecurityConfig {
                                         request,
                                         response,
                                         objectMapper,
-                                        ErrorCode.ACCESS_DENIED
+                                        CommonErrorCode.ACCESS_DENIED
                                 )
                         )
                 )

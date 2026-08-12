@@ -1,6 +1,6 @@
 package kr.chapchap.core.web.response;
 
-import kr.chapchap.core.exception.ErrorCode;
+import kr.chapchap.core.exception.CommonErrorCode;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -36,11 +36,11 @@ class ApiResponseTest {
     @Test
     void fail_호출_시_ErrorCode의_code와_message가_그대로_담긴다() {
         // when
-        ApiResponse<Void> response = ApiResponse.fail(ErrorCode.INVALID_INPUT_VALUE);
+        ApiResponse<Void> response = ApiResponse.fail(CommonErrorCode.INVALID_INPUT_VALUE);
 
         // then
-        assertThat(response.code()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getCode());
-        assertThat(response.message()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getMessage());
+        assertThat(response.code()).isEqualTo(CommonErrorCode.INVALID_INPUT_VALUE.getCode());
+        assertThat(response.message()).isEqualTo(CommonErrorCode.INVALID_INPUT_VALUE.getMessage());
         assertThat(response.data()).isNull();
     }
 
@@ -50,10 +50,10 @@ class ApiResponseTest {
         String customMessage = "커스텀 에러 메시지";
 
         // when
-        ApiResponse<Void> response = ApiResponse.fail(ErrorCode.INVALID_INPUT_VALUE, customMessage);
+        ApiResponse<Void> response = ApiResponse.fail(CommonErrorCode.INVALID_INPUT_VALUE, customMessage);
 
         // then
-        assertThat(response.code()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getCode());
+        assertThat(response.code()).isEqualTo(CommonErrorCode.INVALID_INPUT_VALUE.getCode());
         assertThat(response.message()).isEqualTo(customMessage);
     }
 
@@ -64,11 +64,11 @@ class ApiResponseTest {
 
         // when
         ApiResponse<Map<String, String>> response =
-                ApiResponse.failWithData(ErrorCode.INVALID_INPUT_VALUE, errors);
+                ApiResponse.failWithData(CommonErrorCode.INVALID_INPUT_VALUE, errors);
 
         // then
-        assertThat(response.code()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getCode());
-        assertThat(response.message()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getMessage());
+        assertThat(response.code()).isEqualTo(CommonErrorCode.INVALID_INPUT_VALUE.getCode());
+        assertThat(response.message()).isEqualTo(CommonErrorCode.INVALID_INPUT_VALUE.getMessage());
         assertThat(response.data()).isEqualTo(errors);
     }
 }
