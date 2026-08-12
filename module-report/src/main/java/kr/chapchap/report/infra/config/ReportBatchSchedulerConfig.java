@@ -12,6 +12,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -20,11 +21,12 @@ import java.time.YearMonth;
 public class ReportBatchSchedulerConfig {
 
     private final MonthlyReportAggregationService monthlyReportAggregationService;
+    private static final ZoneId REPORT_ZONE = ZoneId.of("Asia/Seoul");
     private final Clock clock;
 
     @Scheduled(cron = "0 0 2 1 * *", zone = "Asia/Seoul")
     public void aggregatePreviousMonth() {
-        LocalDate today = LocalDate.now(clock);
+        LocalDate today = LocalDate.now(clock.withZone(REPORT_ZONE));
         YearMonth targetMonth = YearMonth.from(today).minusMonths(1);
 
         log.info("월간 리포트 작업 시작. targetMonth={}", targetMonth);

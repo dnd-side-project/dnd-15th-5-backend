@@ -5,6 +5,7 @@ import kr.chapchap.core.exception.ErrorCode;
 import kr.chapchap.report.application.command.AggregateMonthlyReportCommand;
 import kr.chapchap.report.application.info.ConsumptionActivity;
 import kr.chapchap.report.application.info.MonthlyReportAggregationResultInfo;
+import kr.chapchap.report.application.port.AdvisoryLockHandle;
 import kr.chapchap.report.application.port.AdvisoryLockPort;
 import kr.chapchap.report.application.port.ConsumptionActivityPort;
 import kr.chapchap.report.application.port.DongNameLookupPort;
@@ -59,7 +60,6 @@ public class MonthlyReportAggregationService {
     private final ReportPlaceRankRepository reportPlaceRankRepository;
     private final ReportTimePatternRepository reportTimePatternRepository;
     private final AdvisoryLockPort advisoryLockPort;
-    private final TransactionTemplate outerTransactionTemplate;
     private final TransactionTemplate perUserTransactionTemplate;
 
     public MonthlyReportAggregationService(
@@ -88,7 +88,6 @@ public class MonthlyReportAggregationService {
         this.reportTimePatternRepository = reportTimePatternRepository;
         this.advisoryLockPort = advisoryLockPort;
 
-        this.outerTransactionTemplate = new TransactionTemplate(transactionManager);
 
         TransactionTemplate perUserTemplate = new TransactionTemplate(transactionManager);
         perUserTemplate.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
@@ -99,21 +98,20 @@ public class MonthlyReportAggregationService {
         YearMonth yearMonth = command.yearMonth();
         long lockKey = lockKey(yearMonth);
 
-        return outerTransactionTemplate.execute(status -> {
-            if (!advisoryLockPort.tryLock(lockKey)) {
-                log.info("월간 리포트 이미 실행 중이라 건너뜁니다. yearMonth={}", yearMonth);
-                return MonthlyReportAggregationResultInfo.skippedDueToLock(yearMonth);
-            }
+        Optional<AdvisoryLockHandle> lockHandle = advisoryLockPort.tryLock(lockKey);
+        if (lockHandle.isEmpty()) {
+            log.info("월간 리포트 이미 실행 중이라 건너뜁니다. yearMonth={}", yearMonth);
+            return MonthlyReportAggregationResultInfo.skippedDueToLock(yearMonth);
+        }
 
+        try {
             List<Long> targetUserIds = consumptionActivityPort.findActiveUserIds(yearMonth.atDay(1), yearMonth.plusMonths(1).atDay(1));
-
             List<Long> failedUserIds = new ArrayList<>();
-
             int succeeded = 0;
 
             for (Long userId : targetUserIds) {
-                try {perUserTransactionTemplate.executeWithoutResult(innerStatus ->
-                            aggregateForUser(userId, yearMonth));
+                try {
+                    perUserTransactionTemplate.executeWithoutResult(status -> aggregateForUser(userId, yearMonth));
                     succeeded++;
                 } catch (Exception exception) {
                     BusinessException businessException = new BusinessException(ErrorCode.MONTHLY_REPORT_AGGREGATION_FAILED, exception);
@@ -126,7 +124,9 @@ public class MonthlyReportAggregationService {
             }
 
             return new MonthlyReportAggregationResultInfo(yearMonth, true, targetUserIds.size(), succeeded, failedUserIds);
-        });
+        } finally {
+            lockHandle.get().close();
+        }
     }
 
 

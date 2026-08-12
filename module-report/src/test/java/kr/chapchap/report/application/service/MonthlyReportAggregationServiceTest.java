@@ -3,6 +3,7 @@ package kr.chapchap.report.application.service;
 import kr.chapchap.report.application.command.AggregateMonthlyReportCommand;
 import kr.chapchap.report.application.info.ConsumptionActivity;
 import kr.chapchap.report.application.info.MonthlyReportAggregationResultInfo;
+import kr.chapchap.report.application.port.AdvisoryLockHandle;
 import kr.chapchap.report.application.port.AdvisoryLockPort;
 import kr.chapchap.report.application.port.ConsumptionActivityPort;
 import kr.chapchap.report.application.port.DongNameLookupPort;
@@ -38,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -74,8 +76,9 @@ class MonthlyReportAggregationServiceTest {
 
     @BeforeEach
     void setUp() {
+        // 락 획득에 실패하는 테스트는 perUserTransactionTemplate까지 안 가서 이 스텁을 안 쓴다 - lenient로 완화
         TransactionStatus status = mock(TransactionStatus.class);
-        when(transactionManager.getTransaction(any(TransactionDefinition.class))).thenReturn(status);
+        lenient().when(transactionManager.getTransaction(any(TransactionDefinition.class))).thenReturn(status);
 
         sut = new MonthlyReportAggregationService(
                 consumptionActivityPort,
@@ -96,7 +99,7 @@ class MonthlyReportAggregationServiceTest {
     @Test
     void 락_획득에_실패하면_아무_사용자도_처리하지_않는다() {
         // given
-        when(advisoryLockPort.tryLock(anyLong())).thenReturn(false);
+        when(advisoryLockPort.tryLock(anyLong())).thenReturn(Optional.empty());
 
         // when
         MonthlyReportAggregationResultInfo result =
@@ -114,7 +117,7 @@ class MonthlyReportAggregationServiceTest {
         YearMonth yearMonth = YearMonth.of(2026, 7);
         LocalDate monthStart = yearMonth.atDay(1);
 
-        when(advisoryLockPort.tryLock(anyLong())).thenReturn(true);
+        when(advisoryLockPort.tryLock(anyLong())).thenReturn(Optional.of(mock(AdvisoryLockHandle.class)));
         when(consumptionActivityPort.findActiveUserIds(monthStart, monthStart.plusMonths(1))).thenReturn(List.of(userId));
 
         ConsumptionActivity activity = new ConsumptionActivity(101L, "CAFE", LocalDate.of(2026, 7, 5), LocalTime.of(10, 0));
@@ -149,7 +152,7 @@ class MonthlyReportAggregationServiceTest {
         YearMonth yearMonth = YearMonth.of(2026, 7);
         LocalDate monthStart = yearMonth.atDay(1);
 
-        when(advisoryLockPort.tryLock(anyLong())).thenReturn(true);
+        when(advisoryLockPort.tryLock(anyLong())).thenReturn(Optional.of(mock(AdvisoryLockHandle.class)));
         when(consumptionActivityPort.findActiveUserIds(monthStart, monthStart.plusMonths(1))).thenReturn(List.of(userId));
         when(consumptionActivityPort.findActivities(userId, monthStart, monthStart.plusMonths(1))).thenReturn(List.of());
 
@@ -170,7 +173,7 @@ class MonthlyReportAggregationServiceTest {
         YearMonth yearMonth = YearMonth.of(2026, 7);
         LocalDate monthStart = yearMonth.atDay(1);
 
-        when(advisoryLockPort.tryLock(anyLong())).thenReturn(true);
+        when(advisoryLockPort.tryLock(anyLong())).thenReturn(Optional.of(mock(AdvisoryLockHandle.class)));
         when(consumptionActivityPort.findActiveUserIds(monthStart, monthStart.plusMonths(1)))
                 .thenReturn(List.of(failingUserId, succeedingUserId));
 
