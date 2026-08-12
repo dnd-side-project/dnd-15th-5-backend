@@ -13,4 +13,6 @@ public interface ConsumptionQueryRepository {
                                       int fetchSize);
 
     List<Consumption> findAllByUserAndDateRange(Long userId, LocalDate from, LocalDate toExclusive);
+
+    List<Long> findDistinctUserIdsByDateRange(LocalDate from, LocalDate toExclusive);
 }

@@ -32,7 +32,7 @@ class RecentDiscoveryMessageGeneratorTest {
         String message = sut.generate(recent, previous);
 
         // then
-        assertThat(message).isEqualTo("연남동에서 신논현동으로 생활권이 바뀌었어요");
+        assertThat(message).isEqualTo("최근 연남동에서 신논현동으로 본거지를 이동중이시네요!");
     }
 
     @Test
@@ -65,10 +65,10 @@ class RecentDiscoveryMessageGeneratorTest {
         String message = sut.generate(recent, previous);
 
         // then
-        assertThat(message).isEqualTo("최근 2곳이나 새로운 곳을 방문했어요");
+        assertThat(message).isEqualTo("프로 단골러 등장! 최근 새로운 단골집이 2곳이나 늘어났어요");
     }
 
     private VisitActivity activity(Long placeId, String dongName, LocalDate date, LocalTime time) {
-        return new VisitActivity(placeId, dongName, date, time);
+        return new VisitActivity(placeId, dongName, null, date, time);
     }
 }

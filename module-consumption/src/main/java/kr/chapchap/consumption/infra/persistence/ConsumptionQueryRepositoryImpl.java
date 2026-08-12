@@ -65,4 +65,19 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
                 )
                 .fetch();
     }
+
+    @Override
+    public List<Long> findDistinctUserIdsByDateRange(LocalDate from, LocalDate toExclusive) {
+        QConsumption consumption = QConsumption.consumption;
+
+        return queryFactory
+                .select(consumption.userId)
+                .distinct()
+                .from(consumption)
+                .where(
+                        consumption.purchaseDate.goe(from),
+                        consumption.purchaseDate.lt(toExclusive)
+                )
+                .fetch();
+    }
 }

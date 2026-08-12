@@ -120,6 +120,7 @@ public class ReportQueryService {
         return new VisitActivity(
                 activity.placeId(),
                 dongNames.get(activity.placeId()),
+                activity.category(),
                 activity.purchaseDate(),
                 activity.purchaseTime()
         );
