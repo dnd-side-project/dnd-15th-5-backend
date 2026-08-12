@@ -188,7 +188,7 @@ public class RecentDiscoveryMessageGenerator {
             return Optional.of("요즘 올빼미 모드 켜졌나요? 밤 활동 비중이 훌쩍 늘었어요");
         }
         if (shift <= -DAY_NIGHT_SHIFT_THRESHOLD) {
-            return Optional.of("요새 낮 활동이 확 늘었네요! 햇살 좀 쬐면서 비타민 D 충전하세요");
+            return Optional.of("요새 낮 활동이 확 늘었네요! 햇살 좀 쬐면서 비타민 D " + "충전 중이신가요?");
         }
         return Optional.empty();
     }

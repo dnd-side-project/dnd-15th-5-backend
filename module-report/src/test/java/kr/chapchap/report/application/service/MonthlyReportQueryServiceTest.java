@@ -1,7 +1,6 @@
 package kr.chapchap.report.application.service;
 
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
 import kr.chapchap.report.application.command.GetMonthlyReportCommand;
 import kr.chapchap.report.application.info.ConsumptionActivity;
 import kr.chapchap.report.application.info.MonthlyReportInfo;
@@ -17,6 +16,7 @@ import kr.chapchap.report.domain.repository.ReportPlaceRankRepository;
 import kr.chapchap.report.domain.repository.ReportRepository;
 import kr.chapchap.report.domain.repository.ReportTimePatternRepository;
 import kr.chapchap.report.domain.repository.ReportTownRankRepository;
+import kr.chapchap.report.exception.ReportErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -85,7 +85,7 @@ class MonthlyReportQueryServiceTest {
         assertThatThrownBy(() -> sut.getMonthlyReport(new GetMonthlyReportCommand(USER_ID, YEAR_MONTH)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(exception -> ((BusinessException) exception).getErrorCode())
-                .isEqualTo(ErrorCode.REPORT_NOT_FOUND);
+                .isEqualTo(ReportErrorCode.REPORT_NOT_FOUND);
     }
 
     @Test

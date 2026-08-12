@@ -18,7 +18,7 @@ public record MonthlyReportInfo(
         TimePatternInfo timePattern
 ) {
 
-    public record PersonaInfo(String type, String typeName, String description, ScoresInfo scores) {
+    public record PersonaInfo(String type, String typeName, ScoresInfo scores) {
     }
 
     public record ScoresInfo(

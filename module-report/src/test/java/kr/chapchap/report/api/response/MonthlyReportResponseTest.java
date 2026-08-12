@@ -18,7 +18,7 @@ class MonthlyReportResponseTest {
         MonthlyReportInfo info = new MonthlyReportInfo(
                 1L,
                 YearMonth.of(2026, 7),
-                new MonthlyReportInfo.PersonaInfo("RHDP", "테스트", "테스트", new MonthlyReportInfo.ScoresInfo(
+                new MonthlyReportInfo.PersonaInfo("RHDP", "테스트", new MonthlyReportInfo.ScoresInfo(
                         BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO)),
                 List.of(),
                 List.of(),

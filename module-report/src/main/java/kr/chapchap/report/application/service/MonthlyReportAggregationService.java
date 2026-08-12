@@ -1,7 +1,6 @@
 package kr.chapchap.report.application.service;
 
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
 import kr.chapchap.report.application.command.AggregateMonthlyReportCommand;
 import kr.chapchap.report.application.info.ConsumptionActivity;
 import kr.chapchap.report.application.info.MonthlyReportAggregationResultInfo;
@@ -25,6 +24,7 @@ import kr.chapchap.report.domain.repository.ReportTimePatternRepository;
 import kr.chapchap.report.domain.repository.ReportTownRankRepository;
 import kr.chapchap.report.domain.service.MonthlyAggregationCalculator;
 import kr.chapchap.report.domain.service.PersonaScoringService;
+import kr.chapchap.report.exception.ReportErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -114,7 +114,7 @@ public class MonthlyReportAggregationService {
                     perUserTransactionTemplate.executeWithoutResult(status -> aggregateForUser(userId, yearMonth));
                     succeeded++;
                 } catch (Exception exception) {
-                    BusinessException businessException = new BusinessException(ErrorCode.MONTHLY_REPORT_AGGREGATION_FAILED, exception);
+                    BusinessException businessException = new BusinessException(ReportErrorCode.MONTHLY_REPORT_AGGREGATION_FAILED, exception);
                     log.error("[{}] {} userId={}, yearMonth={}",
                             businessException.getErrorCode().getCode(),
                             businessException.getErrorCode().getMessage(),

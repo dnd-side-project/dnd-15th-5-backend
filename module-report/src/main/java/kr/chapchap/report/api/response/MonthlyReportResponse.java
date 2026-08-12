@@ -38,10 +38,10 @@ public record MonthlyReportResponse(
         );
     }
 
-    public record PersonaResponse(String type, String typeName, String description, ScoresResponse scores) {
+    public record PersonaResponse(String type, String typeName, ScoresResponse scores) {
 
         public static PersonaResponse from(MonthlyReportInfo.PersonaInfo info) {
-            return new PersonaResponse(info.type(), info.typeName(), info.description(), ScoresResponse.from(info.scores()));
+            return new PersonaResponse(info.type(), info.typeName(), ScoresResponse.from(info.scores()));
         }
     }
 

@@ -1,7 +1,6 @@
 package kr.chapchap.report.application.service;
 
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.core.exception.ErrorCode;
 import kr.chapchap.report.application.command.GetMonthlyReportCommand;
 import kr.chapchap.report.application.info.ConsumptionActivity;
 import kr.chapchap.report.application.info.MonthlyReportInfo;
@@ -25,6 +24,7 @@ import kr.chapchap.report.domain.repository.ReportPlaceRankRepository;
 import kr.chapchap.report.domain.repository.ReportRepository;
 import kr.chapchap.report.domain.repository.ReportTimePatternRepository;
 import kr.chapchap.report.domain.repository.ReportTownRankRepository;
+import kr.chapchap.report.exception.ReportErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,7 +52,7 @@ public class MonthlyReportQueryService {
 
     public MonthlyReportInfo getMonthlyReport(GetMonthlyReportCommand command) {
         Report report = reportRepository.findByUserIdAndReportMonth(command.userId(), command.yearMonth().atDay(1))
-                .orElseThrow(() -> new BusinessException(ErrorCode.REPORT_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ReportErrorCode.REPORT_NOT_FOUND));
 
         List<ReportCategoryStat> categoryStats = reportCategoryStatRepository.findByReportId(report.getId());
         List<ReportTownRank> townRanks = reportTownRankRepository.findByReportIdOrderByRankAsc(report.getId());
@@ -76,7 +76,6 @@ public class MonthlyReportQueryService {
         return new PersonaInfo(
                 report.getPersonaType().name(),
                 report.getPersonaType().getTypeName(),
-                report.getPersonaType().getDescription(),
                 new ScoresInfo(
                         report.getScoreExploration(),
                         report.getScoreTownExpansion(),
