@@ -62,11 +62,11 @@ public record MonthlyReportResponse(
         }
     }
 
-    public record PlaceRankResponse(int rank, String placeName, int visitCount, String firstVisitedDate) {
+    public record PlaceRankResponse(int rank, String placeName, int visitCount, String firstVisitedDate, String category) {
 
         public static PlaceRankResponse from(MonthlyReportInfo.PlaceRankInfo info) {
             String firstVisitedDate = info.firstVisitedDate() != null ? DATE_FORMAT.format(info.firstVisitedDate()) : null;
-            return new PlaceRankResponse(info.rank(), info.placeName(), info.visitCount(), firstVisitedDate);
+            return new PlaceRankResponse(info.rank(), info.placeName(), info.visitCount(), firstVisitedDate, info.category());
         }
     }
 
@@ -108,8 +108,11 @@ public record MonthlyReportResponse(
             );
         }
 
-        // 1(월요일)~7(일요일)
+
         private static String toDayOfWeekCode(int dayOfWeek) {
+            if (dayOfWeek == 0) {
+                return null;
+            }
             return DayOfWeek.of(dayOfWeek).name().substring(0, 3).toUpperCase(Locale.ROOT);
         }
     }

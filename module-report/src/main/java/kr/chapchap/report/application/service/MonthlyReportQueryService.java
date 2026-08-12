@@ -3,6 +3,7 @@ package kr.chapchap.report.application.service;
 import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.core.exception.ErrorCode;
 import kr.chapchap.report.application.command.GetMonthlyReportCommand;
+import kr.chapchap.report.application.info.ConsumptionActivity;
 import kr.chapchap.report.application.info.MonthlyReportInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.CategoryStatInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.DayOfWeekCountInfo;
@@ -13,6 +14,7 @@ import kr.chapchap.report.application.info.MonthlyReportInfo.ScoresInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.SummaryInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.TimePatternInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.TownRankInfo;
+import kr.chapchap.report.application.port.ConsumptionActivityPort;
 import kr.chapchap.report.domain.entity.Report;
 import kr.chapchap.report.domain.entity.ReportCategoryStat;
 import kr.chapchap.report.domain.entity.ReportPlaceRank;
@@ -27,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -38,12 +41,14 @@ public class MonthlyReportQueryService {
 
     private static final int NO_VISIT_HOUR = 0;
     private static final int NO_DAY_OF_WEEK = 0;
+    private static final int TOP_PLACE_RANK = 1;
 
     private final ReportRepository reportRepository;
     private final ReportCategoryStatRepository reportCategoryStatRepository;
     private final ReportTownRankRepository reportTownRankRepository;
     private final ReportPlaceRankRepository reportPlaceRankRepository;
     private final ReportTimePatternRepository reportTimePatternRepository;
+    private final ConsumptionActivityPort consumptionActivityPort;
 
     public MonthlyReportInfo getMonthlyReport(GetMonthlyReportCommand command) {
         Report report = reportRepository.findByUserIdAndReportMonth(command.userId(), command.yearMonth().atDay(1))
@@ -58,7 +63,7 @@ public class MonthlyReportQueryService {
                 report.getId(),
                 command.yearMonth(),
                 toPersonaInfo(report),
-                toPlaceRankInfos(placeRanks),
+                toPlaceRankInfos(placeRanks, command),
                 toTownRankInfos(townRanks),
                 toDiscoveryInfo(report),
                 toSummaryInfo(report),
@@ -81,15 +86,28 @@ public class MonthlyReportQueryService {
         );
     }
 
-    private List<PlaceRankInfo> toPlaceRankInfos(List<ReportPlaceRank> placeRanks) {
+    private List<PlaceRankInfo> toPlaceRankInfos(List<ReportPlaceRank> placeRanks, GetMonthlyReportCommand command) {
         return placeRanks.stream()
                 .map(placeRank -> new PlaceRankInfo(
                         placeRank.getRank(),
                         placeRank.getPlaceName(),
                         placeRank.getVisitCount(),
-                        placeRank.getFirstVisitedDate()
+                        placeRank.getFirstVisitedDate(),
+                        placeRank.getRank() == TOP_PLACE_RANK ? findCategory(command, placeRank.getPlaceId()) : null
                 ))
                 .toList();
+    }
+
+
+    private String findCategory(GetMonthlyReportCommand command, Long placeId) {
+        LocalDate monthStart = command.yearMonth().atDay(1);
+        LocalDate monthEndExclusive = command.yearMonth().plusMonths(1).atDay(1);
+
+        return consumptionActivityPort.findActivities(command.userId(), monthStart, monthEndExclusive).stream()
+                .filter(activity -> activity.placeId().equals(placeId))
+                .map(ConsumptionActivity::category)
+                .findFirst()
+                .orElse(null);
     }
 
     private List<TownRankInfo> toTownRankInfos(List<ReportTownRank> townRanks) {

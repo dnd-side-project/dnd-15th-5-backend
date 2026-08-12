@@ -6,6 +6,7 @@ import java.time.LocalTime;
 public record VisitActivity(
         Long placeId,
         String dongName,
+        String category,
         LocalDate purchaseDate,
         LocalTime purchaseTime
 ) {

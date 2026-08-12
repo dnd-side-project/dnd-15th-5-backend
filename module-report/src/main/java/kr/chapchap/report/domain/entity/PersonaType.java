@@ -61,8 +61,8 @@ public enum PersonaType {
 
     @Getter
     public enum VisitStyle {
-        REGULAR("단골형", "익숙한 가게를 반복해서 찾는 편이에요."),
-        NOMAD("탐험형", "새로운 가게를 적극적으로 찾아 나서는 편이에요."),
+        REGULAR("단골 반복형", "익숙한 가게를 반복해서 찾는 편이에요."),
+        NOMAD("신규 탐색형", "새로운 가게를 적극적으로 찾아 나서는 편이에요."),
         ;
         private final String label;
         private final String description;
@@ -76,8 +76,8 @@ public enum PersonaType {
 
     @Getter
     public enum ActivityRange {
-        HOME("한동네형", "익숙한 한 동네에 머무는 편이에요."),
-        WANDER("확장형", "여러 동네를 넘나드는 편이에요."),
+        HOME("동네 집중형", "익숙한 한 동네에 머무는 편이에요."),
+        WANDER("동네 확장형", "여러 동네를 넘나드는 편이에요."),
         ;
         private final String label;
         private final String description;
@@ -91,8 +91,8 @@ public enum PersonaType {
 
     @Getter
     public enum ConsumptionTime {
-        DAY("낮형", "오전·오후에 소비하는 것을 즐기는 편이에요."),
-        MOON("밤형", "저녁·밤에 소비하는 것을 즐기는 편이에요."),
+        DAY("낮소비형", "오전·오후에 소비하는 것을 즐기는 편이에요."),
+        MOON("밤소비형", "저녁·밤에 소비하는 것을 즐기는 편이에요."),
         ;
         private final String label;
         private final String description;
@@ -105,7 +105,7 @@ public enum PersonaType {
 
     @Getter
     public enum ConsumptionRhythm {
-        PATTERN("루틴형", "정해진 요일에 규칙적으로 소비하는 편이에요."),
+        PATTERN("규칙형", "정해진 요일에 규칙적으로 소비하는 편이에요."),
         FREE("즉흥형", "요일에 얽매이지 않고 즉흥적으로 소비하는 편이에요."),
         ;
         private final String label;

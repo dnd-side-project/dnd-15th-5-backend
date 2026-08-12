@@ -3,7 +3,9 @@ package kr.chapchap.report.application.service;
 import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.core.exception.ErrorCode;
 import kr.chapchap.report.application.command.GetMonthlyReportCommand;
+import kr.chapchap.report.application.info.ConsumptionActivity;
 import kr.chapchap.report.application.info.MonthlyReportInfo;
+import kr.chapchap.report.application.port.ConsumptionActivityPort;
 import kr.chapchap.report.domain.entity.PersonaType;
 import kr.chapchap.report.domain.entity.Report;
 import kr.chapchap.report.domain.entity.ReportCategoryStat;
@@ -31,6 +33,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -55,6 +58,9 @@ class MonthlyReportQueryServiceTest {
     @Mock
     private ReportTimePatternRepository reportTimePatternRepository;
 
+    @Mock
+    private ConsumptionActivityPort consumptionActivityPort;
+
     private MonthlyReportQueryService sut;
 
     @BeforeEach
@@ -64,7 +70,8 @@ class MonthlyReportQueryServiceTest {
                 reportCategoryStatRepository,
                 reportTownRankRepository,
                 reportPlaceRankRepository,
-                reportTimePatternRepository
+                reportTimePatternRepository,
+                consumptionActivityPort
         );
     }
 
@@ -98,6 +105,9 @@ class MonthlyReportQueryServiceTest {
                         .visitCount(9).firstVisitedDate(LocalDate.of(2026, 5, 1)).build()
         ));
         when(reportTimePatternRepository.findByReportId(REPORT_ID)).thenReturn(List.of());
+        when(consumptionActivityPort.findActivities(eq(USER_ID), any(), any())).thenReturn(List.of(
+                new ConsumptionActivity(101L, "카페", LocalDate.of(2026, 7, 3), null)
+        ));
 
         // when
         MonthlyReportInfo info = sut.getMonthlyReport(new GetMonthlyReportCommand(USER_ID, YEAR_MONTH));
@@ -105,9 +115,10 @@ class MonthlyReportQueryServiceTest {
         // then
         assertThat(info.reportId()).isEqualTo(REPORT_ID);
         assertThat(info.persona().type()).isEqualTo("RHMP");
-        assertThat(info.persona().typeName()).isEqualTo("단골형 · 한동네형 · 밤형 · 루틴형");
+        assertThat(info.persona().typeName()).isEqualTo("단골 반복형 · 동네 집중형 · 밤소비형 · 규칙형");
         assertThat(info.placeRanks()).hasSize(1);
         assertThat(info.placeRanks().get(0).placeName()).isEqualTo("투썸 플레이스 뚝섬지점");
+        assertThat(info.placeRanks().get(0).category()).isEqualTo("카페");
         assertThat(info.townRanks()).hasSize(1);
         assertThat(info.discovery().newStickerCount()).isEqualTo(3);
         assertThat(info.discovery().message()).contains("3개");

@@ -29,16 +29,6 @@ public class PersonaAxisScoringService implements PersonaScoringService {
     private static final BigDecimal ACTIVITY_RANGE_THRESHOLD = BigDecimal.valueOf(50); //최다 방문동 비중
     private static final BigDecimal RHYTHM_THRESHOLD = BigDecimal.valueOf(60);// TOP 2 요일 비중
 
-    private static final int MORNING_START = 5;
-    private static final int AFTERNOON_START = 11;
-    private static final int EVENING_START = 17;
-    private static final int NIGHT_START = 21;
-
-    private static final int MORNING_WEIGHT = -2;
-    private static final int AFTERNOON_WEIGHT = -1;
-    private static final int EVENING_WEIGHT = 1;
-    private static final int NIGHT_WEIGHT = 2;
-
     private static final int TOP_DAYS_FOR_RHYTHM = 2; // 상위 2개 요일 추출
 
     @Override
@@ -94,25 +84,11 @@ public class PersonaAxisScoringService implements PersonaScoringService {
         long weightedSum = 0;
         long timedVisitCount = 0;
         for (AggregatedTimePattern pattern : timePatterns) {
-            weightedSum += (long) hourWeight(pattern.visitHour()) * pattern.visitCount();
+            weightedSum += (long) TimeOfDayWeightCalculator.hourWeight(pattern.visitHour()) * pattern.visitCount();
             timedVisitCount += pattern.visitCount();
         }
         return new TimeIntensity(weightedSum, timedVisitCount);
     }
-
-    private int hourWeight(int visitHour) {
-        if (visitHour >= MORNING_START && visitHour < AFTERNOON_START) {
-            return MORNING_WEIGHT;
-        }
-        if (visitHour >= AFTERNOON_START && visitHour < EVENING_START) {
-            return AFTERNOON_WEIGHT;
-        }
-        if (visitHour >= EVENING_START && visitHour < NIGHT_START) {
-            return EVENING_WEIGHT;
-        }
-        return NIGHT_WEIGHT;
-    }
-
 
     private BigDecimal calculateTopDaysShare(List<AggregatedTimePattern> timePatterns) {
         Map<Integer, Long> visitCountByDayOfWeek = timePatterns.stream()

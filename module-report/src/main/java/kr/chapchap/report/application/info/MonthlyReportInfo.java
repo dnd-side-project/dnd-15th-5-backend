@@ -29,7 +29,7 @@ public record MonthlyReportInfo(
     ) {
     }
 
-    public record PlaceRankInfo(int rank, String placeName, int visitCount, LocalDate firstVisitedDate) {
+    public record PlaceRankInfo(int rank, String placeName, int visitCount, LocalDate firstVisitedDate, String category) {
     }
 
     public record TownRankInfo(int rank, String townName, int visitCount) {

@@ -5,6 +5,7 @@ import kr.chapchap.core.test.JpaAuditingTestConfig;
 import kr.chapchap.core.test.TestcontainersConfiguration;
 import kr.chapchap.report.application.command.GetMonthlyReportCommand;
 import kr.chapchap.report.application.info.MonthlyReportInfo;
+import kr.chapchap.report.application.port.ConsumptionActivityPort;
 import kr.chapchap.report.domain.entity.Report;
 import kr.chapchap.report.domain.repository.ReportCategoryStatRepository;
 import kr.chapchap.report.domain.repository.ReportPlaceRankRepository;
@@ -21,6 +22,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 import java.time.YearMonth;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -57,6 +59,9 @@ class MonthlyReportQueryServiceIntegrationTest {
     @Autowired
     private EntityManager entityManager;
 
+    // module-consumption의 실제 구현이 아니라 순수 Port라, DataJpaTest 컨텍스트에는 빈이 없어 직접 mock한다.
+    private final ConsumptionActivityPort consumptionActivityPort = org.mockito.Mockito.mock(ConsumptionActivityPort.class);
+
     private MonthlyReportQueryService sut;
 
     @BeforeEach
@@ -66,7 +71,8 @@ class MonthlyReportQueryServiceIntegrationTest {
                 reportCategoryStatRepository,
                 reportTownRankRepository,
                 reportPlaceRankRepository,
-                reportTimePatternRepository
+                reportTimePatternRepository,
+                consumptionActivityPort
         );
 
         entityManager.createNativeQuery(
@@ -107,18 +113,25 @@ class MonthlyReportQueryServiceIntegrationTest {
 
     @Test
     void 실제_DB에_저장된_리포트를_조회하면_모든_필드가_정확히_매핑된다() {
+        // given: 1위 가게(placeId=101)의 그 달 소비기록 - 카테고리는 여기서 즉석으로 조회한다
+        org.mockito.Mockito.when(consumptionActivityPort.findActivities(
+                        org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(List.of(new kr.chapchap.report.application.info.ConsumptionActivity(
+                        101L, "카페", java.time.LocalDate.of(2026, 7, 3), null)));
+
         // when
         MonthlyReportInfo info = sut.getMonthlyReport(new GetMonthlyReportCommand(1L, YearMonth.of(2026, 7)));
 
         // then
         assertThat(info.reportId()).isEqualTo(1L);
         assertThat(info.persona().type()).isEqualTo("RHMP");
-        assertThat(info.persona().typeName()).isEqualTo("단골형 · 한동네형 · 밤형 · 루틴형");
+        assertThat(info.persona().typeName()).isEqualTo("단골 반복형 · 동네 집중형 · 밤소비형 · 규칙형");
         assertThat(info.persona().scores().scoreExploration()).isEqualByComparingTo("0.30");
 
         assertThat(info.placeRanks()).hasSize(1);
         assertThat(info.placeRanks().get(0).placeName()).isEqualTo("투썸 플레이스 뚝섬지점");
         assertThat(info.placeRanks().get(0).firstVisitedDate()).isEqualTo("2026-05-04");
+        assertThat(info.placeRanks().get(0).category()).isEqualTo("카페");
 
         assertThat(info.townRanks()).hasSize(3);
         assertThat(info.townRanks().get(0).townName()).isEqualTo("연남동");
