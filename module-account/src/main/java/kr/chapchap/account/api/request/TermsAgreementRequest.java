@@ -7,11 +7,19 @@ import kr.chapchap.account.application.info.OAuthClientType;
 
 @Schema(description = "필수 약관 동의 요청")
 public record TermsAgreementRequest(
-        @Schema(description = "서비스 이용약관 동의 여부", example = "true")
+        @Schema(
+                description = "서비스 이용약관 동의 여부",
+                example = "true",
+                requiredMode = Schema.RequiredMode.REQUIRED
+        )
         @AssertTrue(message = "서비스 이용약관 동의는 필수입니다.")
         boolean serviceTermsAgreed,
 
-        @Schema(description = "개인정보 처리방침 동의 여부", example = "true")
+        @Schema(
+                description = "개인정보 처리방침 동의 여부",
+                example = "true",
+                requiredMode = Schema.RequiredMode.REQUIRED
+        )
         @AssertTrue(message = "개인정보 처리방침 동의는 필수입니다.")
         boolean privacyPolicyAgreed
 ) {
