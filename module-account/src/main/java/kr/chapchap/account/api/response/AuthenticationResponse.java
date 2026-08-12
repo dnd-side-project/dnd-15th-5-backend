@@ -4,9 +4,15 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import kr.chapchap.account.application.info.AuthenticationInfo;
 
-@Schema(description = "로그인, 회원가입 완료 또는 토큰 재발급 결과")
+@Schema(description = """
+        인증 처리 결과입니다.
+
+        - 약관 동의 필요: requiresTermsAgreement=true이며 signupToken을 발급합니다.
+        - WEB 인증 완료: accessToken을 발급하고 Refresh Token은 HttpOnly 쿠키로 전달합니다.
+        - APP 인증 완료: accessToken과 refreshToken을 발급합니다.
+        """)
 public record AuthenticationResponse(
-        @Schema(description = "필수 약관 동의가 필요한지 여부", example = "false")
+        @Schema(description = "필수 약관 동의 필요 여부", example = "false")
         boolean requiresTermsAgreement,
 
         @Schema(
@@ -16,13 +22,13 @@ public record AuthenticationResponse(
         String signupToken,
 
         @Schema(
-                description = "가입 완료 사용자에게 발급되는 30분 유효 Access Token",
+                description = "인증이 완료된 사용자에게 발급되는 30분 유효 Access Token",
                 nullable = true
         )
         String accessToken,
 
         @Schema(
-                description = "APP 응답에만 포함되는 14일 유효 Refresh Token. WEB은 HttpOnly 쿠키로 전달됩니다.",
+                description = "APP 인증 완료 시에만 응답 본문에 포함되는 14일 유효 Refresh Token",
                 nullable = true
         )
         @JsonInclude(JsonInclude.Include.NON_NULL)

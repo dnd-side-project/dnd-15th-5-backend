@@ -20,7 +20,11 @@ public class OpenApiConfig {
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
                                         .bearerFormat("JWT")
-                                        .description("Access Token 또는 Signup Token을 입력합니다.")
+                                        .description(
+                                                "Bearer JWT 인증입니다. "
+                                                        + "POST /auth/signup/terms에서는 Signup Token을 사용하고, "
+                                                        + "그 외 bearerAuth가 필요한 API에서는 Access Token을 사용합니다."
+                                        )
                         )
                 )
                 .info(new Info()
