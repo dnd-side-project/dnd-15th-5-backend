@@ -1,6 +1,7 @@
 package kr.chapchap.consumption.domain.repository;
 
 import kr.chapchap.consumption.domain.entity.Consumption;
+import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -15,4 +16,6 @@ public interface ConsumptionQueryRepository {
     List<Consumption> findAllByUserAndDateRange(Long userId, LocalDate from, LocalDate toExclusive);
 
     List<Long> findDistinctUserIdsByDateRange(LocalDate from, LocalDate toExclusive);
+
+    List<PlaceCategoryVisitRow> aggregateVisitedPlacesByCategory(Long userId, List<String> categories);
 }

@@ -1,9 +1,11 @@
 package kr.chapchap.consumption.infra.persistence;
 
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import kr.chapchap.consumption.domain.entity.Consumption;
+import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
 import kr.chapchap.consumption.domain.entity.QConsumption;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,9 @@ import java.util.List;
 @RequiredArgsConstructor
 @Repository
 public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepository {
+
+
+    private static final long MAX_VISITED_PLACE_ROWS = 2000;
 
     private final JPAQueryFactory queryFactory;
 
@@ -78,6 +83,29 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
                         consumption.purchaseDate.goe(from),
                         consumption.purchaseDate.lt(toExclusive)
                 )
+                .fetch();
+    }
+
+    @Override
+    public List<PlaceCategoryVisitRow> aggregateVisitedPlacesByCategory(Long userId, List<String> categories) {
+        QConsumption consumption = QConsumption.consumption;
+
+        BooleanBuilder condition = new BooleanBuilder()
+                .and(consumption.userId.eq(userId));
+        if (categories != null && !categories.isEmpty()) {
+            condition.and(consumption.category.in(categories));
+        }
+
+        return queryFactory
+                .select(Projections.constructor(PlaceCategoryVisitRow.class,
+                        consumption.placeId,
+                        consumption.category.max(),
+                        consumption.count()))
+                .from(consumption)
+                .where(condition)
+                .groupBy(consumption.placeId)
+                .orderBy(consumption.count().desc())
+                .limit(MAX_VISITED_PLACE_ROWS)
                 .fetch();
     }
 }
