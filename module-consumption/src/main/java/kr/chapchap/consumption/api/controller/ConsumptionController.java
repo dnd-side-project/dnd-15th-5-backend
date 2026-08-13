@@ -10,7 +10,7 @@ import kr.chapchap.consumption.api.response.ConsumptionScrollResponse;
 import kr.chapchap.consumption.api.response.VisitedPlaceMarkerResponse;
 import kr.chapchap.consumption.application.command.ConsumptionSearchCommand;
 import kr.chapchap.consumption.application.info.ConsumptionScrollInfo;
-import kr.chapchap.consumption.application.info.VisitedPlaceMarkerInfo;
+import kr.chapchap.consumption.application.info.VisitedPlaceMarkersInfo;
 import kr.chapchap.consumption.application.service.ConsumptionQueryService;
 import kr.chapchap.consumption.application.service.VisitedPlaceQueryService;
 import lombok.RequiredArgsConstructor;
@@ -68,7 +68,7 @@ public class ConsumptionController {
             @Parameter(description = "필터링할 카테고리 (생략시 전체 카테고리)")
             @RequestParam(required = false) List<String> categories
     ) {
-        List<VisitedPlaceMarkerInfo> markers = visitedPlaceQueryService.getVisitedPlaceMarkers(1L, categories);
-        return ApiResponse.success(VisitedPlaceMarkerResponse.from(markers));
+        VisitedPlaceMarkersInfo info = visitedPlaceQueryService.getVisitedPlaceMarkers(1L, categories);
+        return ApiResponse.success(VisitedPlaceMarkerResponse.from(info));
     }
 }
