@@ -68,7 +68,6 @@ public class SecurityConfig {
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/auth/social/exchange",
-                                "/auth/social/kakao/exchange",
                                 "/auth/token/refresh",
                                 "/auth/token/refresh/web",
                                 "/auth/logout",

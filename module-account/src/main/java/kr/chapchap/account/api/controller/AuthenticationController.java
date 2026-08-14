@@ -77,7 +77,7 @@ public class AuthenticationController {
                     content = @Content(schema = @Schema(implementation = ApiResponse.class))
             )
     })
-    @PostMapping({"/social/exchange", "/social/kakao/exchange"})
+    @PostMapping("/social/exchange")
     public ApiResponse<AuthenticationResponse> exchangeSocialLoginCode(
             @Valid @RequestBody LoginCodeExchangeRequest request,
             HttpServletResponse response

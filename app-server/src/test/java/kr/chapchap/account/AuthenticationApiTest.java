@@ -136,7 +136,7 @@ class AuthenticationApiTest {
                 .willReturn(createAuthenticationInfo(OAuthClientType.APP));
 
         // when & then
-        mockMvc.perform(post("/auth/social/kakao/exchange")
+        mockMvc.perform(post("/auth/social/exchange")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -156,7 +156,7 @@ class AuthenticationApiTest {
     @Test
     void codeVerifier_형식이_올바르지_않으면_검증_오류를_반환한다() throws Exception {
         // when & then
-        mockMvc.perform(post("/auth/social/kakao/exchange")
+        mockMvc.perform(post("/auth/social/exchange")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
