@@ -1,5 +1,6 @@
 package kr.chapchap.account.infra.external.google;
 
+import kr.chapchap.account.application.info.GoogleWithdrawalAuthenticationInfo;
 import kr.chapchap.account.infra.config.GoogleOAuthProperties;
 import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.core.exception.CommonErrorCode;
@@ -41,6 +42,7 @@ class GoogleAuthenticationClientTest {
             "https://accounts.google.test/o/oauth2/v2/auth"
     );
     private static final URI TOKEN_URI = URI.create("https://oauth2.google.test/token");
+    private static final URI REVOKE_URI = URI.create("https://oauth2.google.test/revoke");
     private static final URI REDIRECT_URI = URI.create(
             "https://client.example.com/oauth/google/callback"
     );
@@ -61,6 +63,7 @@ class GoogleAuthenticationClientTest {
                 REDIRECT_URI,
                 AUTHORIZATION_URI,
                 TOKEN_URI,
+                REVOKE_URI,
                 URI.create("https://www.google.test/oauth2/v3/certs"),
                 Duration.ofSeconds(3),
                 Duration.ofSeconds(5)
@@ -93,6 +96,19 @@ class GoogleAuthenticationClientTest {
     }
 
     @Test
+    void Google_재인증_URI는_계정_선택을_요청한다() {
+        // when
+        URI authorizationUri = googleAuthenticationClient.createReauthenticationUri(STATE);
+
+        // then
+        UriComponents components = UriComponentsBuilder.fromUri(authorizationUri).build();
+        assertThat(components.getQueryParams().getFirst("state")).isEqualTo(STATE);
+        assertThat(components.getQueryParams().getFirst("nonce")).isEqualTo(STATE);
+        assertThat(components.getQueryParams().getFirst("prompt"))
+                .isEqualTo("select_account");
+    }
+
+    @Test
     void 인가_코드를_ID_Token으로_교환하고_검증된_sub를_반환한다() {
         // given
         expectIdTokenExchange();
@@ -112,6 +128,51 @@ class GoogleAuthenticationClientTest {
 
         // then
         assertThat(result).isEqualTo("google-sub");
+        server.verify();
+    }
+
+    @Test
+    void 탈퇴_재인증은_검증한_sub와_일회성_access_token을_반환한다() {
+        // given
+        expectIdTokenExchange();
+        given(idTokenDecoder.decode("google-id-token"))
+                .willReturn(createIdToken(
+                        "https://accounts.google.com",
+                        List.of(CLIENT_ID),
+                        STATE,
+                        "google-sub"
+                ));
+
+        // when
+        GoogleWithdrawalAuthenticationInfo result =
+                googleAuthenticationClient.authenticateForWithdrawal(
+                        "authorization-code",
+                        STATE
+                );
+
+        // then
+        assertThat(result.providerUserId()).isEqualTo("google-sub");
+        assertThat(result.accessToken()).isEqualTo("google-access-token");
+        server.verify();
+    }
+
+    @Test
+    void Google_access_token으로_권한을_해제한다() {
+        // given
+        server.expect(requestTo(REVOKE_URI))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().contentTypeCompatibleWith(
+                        MediaType.APPLICATION_FORM_URLENCODED
+                ))
+                .andExpect(content().formDataContains(Map.of(
+                        "token", "google-access-token"
+                )))
+                .andRespond(withSuccess());
+
+        // when
+        googleAuthenticationClient.revoke("google-access-token");
+
+        // then
         server.verify();
     }
 

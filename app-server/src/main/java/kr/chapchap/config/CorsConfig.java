@@ -3,6 +3,7 @@ package kr.chapchap.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
@@ -20,6 +21,7 @@ public class CorsConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedMethods(List.of(ALL));
         configuration.setAllowedHeaders(List.of(ALL));
+        configuration.setExposedHeaders(List.of(HttpHeaders.LOCATION));
         configuration.setAllowCredentials(true);
         return configuration;
     }

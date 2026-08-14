@@ -12,18 +12,26 @@ import kr.chapchap.account.api.request.AccountUpdateRequest;
 import kr.chapchap.account.api.response.AccountResponse;
 import kr.chapchap.account.api.response.AuthenticationResponseHandler;
 import kr.chapchap.account.application.info.AccountInfo;
+import kr.chapchap.account.application.info.OAuthClientType;
 import kr.chapchap.account.application.service.AccountCommandService;
 import kr.chapchap.account.application.service.AccountQueryService;
+import kr.chapchap.account.application.service.AccountWithdrawalService;
 import kr.chapchap.core.web.auth.ChapChapUserId;
 import kr.chapchap.core.web.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.net.URI;
+import java.util.Optional;
 
 @SecurityRequirement(name = "bearerAuth")
 @Tag(name = "Account", description = "사용자 계정 API")
@@ -34,6 +42,7 @@ public class AccountController {
 
     private final AccountQueryService accountQueryService;
     private final AccountCommandService accountCommandService;
+    private final AccountWithdrawalService accountWithdrawalService;
     private final AuthenticationResponseHandler authenticationResponseHandler;
 
     @Operation(
@@ -145,15 +154,34 @@ public class AccountController {
                     responseCode = "502",
                     description = "카카오 연결 해제 실패 (C007)",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "202",
+                    description = "Google 재인증 필요. Location 헤더의 URI로 이동",
+                    useReturnTypeSchema = true,
+                    headers = @io.swagger.v3.oas.annotations.headers.Header(
+                            name = "Location",
+                            description = "Google 재인증 URI"
+                    )
             )
     })
     @DeleteMapping("/me")
-    public ApiResponse<Void> withdrawMyAccount(
+    public ResponseEntity<ApiResponse<Void>> withdrawMyAccount(
             @ChapChapUserId Long userId,
+            @AuthenticationPrincipal Jwt jwt,
             HttpServletResponse response
     ) {
-        accountCommandService.withdrawAccount(userId);
+        Optional<URI> authorizationUri = accountWithdrawalService.startWithdrawal(
+                userId,
+                OAuthClientType.fromClaim(jwt.getClaimAsString("client_type"))
+        );
+        if (authorizationUri.isPresent()) {
+            return ResponseEntity.accepted()
+                    .location(authorizationUri.get())
+                    .body(ApiResponse.ok());
+        }
+
         authenticationResponseHandler.clearRefreshTokenCookie(response);
-        return ApiResponse.ok();
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 }

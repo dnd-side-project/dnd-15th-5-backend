@@ -65,6 +65,7 @@ chapchap:
     google:
       authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
       token-uri: https://oauth2.googleapis.com/token
+      revoke-uri: https://oauth2.googleapis.com/revoke
       jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
       connect-timeout: 3s
       read-timeout: 5s

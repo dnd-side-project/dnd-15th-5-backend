@@ -3,6 +3,7 @@ package kr.chapchap.account.infra.persistence;
 import kr.chapchap.account.application.info.OAuthAuthorizationSession;
 import kr.chapchap.account.application.info.OAuthClientType;
 import kr.chapchap.account.application.info.OAuthLoginSession;
+import kr.chapchap.account.application.info.OAuthWithdrawalSession;
 import kr.chapchap.account.application.port.OAuthSessionStore;
 import kr.chapchap.account.domain.entity.SocialProvider;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,8 @@ import java.util.UUID;
 public class RedisOAuthSessionStore implements OAuthSessionStore {
 
     private static final String STATE_KEY_PREFIX = "chapchap:account:oauth:state:";
+    private static final String WITHDRAWAL_STATE_KEY_PREFIX =
+            "chapchap:account:oauth:withdrawal-state:";
     private static final String LOGIN_CODE_KEY_PREFIX = "chapchap:account:oauth:login-code:";
     private static final Duration STATE_TTL = Duration.ofMinutes(5);
     private static final Duration LOGIN_CODE_TTL = Duration.ofMinutes(2);
@@ -65,6 +68,48 @@ public class RedisOAuthSessionStore implements OAuthSessionStore {
                     SocialProvider.valueOf(session[0]),
                     OAuthClientType.valueOf(session[1]),
                     session[2]
+            ));
+        } catch (IllegalArgumentException exception) {
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public String createWithdrawalState(Long userId, OAuthClientType clientType) {
+        Objects.requireNonNull(userId, "사용자 ID는 필수입니다.");
+        Objects.requireNonNull(clientType, "OAuth 클라이언트 유형은 필수입니다.");
+
+        String state = OAuthWithdrawalSession.STATE_PREFIX + UUID.randomUUID();
+        redisTemplate.opsForValue().set(
+                WITHDRAWAL_STATE_KEY_PREFIX + state,
+                userId + ":" + clientType.name(),
+                STATE_TTL
+        );
+        return state;
+    }
+
+    @Override
+    public Optional<OAuthWithdrawalSession> consumeWithdrawalState(String state) {
+        if (state == null || !state.startsWith(OAuthWithdrawalSession.STATE_PREFIX)) {
+            return Optional.empty();
+        }
+
+        String value = redisTemplate.opsForValue().getAndDelete(
+                WITHDRAWAL_STATE_KEY_PREFIX + state
+        );
+        if (value == null) {
+            return Optional.empty();
+        }
+
+        String[] session = value.split(":", 2);
+        if (session.length != 2) {
+            return Optional.empty();
+        }
+
+        try {
+            return Optional.of(new OAuthWithdrawalSession(
+                    Long.valueOf(session[0]),
+                    OAuthClientType.valueOf(session[1])
             ));
         } catch (IllegalArgumentException exception) {
             return Optional.empty();

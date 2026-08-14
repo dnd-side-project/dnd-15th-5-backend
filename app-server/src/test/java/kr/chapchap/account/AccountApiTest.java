@@ -4,8 +4,10 @@ import kr.chapchap.account.api.controller.AccountController;
 import kr.chapchap.account.api.response.AuthenticationResponseHandler;
 import kr.chapchap.account.application.command.AccountUpdateCommand;
 import kr.chapchap.account.application.info.AccountInfo;
+import kr.chapchap.account.application.info.OAuthClientType;
 import kr.chapchap.account.application.service.AccountCommandService;
 import kr.chapchap.account.application.service.AccountQueryService;
+import kr.chapchap.account.application.service.AccountWithdrawalService;
 import kr.chapchap.account.exception.AccountErrorCode;
 import kr.chapchap.config.CorsConfig;
 import kr.chapchap.config.SecurityConfig;
@@ -25,6 +27,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.net.URI;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -62,6 +67,9 @@ class AccountApiTest {
 
     @MockitoBean
     private AccountCommandService accountCommandService;
+
+    @MockitoBean
+    private AccountWithdrawalService accountWithdrawalService;
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
@@ -221,10 +229,16 @@ class AccountApiTest {
 
     @Test
     void user_scope로_내_계정을_탈퇴한다() throws Exception {
+        // given
+        given(accountWithdrawalService.startWithdrawal(USER_ID, OAuthClientType.WEB))
+                .willReturn(Optional.empty());
+
         // when & then
         mockMvc.perform(delete("/accounts/me")
                         .with(jwt()
-                                .jwt(jwt -> jwt.subject(USER_ID.toString()))
+                                .jwt(jwt -> jwt
+                                        .subject(USER_ID.toString())
+                                        .claim("client_type", "WEB"))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_user"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("S001"))
@@ -239,7 +253,40 @@ class AccountApiTest {
                         containsString("SameSite=Lax")
                 ));
 
-        then(accountCommandService).should().withdrawAccount(USER_ID);
+        then(accountWithdrawalService).should().startWithdrawal(
+                USER_ID,
+                OAuthClientType.WEB
+        );
+    }
+
+    @Test
+    void Google_회원_탈퇴는_재인증_URI를_반환한다() throws Exception {
+        // given
+        URI authorizationUri = URI.create(
+                "https://accounts.google.com/o/oauth2/v2/auth?state=withdrawal-state"
+        );
+        given(accountWithdrawalService.startWithdrawal(USER_ID, OAuthClientType.APP))
+                .willReturn(Optional.of(authorizationUri));
+
+        // when & then
+        mockMvc.perform(delete("/accounts/me")
+                        .with(jwt()
+                                .jwt(jwt -> jwt
+                                        .subject(USER_ID.toString())
+                                        .claim("client_type", "APP"))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_user"))))
+                .andExpect(status().isAccepted())
+                .andExpect(header().string(
+                        HttpHeaders.LOCATION,
+                        authorizationUri.toString()
+                ))
+                .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE))
+                .andExpect(jsonPath("$.code").value("S001"));
+
+        then(accountWithdrawalService).should().startWithdrawal(
+                USER_ID,
+                OAuthClientType.APP
+        );
     }
 
     @Test

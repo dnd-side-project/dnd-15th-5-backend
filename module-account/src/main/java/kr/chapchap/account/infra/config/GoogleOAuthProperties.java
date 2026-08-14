@@ -16,6 +16,7 @@ public record GoogleOAuthProperties(
         @NotNull URI redirectUri,
         @NotNull URI authorizationUri,
         @NotNull URI tokenUri,
+        @NotNull URI revokeUri,
         @NotNull URI jwkSetUri,
         @NotNull Duration connectTimeout,
         @NotNull Duration readTimeout

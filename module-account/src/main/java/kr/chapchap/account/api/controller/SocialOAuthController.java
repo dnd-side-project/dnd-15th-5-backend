@@ -7,7 +7,11 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
+import kr.chapchap.account.api.response.AuthenticationResponseHandler;
+import kr.chapchap.account.application.info.AccountWithdrawalCallbackInfo;
 import kr.chapchap.account.application.info.OAuthClientType;
+import kr.chapchap.account.application.service.AccountWithdrawalService;
 import kr.chapchap.account.application.service.OAuthFlowService;
 import kr.chapchap.core.web.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +33,8 @@ import java.net.URI;
 public class SocialOAuthController {
 
     private final OAuthFlowService oauthFlowService;
+    private final AccountWithdrawalService accountWithdrawalService;
+    private final AuthenticationResponseHandler authenticationResponseHandler;
 
     @Operation(
             summary = "소셜 로그인 시작",
@@ -113,8 +119,21 @@ public class SocialOAuthController {
             @Parameter(description = "소셜 로그인 제공자가 발급한 Authorization Code")
             @RequestParam(required = false) String code,
             @Parameter(description = "로그인 시작 시 서버가 발급한 일회용 OAuth state")
-            @RequestParam String state
+            @RequestParam String state,
+            HttpServletResponse response
     ) {
+        if (accountWithdrawalService.isGoogleWithdrawalCallback(provider, state)) {
+            AccountWithdrawalCallbackInfo callbackInfo = StringUtils.hasText(code)
+                    ? accountWithdrawalService.handleGoogleCallback(code, state)
+                    : accountWithdrawalService.handleGoogleCancelledCallback(state);
+            if (callbackInfo.completed()) {
+                authenticationResponseHandler.clearRefreshTokenCookie(response);
+            }
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(callbackInfo.redirectUri())
+                    .build();
+        }
+
         URI clientRedirectUri = StringUtils.hasText(code)
                 ? oauthFlowService.handleCallback(provider, code, state)
                 : oauthFlowService.handleCancelledCallback(provider, state);

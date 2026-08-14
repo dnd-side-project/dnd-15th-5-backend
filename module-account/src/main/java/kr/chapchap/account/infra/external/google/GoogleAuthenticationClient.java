@@ -1,5 +1,6 @@
 package kr.chapchap.account.infra.external.google;
 
+import kr.chapchap.account.application.info.GoogleWithdrawalAuthenticationInfo;
 import kr.chapchap.account.application.port.GoogleAuthenticationPort;
 import kr.chapchap.account.infra.config.GoogleOAuthProperties;
 import kr.chapchap.core.exception.BusinessException;
@@ -24,6 +25,7 @@ public class GoogleAuthenticationClient implements GoogleAuthenticationPort {
 
     private static final String AUTHORIZATION_CODE_GRANT = "authorization_code";
     private static final String OPEN_ID_SCOPES = "openid email";
+    private static final String SELECT_ACCOUNT_PROMPT = "select_account";
     private static final Set<String> GOOGLE_ISSUERS = Set.of(
             "https://accounts.google.com",
             "accounts.google.com"
@@ -45,33 +47,88 @@ public class GoogleAuthenticationClient implements GoogleAuthenticationPort {
 
     @Override
     public URI createAuthorizationUri(String state) {
+        return createAuthorizationUri(state, false);
+    }
+
+    @Override
+    public URI createReauthenticationUri(String state) {
+        return createAuthorizationUri(state, true);
+    }
+
+    @Override
+    public String authenticate(String authorizationCode, String nonce) {
+        validateAuthenticationRequest(authorizationCode, nonce);
+
+        GoogleTokenResponse tokenResponse = requestTokens(authorizationCode);
+        return verifyIdToken(tokenResponse.idToken(), nonce);
+    }
+
+    @Override
+    public GoogleWithdrawalAuthenticationInfo authenticateForWithdrawal(
+            String authorizationCode,
+            String nonce
+    ) {
+        validateAuthenticationRequest(authorizationCode, nonce);
+
+        GoogleTokenResponse tokenResponse = requestTokens(authorizationCode);
+        if (!StringUtils.hasText(tokenResponse.accessToken())) {
+            throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
+        }
+        return new GoogleWithdrawalAuthenticationInfo(
+                verifyIdToken(tokenResponse.idToken(), nonce),
+                tokenResponse.accessToken()
+        );
+    }
+
+    @Override
+    public void revoke(String accessToken) {
+        if (!StringUtils.hasText(accessToken)) {
+            throw new IllegalArgumentException("Google access token은 필수입니다.");
+        }
+
+        MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+        formData.add("token", accessToken);
+        try {
+            googleRestClient.post()
+                    .uri(properties.revokeUri())
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(formData)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RestClientException exception) {
+            throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
+        }
+    }
+
+    private URI createAuthorizationUri(String state, boolean reauthentication) {
         if (!StringUtils.hasText(state)) {
             throw new IllegalArgumentException("OAuth state는 비어 있을 수 없습니다.");
         }
 
-        return UriComponentsBuilder.fromUri(properties.authorizationUri())
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUri(
+                        properties.authorizationUri()
+                )
                 .queryParam("response_type", "code")
                 .queryParam("client_id", properties.clientId())
                 .queryParam("redirect_uri", properties.redirectUri())
                 .queryParam("scope", OPEN_ID_SCOPES)
                 .queryParam("state", state)
-                .queryParam("nonce", state)
-                .build()
+                .queryParam("nonce", state);
+        if (reauthentication) {
+            builder.queryParam("prompt", SELECT_ACCOUNT_PROMPT);
+        }
+        return builder.build()
                 .encode()
                 .toUri();
     }
 
-    @Override
-    public String authenticate(String authorizationCode, String nonce) {
+    private void validateAuthenticationRequest(String authorizationCode, String nonce) {
         if (!StringUtils.hasText(authorizationCode) || !StringUtils.hasText(nonce)) {
             throw new BusinessException(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS);
         }
-
-        String idToken = requestIdToken(authorizationCode);
-        return verifyIdToken(idToken, nonce);
     }
 
-    private String requestIdToken(String authorizationCode) {
+    private GoogleTokenResponse requestTokens(String authorizationCode) {
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("grant_type", AUTHORIZATION_CODE_GRANT);
         formData.add("client_id", properties.clientId());
@@ -89,7 +146,7 @@ public class GoogleAuthenticationClient implements GoogleAuthenticationPort {
             if (response == null || !StringUtils.hasText(response.idToken())) {
                 throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
             }
-            return response.idToken();
+            return response;
         } catch (RestClientResponseException exception) {
             if (isInvalidAuthorizationCode(exception)) {
                 throw new BusinessException(

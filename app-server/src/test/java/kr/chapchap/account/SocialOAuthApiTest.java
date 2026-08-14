@@ -1,7 +1,10 @@
 package kr.chapchap.account;
 
 import kr.chapchap.account.api.controller.SocialOAuthController;
+import kr.chapchap.account.api.response.AuthenticationResponseHandler;
+import kr.chapchap.account.application.info.AccountWithdrawalCallbackInfo;
 import kr.chapchap.account.application.info.OAuthClientType;
+import kr.chapchap.account.application.service.AccountWithdrawalService;
 import kr.chapchap.account.application.service.OAuthFlowService;
 import kr.chapchap.config.CorsConfig;
 import kr.chapchap.config.SecurityConfig;
@@ -16,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.net.URI;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -34,6 +38,12 @@ class SocialOAuthApiTest {
 
     @MockitoBean
     private OAuthFlowService oauthFlowService;
+
+    @MockitoBean
+    private AccountWithdrawalService accountWithdrawalService;
+
+    @MockitoBean
+    private AuthenticationResponseHandler authenticationResponseHandler;
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
@@ -115,6 +125,33 @@ class SocialOAuthApiTest {
                 "authorization-code",
                 "state"
         );
+    }
+
+    @Test
+    void Google_탈퇴_콜백은_탈퇴를_완료하고_클라이언트로_이동한다() throws Exception {
+        // given
+        String state = "withdrawal-state";
+        URI clientUri = URI.create("chapchap://oauth/callback?withdrawal=success");
+        given(accountWithdrawalService.isGoogleWithdrawalCallback("google", state))
+                .willReturn(true);
+        given(accountWithdrawalService.handleGoogleCallback(
+                "authorization-code",
+                state
+        )).willReturn(new AccountWithdrawalCallbackInfo(clientUri, true));
+
+        // when & then
+        mockMvc.perform(get("/oauth/google/callback")
+                        .param("code", "authorization-code")
+                        .param("state", state))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", clientUri.toString()));
+
+        then(accountWithdrawalService).should().handleGoogleCallback(
+                "authorization-code",
+                state
+        );
+        then(authenticationResponseHandler).should().clearRefreshTokenCookie(any());
+        then(oauthFlowService).shouldHaveNoInteractions();
     }
 
     @Test

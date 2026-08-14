@@ -8,5 +8,7 @@ public interface OAuthClientRedirectPort {
 
     URI createLoginRedirect(OAuthClientType clientType, String loginCode);
 
+    URI createWithdrawalRedirect(OAuthClientType clientType);
+
     URI createErrorRedirect(OAuthClientType clientType, String errorCode);
 }
