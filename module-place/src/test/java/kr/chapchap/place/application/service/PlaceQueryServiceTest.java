@@ -3,6 +3,8 @@ package kr.chapchap.place.application.service;
 import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.place.application.info.PlaceLocationInfo;
 import kr.chapchap.place.domain.entity.Place;
+import kr.chapchap.place.domain.entity.PlaceLike;
+import kr.chapchap.place.domain.repository.PlaceLikeRepository;
 import kr.chapchap.place.domain.repository.PlaceRepository;
 import kr.chapchap.place.exception.PlaceErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +20,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -31,11 +34,14 @@ class PlaceQueryServiceTest {
     @Mock
     private PlaceRepository placeRepository;
 
+    @Mock
+    private PlaceLikeRepository placeLikeRepository;
+
     private PlaceQueryService sut;
 
     @BeforeEach
     void setUp() {
-        sut = new PlaceQueryService(placeRepository);
+        sut = new PlaceQueryService(placeRepository, placeLikeRepository);
     }
 
     @Test
@@ -67,6 +73,20 @@ class PlaceQueryServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(exception -> ((BusinessException) exception).getErrorCode())
                 .isEqualTo(PlaceErrorCode.LOCATION_NOT_FOUND);
+    }
+
+    @Test
+    void 좋아요한_장소_id만_Set으로_반환한다() {
+        // given
+        PlaceLike like101 = PlaceLike.builder().userId(1L).placeId(101L).build();
+        when(placeLikeRepository.findByUserIdAndPlaceIdIn(1L, List.of(101L, 102L)))
+                .thenReturn(List.of(like101));
+
+        // when
+        Set<Long> result = sut.findLikedPlaceIds(1L, List.of(101L, 102L));
+
+        // then
+        assertThat(result).containsExactly(101L);
     }
 
     private Place createPlace(Long id, double longitude, double latitude) {
