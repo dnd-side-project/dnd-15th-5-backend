@@ -7,8 +7,8 @@ import kr.chapchap.account.application.command.TermsAgreementCommand;
 import kr.chapchap.account.application.info.AuthenticationInfo;
 import kr.chapchap.account.application.info.OAuthClientType;
 import kr.chapchap.account.application.info.TokenPair;
-import kr.chapchap.account.application.service.KakaoOAuthFlowService;
 import kr.chapchap.account.application.service.LoginTokenService;
+import kr.chapchap.account.application.service.OAuthFlowService;
 import kr.chapchap.account.application.service.TermsAgreementService;
 import kr.chapchap.config.CorsConfig;
 import kr.chapchap.config.SecurityConfig;
@@ -52,7 +52,7 @@ class AuthenticationApiTest {
     private final MockMvc mockMvc;
 
     @MockitoBean
-    private KakaoOAuthFlowService kakaoOAuthFlowService;
+    private OAuthFlowService oauthFlowService;
 
     @MockitoBean
     private TermsAgreementService termsAgreementService;
@@ -71,14 +71,14 @@ class AuthenticationApiTest {
     @Test
     void 약관_동의_대기_사용자가_loginCode를_교환하면_Signup_Token만_반환한다() throws Exception {
         // given
-        given(kakaoOAuthFlowService.exchange("login-code", CODE_VERIFIER))
+        given(oauthFlowService.exchange("login-code", CODE_VERIFIER))
                 .willReturn(AuthenticationInfo.termsRequired(
                         OAuthClientType.WEB,
                         "signup-token"
                 ));
 
         // when & then
-        mockMvc.perform(post("/auth/social/kakao/exchange")
+        mockMvc.perform(post("/auth/social/exchange")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -94,17 +94,17 @@ class AuthenticationApiTest {
                 .andExpect(jsonPath("$.data.refreshToken").doesNotExist())
                 .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE));
 
-        then(kakaoOAuthFlowService).should().exchange("login-code", CODE_VERIFIER);
+        then(oauthFlowService).should().exchange("login-code", CODE_VERIFIER);
     }
 
     @Test
     void WEB_사용자가_loginCode를_교환하면_Access_Token은_JSON으로_Refresh_Token은_쿠키로_반환한다() throws Exception {
         // given
-        given(kakaoOAuthFlowService.exchange("login-code", CODE_VERIFIER))
+        given(oauthFlowService.exchange("login-code", CODE_VERIFIER))
                 .willReturn(createAuthenticationInfo(OAuthClientType.WEB));
 
         // when & then
-        mockMvc.perform(post("/auth/social/kakao/exchange")
+        mockMvc.perform(post("/auth/social/exchange")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -126,17 +126,17 @@ class AuthenticationApiTest {
                         containsString("SameSite=Lax")
                 ));
 
-        then(kakaoOAuthFlowService).should().exchange("login-code", CODE_VERIFIER);
+        then(oauthFlowService).should().exchange("login-code", CODE_VERIFIER);
     }
 
     @Test
     void APP_사용자가_loginCode를_교환하면_Access_Token과_Refresh_Token을_JSON으로_반환한다() throws Exception {
         // given
-        given(kakaoOAuthFlowService.exchange("login-code", CODE_VERIFIER))
+        given(oauthFlowService.exchange("login-code", CODE_VERIFIER))
                 .willReturn(createAuthenticationInfo(OAuthClientType.APP));
 
         // when & then
-        mockMvc.perform(post("/auth/social/kakao/exchange")
+        mockMvc.perform(post("/auth/social/exchange")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -150,13 +150,13 @@ class AuthenticationApiTest {
                 .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"))
                 .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE));
 
-        then(kakaoOAuthFlowService).should().exchange("login-code", CODE_VERIFIER);
+        then(oauthFlowService).should().exchange("login-code", CODE_VERIFIER);
     }
 
     @Test
     void codeVerifier_형식이_올바르지_않으면_검증_오류를_반환한다() throws Exception {
         // when & then
-        mockMvc.perform(post("/auth/social/kakao/exchange")
+        mockMvc.perform(post("/auth/social/exchange")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {

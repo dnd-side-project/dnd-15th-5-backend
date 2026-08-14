@@ -3,7 +3,11 @@ package kr.chapchap.account.application.service;
 import kr.chapchap.account.application.command.AccountUpdateCommand;
 import kr.chapchap.account.application.event.ProfileImageCleanupEvent;
 import kr.chapchap.account.application.info.AccountInfo;
+import kr.chapchap.account.application.info.OAuthClientType;
+import kr.chapchap.account.application.port.GoogleAuthenticationPort;
 import kr.chapchap.account.application.port.KakaoAuthenticationPort;
+import kr.chapchap.account.application.port.OAuthClientRedirectPort;
+import kr.chapchap.account.application.port.OAuthSessionStore;
 import kr.chapchap.account.application.port.ProfileImageStorage;
 import kr.chapchap.account.application.port.RefreshTokenStore;
 import kr.chapchap.account.domain.entity.SocialAccount;
@@ -65,10 +69,22 @@ class AccountCommandServiceTest {
     private KakaoAuthenticationPort kakaoAuthenticationPort;
 
     @Mock
+    private GoogleAuthenticationPort googleAuthenticationPort;
+
+    @Mock
+    private OAuthSessionStore oauthSessionStore;
+
+    @Mock
+    private OAuthClientRedirectPort oauthClientRedirectPort;
+
+    @Mock
     private RefreshTokenStore refreshTokenStore;
 
     @InjectMocks
     private AccountCommandService accountCommandService;
+
+    @InjectMocks
+    private AccountWithdrawalService accountWithdrawalService;
 
     @Test
     void 닉네임만_수정한다() {
@@ -278,7 +294,7 @@ class AccountCommandServiceTest {
         )).willReturn(Optional.of(socialAccount));
 
         // when
-        accountCommandService.withdrawAccount(USER_ID);
+        accountWithdrawalService.startWithdrawal(USER_ID, OAuthClientType.WEB);
 
         // then
         assertThat(user.getStatus()).isEqualTo(UserStatus.WITHDRAWN);
@@ -296,7 +312,10 @@ class AccountCommandServiceTest {
         given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> accountCommandService.withdrawAccount(USER_ID))
+        assertThatThrownBy(() -> accountWithdrawalService.startWithdrawal(
+                USER_ID,
+                OAuthClientType.WEB
+        ))
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
                         assertThat(exception.getErrorCode())
                                 .isEqualTo(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
@@ -314,7 +333,10 @@ class AccountCommandServiceTest {
         given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
 
         // when & then
-        assertThatThrownBy(() -> accountCommandService.withdrawAccount(USER_ID))
+        assertThatThrownBy(() -> accountWithdrawalService.startWithdrawal(
+                USER_ID,
+                OAuthClientType.WEB
+        ))
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED)
                 );
@@ -342,7 +364,10 @@ class AccountCommandServiceTest {
                 .unlink(KAKAO_PROVIDER_USER_ID);
 
         // when & then
-        assertThatThrownBy(() -> accountCommandService.withdrawAccount(USER_ID))
+        assertThatThrownBy(() -> accountWithdrawalService.startWithdrawal(
+                USER_ID,
+                OAuthClientType.WEB
+        ))
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
                         assertThat(exception.getErrorCode())
                                 .isEqualTo(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE)

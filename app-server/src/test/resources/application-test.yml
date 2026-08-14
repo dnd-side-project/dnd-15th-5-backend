@@ -5,6 +5,10 @@ chapchap:
       client-secret: test-client-secret
       admin-key: test-kakao-admin-key
       redirect-uri: https://example.com/oauth/kakao
+    google:
+      client-id: test-google-client-id
+      client-secret: test-google-client-secret
+      redirect-uri: https://example.com/oauth/google
     client:
       web-redirect-uri: https://web.example.com/oauth/callback
       app-redirect-uri: chapchap://oauth/callback

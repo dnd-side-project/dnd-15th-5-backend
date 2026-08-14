@@ -4,6 +4,7 @@ import kr.chapchap.account.application.info.AuthenticationInfo;
 import kr.chapchap.account.application.info.OAuthAuthorizationSession;
 import kr.chapchap.account.application.info.OAuthClientType;
 import kr.chapchap.account.application.info.OAuthLoginSession;
+import kr.chapchap.account.application.port.GoogleAuthenticationPort;
 import kr.chapchap.account.application.port.KakaoAuthenticationPort;
 import kr.chapchap.account.application.port.OAuthClientRedirectPort;
 import kr.chapchap.account.application.port.OAuthSessionStore;
@@ -24,7 +25,7 @@ import java.util.regex.Pattern;
 @Slf4j
 @RequiredArgsConstructor
 @Service
-public class KakaoOAuthFlowService {
+public class OAuthFlowService {
 
     private static final String OAUTH_CANCELLED = "oauth_cancelled";
     private static final String OAUTH_FAILED = "oauth_failed";
@@ -33,28 +34,49 @@ public class KakaoOAuthFlowService {
     );
 
     private final KakaoAuthenticationPort kakaoAuthenticationPort;
+    private final GoogleAuthenticationPort googleAuthenticationPort;
     private final SocialLoginService socialLoginService;
     private final OAuthSessionStore oauthSessionStore;
     private final OAuthClientRedirectPort oauthClientRedirectPort;
     private final LoginTokenService loginTokenService;
 
-    public URI createAuthorizationUri(OAuthClientType clientType, String codeChallenge) {
+    public URI createAuthorizationUri(
+            String provider,
+            OAuthClientType clientType,
+            String codeChallenge
+    ) {
         if (codeChallenge == null || !CODE_CHALLENGE_PATTERN.matcher(codeChallenge).matches()) {
             throw new BusinessException(CommonErrorCode.INVALID_INPUT_VALUE);
         }
 
-        String state = oauthSessionStore.createState(clientType, codeChallenge);
-        return kakaoAuthenticationPort.createAuthorizationUri(state);
+        SocialProvider socialProvider = parseProvider(provider);
+        String state = oauthSessionStore.createState(
+                socialProvider,
+                clientType,
+                codeChallenge
+        );
+        return switch (socialProvider) {
+            case KAKAO -> kakaoAuthenticationPort.createAuthorizationUri(state);
+            case GOOGLE -> googleAuthenticationPort.createAuthorizationUri(state);
+        };
     }
 
-    public URI handleCallback(String authorizationCode, String state) {
-        OAuthAuthorizationSession authorizationSession = consumeAuthorizationSession(state);
+    public URI handleCallback(
+            String provider,
+            String authorizationCode,
+            String state
+    ) {
+        SocialProvider socialProvider = parseProvider(provider);
+        OAuthAuthorizationSession authorizationSession = consumeAuthorizationSession(
+                socialProvider,
+                state
+        );
         try {
-            String providerUserId = kakaoAuthenticationPort.authenticate(authorizationCode);
-            Long userId = socialLoginService.login(
-                    SocialProvider.KAKAO,
-                    providerUserId
-            );
+            String providerUserId = switch (socialProvider) {
+                case KAKAO -> kakaoAuthenticationPort.authenticate(authorizationCode);
+                case GOOGLE -> googleAuthenticationPort.authenticate(authorizationCode, state);
+            };
+            Long userId = socialLoginService.login(socialProvider, providerUserId);
             String loginCode = oauthSessionStore.createLoginCode(
                     userId,
                     authorizationSession.clientType(),
@@ -65,7 +87,11 @@ public class KakaoOAuthFlowService {
                     loginCode
             );
         } catch (BusinessException exception) {
-            log.warn("카카오 OAuth 처리 실패: code={}", exception.getErrorCode().getCode());
+            log.warn(
+                    "OAuth 처리 실패: provider={}, code={}",
+                    socialProvider,
+                    exception.getErrorCode().getCode()
+            );
             return oauthClientRedirectPort.createErrorRedirect(
                     authorizationSession.clientType(),
                     OAUTH_FAILED
@@ -73,8 +99,12 @@ public class KakaoOAuthFlowService {
         }
     }
 
-    public URI handleCancelledCallback(String state) {
-        OAuthAuthorizationSession authorizationSession = consumeAuthorizationSession(state);
+    public URI handleCancelledCallback(String provider, String state) {
+        SocialProvider socialProvider = parseProvider(provider);
+        OAuthAuthorizationSession authorizationSession = consumeAuthorizationSession(
+                socialProvider,
+                state
+        );
         return oauthClientRedirectPort.createErrorRedirect(
                 authorizationSession.clientType(),
                 OAUTH_CANCELLED
@@ -94,11 +124,28 @@ public class KakaoOAuthFlowService {
         );
     }
 
-    private OAuthAuthorizationSession consumeAuthorizationSession(String state) {
-        return oauthSessionStore.consumeState(state)
+    private OAuthAuthorizationSession consumeAuthorizationSession(
+            SocialProvider provider,
+            String state
+    ) {
+        OAuthAuthorizationSession session = oauthSessionStore.consumeState(state)
                 .orElseThrow(() -> new BusinessException(
                         CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS
                 ));
+        if (session.provider() != provider) {
+            throw new BusinessException(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS);
+        }
+        return session;
+    }
+
+    private SocialProvider parseProvider(String provider) {
+        return switch (provider) {
+            case "kakao" -> SocialProvider.KAKAO;
+            case "google" -> SocialProvider.GOOGLE;
+            default -> throw new BusinessException(
+                    CommonErrorCode.INVALID_INPUT_VALUE
+            );
+        };
     }
 
     private String createCodeChallenge(String codeVerifier) {

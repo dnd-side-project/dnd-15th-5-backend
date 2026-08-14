@@ -17,8 +17,8 @@ import kr.chapchap.account.api.response.AuthenticationResponse;
 import kr.chapchap.account.api.response.AuthenticationResponseHandler;
 import kr.chapchap.account.application.info.AuthenticationInfo;
 import kr.chapchap.account.application.info.OAuthClientType;
-import kr.chapchap.account.application.service.KakaoOAuthFlowService;
 import kr.chapchap.account.application.service.LoginTokenService;
+import kr.chapchap.account.application.service.OAuthFlowService;
 import kr.chapchap.account.application.service.TermsAgreementService;
 import kr.chapchap.core.web.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -39,14 +39,14 @@ import static kr.chapchap.account.api.response.AuthenticationResponseHandler.REF
 @RequestMapping("/auth")
 public class AuthenticationController {
 
-    private final KakaoOAuthFlowService kakaoOAuthFlowService;
+    private final OAuthFlowService oauthFlowService;
     private final TermsAgreementService termsAgreementService;
     private final LoginTokenService loginTokenService;
     private final AuthenticationResponseHandler authenticationResponseHandler;
 
     @Operation(
-            summary = "카카오 로그인 코드 교환",
-            description = "카카오 콜백이 전달한 일회용 loginCode와 로그인 시작 시 생성한 codeVerifier를 교환합니다.\n\n"
+            summary = "소셜 로그인 코드 교환",
+            description = "소셜 로그인 콜백이 전달한 일회용 loginCode와 로그인 시작 시 생성한 codeVerifier를 교환합니다.\n\n"
                     + "가입이 완료된 사용자는 Access Token을 발급하고, 약관 동의가 필요한 사용자는 Signup Token을 발급합니다.\n\n"
                     + "WEB의 Refresh Token은 HttpOnly 쿠키로, APP의 Refresh Token은 응답 본문으로 전달합니다.\n\n"
                     + "Authorization 헤더 없이 호출합니다."
@@ -77,12 +77,12 @@ public class AuthenticationController {
                     content = @Content(schema = @Schema(implementation = ApiResponse.class))
             )
     })
-    @PostMapping("/social/kakao/exchange")
-    public ApiResponse<AuthenticationResponse> exchangeKakaoLoginCode(
+    @PostMapping("/social/exchange")
+    public ApiResponse<AuthenticationResponse> exchangeSocialLoginCode(
             @Valid @RequestBody LoginCodeExchangeRequest request,
             HttpServletResponse response
     ) {
-        AuthenticationInfo info = kakaoOAuthFlowService.exchange(
+        AuthenticationInfo info = oauthFlowService.exchange(
                 request.loginCode(),
                 request.codeVerifier()
         );

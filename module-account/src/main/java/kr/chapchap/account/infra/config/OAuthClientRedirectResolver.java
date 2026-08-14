@@ -24,6 +24,15 @@ public class OAuthClientRedirectResolver implements OAuthClientRedirectPort {
     }
 
     @Override
+    public URI createWithdrawalRedirect(OAuthClientType clientType) {
+        return UriComponentsBuilder.fromUri(resolveRedirectUri(clientType))
+                .queryParam("withdrawal", "success")
+                .build()
+                .encode()
+                .toUri();
+    }
+
+    @Override
     public URI createErrorRedirect(OAuthClientType clientType, String errorCode) {
         return UriComponentsBuilder.fromUri(resolveRedirectUri(clientType))
                 .queryParam("error", errorCode)
