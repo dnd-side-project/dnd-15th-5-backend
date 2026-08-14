@@ -129,15 +129,17 @@ public class AccountController {
     @Operation(
             summary = "회원 탈퇴",
             description = """
-                    계정을 탈퇴 상태로 변경하고 카카오 연결 및 인증 토큰을 정리합니다.
-                    WEB은 Refresh Token 쿠키가 만료되며, WEB과 APP은 성공 응답 후 보관 중인 Access Token을 삭제해야 합니다.
-                    APP은 로컬에 저장된 Refresh Token도 함께 삭제해야 합니다.
+                    Kakao는 연결 해제와 회원 탈퇴를 즉시 처리하고 200 OK를 반환합니다.
+                    Google은 202 Accepted와 Location 헤더를 반환하며, 클라이언트가 해당 URI로 이동해 재인증을 완료하면 callback에서 회원 탈퇴를 처리합니다.
+                    Google의 202 Accepted 응답은 회원 탈퇴 완료를 의미하지 않습니다.
+                    회원 탈퇴 완료 후 WEB과 APP은 보관 중인 Access Token을 삭제해야 합니다.
+                    WEB은 Refresh Token 쿠키가 만료되며, APP은 로컬에 저장된 Refresh Token도 함께 삭제해야 합니다.
                     """
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
-                    description = "회원 탈퇴 성공",
+                    description = "Kakao 회원 탈퇴 완료",
                     useReturnTypeSchema = true
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -157,7 +159,7 @@ public class AccountController {
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "202",
-                    description = "Google 재인증 필요. Location 헤더의 URI로 이동",
+                    description = "Google 회원 탈퇴 절차 시작. 탈퇴 완료 전이며 Location 헤더의 URI로 이동 필요",
                     useReturnTypeSchema = true,
                     headers = @io.swagger.v3.oas.annotations.headers.Header(
                             name = "Location",
