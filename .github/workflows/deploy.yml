@@ -75,6 +75,9 @@ jobs:
           KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
           KAKAO_ADMIN_KEY=${{ secrets.KAKAO_ADMIN_KEY }}
           KAKAO_REDIRECT_URI=${{ vars.KAKAO_REDIRECT_URI }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REDIRECT_URI=${{ vars.GOOGLE_REDIRECT_URI }}
           OAUTH_WEB_REDIRECT_URI=${{ vars.OAUTH_WEB_REDIRECT_URI }}
           OAUTH_APP_REDIRECT_URI=${{ vars.OAUTH_APP_REDIRECT_URI }}
           JWT_SECRET=${{ secrets.JWT_SECRET }}
