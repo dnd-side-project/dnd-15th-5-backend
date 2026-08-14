@@ -4,6 +4,7 @@ import kr.chapchap.account.application.info.OAuthAuthorizationSession;
 import kr.chapchap.account.application.info.OAuthClientType;
 import kr.chapchap.account.application.info.OAuthLoginSession;
 import kr.chapchap.account.application.port.OAuthSessionStore;
+import kr.chapchap.account.domain.entity.SocialProvider;
 import kr.chapchap.core.test.TestcontainersConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,14 +32,19 @@ class OAuthSessionPersistenceIntegrationTest {
     }
 
     @Test
-    void OAuth_state는_clientType과_codeChallenge를_한_번만_반환한다() {
+    void OAuth_state는_Provider와_clientType과_codeChallenge를_한_번만_반환한다() {
         // given
-        String state = oauthSessionStore.createState(OAuthClientType.APP, CODE_CHALLENGE);
+        String state = oauthSessionStore.createState(
+                SocialProvider.GOOGLE,
+                OAuthClientType.APP,
+                CODE_CHALLENGE
+        );
 
         // when
         OAuthAuthorizationSession firstSession = oauthSessionStore.consumeState(state).orElseThrow();
 
         // then
+        assertThat(firstSession.provider()).isEqualTo(SocialProvider.GOOGLE);
         assertThat(firstSession.clientType()).isEqualTo(OAuthClientType.APP);
         assertThat(firstSession.codeChallenge()).isEqualTo(CODE_CHALLENGE);
         assertThat(oauthSessionStore.consumeState(state)).isEmpty();

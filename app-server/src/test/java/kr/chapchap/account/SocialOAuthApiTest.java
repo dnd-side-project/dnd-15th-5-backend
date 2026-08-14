@@ -1,8 +1,8 @@
 package kr.chapchap.account;
 
-import kr.chapchap.account.api.controller.KakaoOAuthController;
+import kr.chapchap.account.api.controller.SocialOAuthController;
 import kr.chapchap.account.application.info.OAuthClientType;
-import kr.chapchap.account.application.service.KakaoOAuthFlowService;
+import kr.chapchap.account.application.service.OAuthFlowService;
 import kr.chapchap.config.CorsConfig;
 import kr.chapchap.config.SecurityConfig;
 import kr.chapchap.core.web.exception.GlobalExceptionHandler;
@@ -24,8 +24,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Import({SecurityConfig.class, CorsConfig.class, GlobalExceptionHandler.class})
-@WebMvcTest(KakaoOAuthController.class)
-class KakaoOAuthApiTest {
+@WebMvcTest(SocialOAuthController.class)
+class SocialOAuthApiTest {
 
     private static final String CODE_CHALLENGE =
             "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM";
@@ -33,13 +33,13 @@ class KakaoOAuthApiTest {
     private final MockMvc mockMvc;
 
     @MockitoBean
-    private KakaoOAuthFlowService kakaoOAuthFlowService;
+    private OAuthFlowService oauthFlowService;
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
 
     @Autowired
-    KakaoOAuthApiTest(MockMvc mockMvc) {
+    SocialOAuthApiTest(MockMvc mockMvc) {
         this.mockMvc = mockMvc;
     }
 
@@ -47,11 +47,11 @@ class KakaoOAuthApiTest {
     void WEB으로_카카오_로그인을_시작하면_인가_URI로_이동한다() throws Exception {
         // given
         URI authorizationUri = URI.create("https://kauth.kakao.com/oauth/authorize?state=state");
-        given(kakaoOAuthFlowService.createAuthorizationUri(
+        given(oauthFlowService.createAuthorizationUri(
+                "kakao",
                 OAuthClientType.WEB,
                 CODE_CHALLENGE
-        ))
-                .willReturn(authorizationUri);
+        )).willReturn(authorizationUri);
 
         // when & then
         mockMvc.perform(get("/oauth/kakao/start")
@@ -60,9 +60,60 @@ class KakaoOAuthApiTest {
                 .andExpect(status().isFound())
                 .andExpect(header().string("Location", authorizationUri.toString()));
 
-        then(kakaoOAuthFlowService).should().createAuthorizationUri(
+        then(oauthFlowService).should().createAuthorizationUri(
+                "kakao",
                 OAuthClientType.WEB,
                 CODE_CHALLENGE
+        );
+    }
+
+    @Test
+    void APP으로_Google_로그인을_시작하면_인가_URI로_이동한다() throws Exception {
+        // given
+        URI authorizationUri = URI.create(
+                "https://accounts.google.com/o/oauth2/v2/auth?state=state"
+        );
+        given(oauthFlowService.createAuthorizationUri(
+                "google",
+                OAuthClientType.APP,
+                CODE_CHALLENGE
+        )).willReturn(authorizationUri);
+
+        // when & then
+        mockMvc.perform(get("/oauth/google/start")
+                        .param("client", "APP")
+                        .param("codeChallenge", CODE_CHALLENGE))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", authorizationUri.toString()));
+
+        then(oauthFlowService).should().createAuthorizationUri(
+                "google",
+                OAuthClientType.APP,
+                CODE_CHALLENGE
+        );
+    }
+
+    @Test
+    void Google_콜백을_처리하면_클라이언트_URI로_이동한다() throws Exception {
+        // given
+        URI clientUri = URI.create("chapchap://oauth/callback?loginCode=login-code");
+        given(oauthFlowService.handleCallback(
+                "google",
+                "authorization-code",
+                "state"
+        )).willReturn(clientUri);
+
+        // when & then
+        mockMvc.perform(get("/oauth/google/callback")
+                        .param("code", "authorization-code")
+                        .param("state", "state"))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", clientUri.toString()));
+
+        then(oauthFlowService).should().handleCallback(
+                "google",
+                "authorization-code",
+                "state"
         );
     }
 
@@ -70,8 +121,11 @@ class KakaoOAuthApiTest {
     void 카카오_콜백을_처리하면_클라이언트_URI로_이동한다() throws Exception {
         // given
         URI clientUri = URI.create("chapchap://oauth/callback?loginCode=login-code");
-        given(kakaoOAuthFlowService.handleCallback("authorization-code", "state"))
-                .willReturn(clientUri);
+        given(oauthFlowService.handleCallback(
+                "kakao",
+                "authorization-code",
+                "state"
+        )).willReturn(clientUri);
 
         // when & then
         mockMvc.perform(get("/oauth/kakao/callback")
@@ -80,15 +134,18 @@ class KakaoOAuthApiTest {
                 .andExpect(status().isFound())
                 .andExpect(header().string("Location", clientUri.toString()));
 
-        then(kakaoOAuthFlowService).should()
-                .handleCallback("authorization-code", "state");
+        then(oauthFlowService).should().handleCallback(
+                "kakao",
+                "authorization-code",
+                "state"
+        );
     }
 
     @Test
     void 카카오_로그인을_취소해도_클라이언트_URI로_복귀한다() throws Exception {
         // given
         URI clientUri = URI.create("chapchap://oauth/callback?error=oauth_cancelled");
-        given(kakaoOAuthFlowService.handleCancelledCallback("state"))
+        given(oauthFlowService.handleCancelledCallback("kakao", "state"))
                 .willReturn(clientUri);
 
         // when & then
@@ -97,18 +154,19 @@ class KakaoOAuthApiTest {
                 .andExpect(status().isFound())
                 .andExpect(header().string("Location", clientUri.toString()));
 
-        then(kakaoOAuthFlowService).should().handleCancelledCallback("state");
+        then(oauthFlowService).should()
+                .handleCancelledCallback("kakao", "state");
     }
 
     @Test
     void 지원하지_않는_클라이언트로_로그인을_시작하면_입력값_오류를_반환한다() throws Exception {
         // when & then
-        mockMvc.perform(get("/oauth/kakao/start")
+        mockMvc.perform(get("/oauth/google/start")
                         .param("client", "DESKTOP")
                         .param("codeChallenge", CODE_CHALLENGE))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("C001"));
 
-        then(kakaoOAuthFlowService).shouldHaveNoInteractions();
+        then(oauthFlowService).shouldHaveNoInteractions();
     }
 }

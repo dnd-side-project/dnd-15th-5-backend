@@ -4,6 +4,7 @@ import kr.chapchap.account.application.info.OAuthAuthorizationSession;
 import kr.chapchap.account.application.info.OAuthClientType;
 import kr.chapchap.account.application.info.OAuthLoginSession;
 import kr.chapchap.account.application.port.OAuthSessionStore;
+import kr.chapchap.account.domain.entity.SocialProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;
@@ -25,14 +26,19 @@ public class RedisOAuthSessionStore implements OAuthSessionStore {
     private final StringRedisTemplate redisTemplate;
 
     @Override
-    public String createState(OAuthClientType clientType, String codeChallenge) {
+    public String createState(
+            SocialProvider provider,
+            OAuthClientType clientType,
+            String codeChallenge
+    ) {
+        Objects.requireNonNull(provider, "소셜 로그인 제공자는 필수입니다.");
         Objects.requireNonNull(clientType, "OAuth 클라이언트 유형은 필수입니다.");
         Objects.requireNonNull(codeChallenge, "PKCE 코드 챌린지는 필수입니다.");
 
         String state = UUID.randomUUID().toString();
         redisTemplate.opsForValue().set(
                 STATE_KEY_PREFIX + state,
-                clientType.name() + ":" + codeChallenge,
+                provider.name() + ":" + clientType.name() + ":" + codeChallenge,
                 STATE_TTL
         );
         return state;
@@ -49,15 +55,16 @@ public class RedisOAuthSessionStore implements OAuthSessionStore {
             return Optional.empty();
         }
 
-        String[] session = value.split(":", 2);
-        if (session.length != 2) {
+        String[] session = value.split(":", 3);
+        if (session.length != 3) {
             return Optional.empty();
         }
 
         try {
             return Optional.of(new OAuthAuthorizationSession(
-                    OAuthClientType.valueOf(session[0]),
-                    session[1]
+                    SocialProvider.valueOf(session[0]),
+                    OAuthClientType.valueOf(session[1]),
+                    session[2]
             ));
         } catch (IllegalArgumentException exception) {
             return Optional.empty();

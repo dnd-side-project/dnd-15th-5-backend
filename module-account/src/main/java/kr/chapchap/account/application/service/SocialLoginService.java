@@ -32,20 +32,12 @@ public class SocialLoginService {
             throw new IllegalArgumentException("소셜 로그인 사용자 식별값은 비어 있을 수 없습니다.");
         }
 
-        return findOrCreate(provider, providerUserId);
-    }
-
-    private Long findOrCreate(
-            SocialProvider provider,
-            String providerUserId
-    ) {
         return socialAccountRepository.findByProviderAndProviderUserId(
                         provider,
                         providerUserId
                 )
                 .map(SocialAccount::getUserId)
-                .map(this::findUser)
-                .map(this::toUserId)
+                .map(this::findLoginableUserId)
                 .orElseGet(() -> createUserAndSocialAccount(provider, providerUserId));
     }
 
@@ -62,21 +54,17 @@ public class SocialLoginService {
         );
         socialAccountRepository.save(socialAccount);
 
-        return toUserId(user);
+        return user.getId();
     }
 
-    private User findUser(Long userId) {
-        return userRepository.findById(userId)
+    private Long findLoginableUserId(Long userId) {
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(
                         CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS
                 ));
-    }
-
-    private Long toUserId(User user) {
         return switch (user.getStatus()) {
             case PENDING_TERMS, ACTIVE -> user.getId();
             case SUSPENDED, WITHDRAWN -> throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
         };
     }
-
 }

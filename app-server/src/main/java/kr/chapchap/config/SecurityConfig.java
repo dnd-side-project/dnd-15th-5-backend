@@ -57,10 +57,17 @@ public class SecurityConfig {
                         )
                 )
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(HttpMethod.GET, "/oauth/kakao/start", "/oauth/kakao/callback")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/oauth/kakao/start",
+                                "/oauth/kakao/callback",
+                                "/oauth/google/start",
+                                "/oauth/google/callback"
+                        )
                         .permitAll()
                         .requestMatchers(
                                 HttpMethod.POST,
+                                "/auth/social/exchange",
                                 "/auth/social/kakao/exchange",
                                 "/auth/token/refresh",
                                 "/auth/token/refresh/web",
