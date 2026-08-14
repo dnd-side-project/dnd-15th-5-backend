@@ -5,7 +5,6 @@ import kr.chapchap.place.application.service.PlaceQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.Set;
 
 
@@ -16,7 +15,7 @@ public class PlaceLikeLookupAdapter implements PlaceLikeLookupPort {
     private final PlaceQueryService placeQueryService;
 
     @Override
-    public Set<Long> findLikedPlaceIds(Long userId, List<Long> placeIds) {
-        return placeQueryService.findLikedPlaceIds(userId, placeIds);
+    public Set<Long> findLikedPlaceIds(Long userId) {
+        return placeQueryService.findLikedPlaceIds(userId);
     }
 }

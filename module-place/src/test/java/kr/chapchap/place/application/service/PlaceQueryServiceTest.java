@@ -79,11 +79,10 @@ class PlaceQueryServiceTest {
     void 좋아요한_장소_id만_Set으로_반환한다() {
         // given
         PlaceLike like101 = PlaceLike.builder().userId(1L).placeId(101L).build();
-        when(placeLikeRepository.findByUserIdAndPlaceIdIn(1L, List.of(101L, 102L)))
-                .thenReturn(List.of(like101));
+        when(placeLikeRepository.findByUserId(1L)).thenReturn(List.of(like101));
 
         // when
-        Set<Long> result = sut.findLikedPlaceIds(1L, List.of(101L, 102L));
+        Set<Long> result = sut.findLikedPlaceIds(1L);
 
         // then
         assertThat(result).containsExactly(101L);

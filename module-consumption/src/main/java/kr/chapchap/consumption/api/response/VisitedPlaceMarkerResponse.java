@@ -5,11 +5,11 @@ import kr.chapchap.consumption.application.info.VisitedPlaceMarkersInfo;
 
 import java.util.List;
 
-public record VisitedPlaceMarkerResponse(List<VisitedPlaceMarkerItem> places, int month, int monthlyCount) {
+public record VisitedPlaceMarkerResponse(List<VisitedPlaceMarkerItem> places, int month, int monthlyPlaceCount) {
 
     public static VisitedPlaceMarkerResponse from(VisitedPlaceMarkersInfo info) {
         List<VisitedPlaceMarkerItem> items = info.markers().stream().map(VisitedPlaceMarkerItem::from).toList();
-        return new VisitedPlaceMarkerResponse(items, info.month(), info.monthlyCount());
+        return new VisitedPlaceMarkerResponse(items, info.month(), info.monthlyPlaceCount());
     }
 
     public record VisitedPlaceMarkerItem(

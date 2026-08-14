@@ -16,6 +16,8 @@ public interface ConsumptionQueryRepository {
 
     List<Consumption> findAllByUserAndDateRange(Long userId, LocalDate from, LocalDate toExclusive);
 
+    long countDistinctPlacesByUserAndDateRange(Long userId, LocalDate from, LocalDate toExclusive);
+
     List<Long> findDistinctUserIdsByDateRange(LocalDate from, LocalDate toExclusive);
 
     List<PlaceCategoryVisitRow> aggregateVisitedPlacesByCategory(Long userId, List<String> categories);

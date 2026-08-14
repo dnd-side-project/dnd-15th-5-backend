@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -40,37 +41,54 @@ public class VisitedPlaceQueryService {
 
     public VisitedPlaceMarkersInfo getVisitedPlaceMarkers(Long userId, List<String> categories) {
         YearMonth currentMonth = YearMonth.now(clock);
-        int monthlyCount = calculateMonthlyCount(userId, currentMonth);
+        int monthlyPlaceCount = calculateMonthlyPlaceCount(userId, currentMonth);
 
-        //place id , 카테고리 , 횟수
+        //방문 한 곳
         List<PlaceCategoryVisitRow> rows = consumptionQueryRepository.aggregateVisitedPlacesByCategory(userId, categories);
-        if (rows.isEmpty()) {
-            return new VisitedPlaceMarkersInfo(List.of(), currentMonth.getMonthValue(), monthlyCount);
+        List<Long> visitedPlaceIds = rows.stream().map(PlaceCategoryVisitRow::placeId).toList();
+        Set<Long> visitedPlaceIdSet = Set.copyOf(visitedPlaceIds);
+
+        Set<Long> likedPlaceIds = placeLikeLookupPort.findLikedPlaceIds(userId); //좋아요
+        List<Long> likedOnlyPlaceIds = likedPlaceIds.stream().filter(placeId -> !visitedPlaceIdSet.contains(placeId)).toList(); //방문x 좋아요
+
+        if (rows.isEmpty() && likedOnlyPlaceIds.isEmpty()) {
+            return new VisitedPlaceMarkersInfo(List.of(), currentMonth.getMonthValue(), monthlyPlaceCount);
         }
 
-        List<Long> placeIds = rows.stream().map(PlaceCategoryVisitRow::placeId).toList();
-        Map<Long, String> placeNames = placeNameLookupPort.findNames(placeIds);
-        Map<Long, PlaceLocationInfo> placeLocations = placeLocationLookupPort.findLocations(placeIds);
-        Set<Long> likedPlaceIds = placeLikeLookupPort.findLikedPlaceIds(userId, placeIds);
-        Map<Long, StickerItem> firstStickerByPlace = findFirstStickerByPlace(userId, placeIds);
+        List<Long> allPlaceIds = Stream.concat(visitedPlaceIds.stream(), likedOnlyPlaceIds.stream()).toList();
+        Map<Long, String> placeNames = placeNameLookupPort.findNames(allPlaceIds);
+        Map<Long, PlaceLocationInfo> placeLocations = placeLocationLookupPort.findLocations(allPlaceIds);
+        Map<Long, StickerItem> firstStickerByPlace = findFirstStickerByPlace(userId, visitedPlaceIds);
 
-        List<VisitedPlaceMarkerInfo> markers = rows.stream()
+        List<VisitedPlaceMarkerInfo> visitedMarkers = rows.stream()
                 .map(row -> toMarkerInfo(row, placeNames, placeLocations, likedPlaceIds, firstStickerByPlace))
+                .toList();
+
+        // 방문X 좋아요
+        List<VisitedPlaceMarkerInfo> likedOnlyMarkers = likedOnlyPlaceIds.stream()
+                .map(placeId -> toLikedOnlyMarkerInfo(placeId, placeNames, placeLocations))
+                .toList();
+
+        List<VisitedPlaceMarkerInfo> markers = Stream.concat(visitedMarkers.stream(), likedOnlyMarkers.stream())
                 .sorted(Comparator.comparing(VisitedPlaceMarkerInfo::visitCount).reversed())
                 .toList();
 
-        return new VisitedPlaceMarkersInfo(markers, currentMonth.getMonthValue(), monthlyCount);
+        return new VisitedPlaceMarkersInfo(markers, currentMonth.getMonthValue(), monthlyPlaceCount);
     }
 
-    private int calculateMonthlyCount(Long userId, YearMonth currentMonth) {
+    private int calculateMonthlyPlaceCount(Long userId, YearMonth currentMonth) {
         LocalDate monthStart = currentMonth.atDay(1);
         LocalDate monthEndExclusive = currentMonth.plusMonths(1).atDay(1);
-        return consumptionQueryRepository.findAllByUserAndDateRange(userId, monthStart, monthEndExclusive).size();
+        return (int) consumptionQueryRepository.countDistinctPlacesByUserAndDateRange(userId, monthStart, monthEndExclusive);
     }
 
 
-    private Map<Long, StickerItem> findFirstStickerByPlace(Long userId, List<Long> placeIds) {
-        List<PlaceFirstStickerRow> firstStickerRows = consumptionQueryRepository.findFirstStickerItemIdsByPlace(userId, placeIds);
+    private Map<Long, StickerItem> findFirstStickerByPlace(Long userId, List<Long> visitedPlaceIds) {
+        if (visitedPlaceIds.isEmpty()) {
+            return Map.of();
+        }
+
+        List<PlaceFirstStickerRow> firstStickerRows = consumptionQueryRepository.findFirstStickerItemIdsByPlace(userId, visitedPlaceIds);
         if (firstStickerRows.isEmpty()) {
             return Map.of();
         }
@@ -99,6 +117,22 @@ public class VisitedPlaceQueryService {
                 row.visitCount(),
                 likedPlaceIds.contains(row.placeId()),
                 firstSticker != null ? firstSticker.getName() : null
+        );
+    }
+
+    private VisitedPlaceMarkerInfo toLikedOnlyMarkerInfo(Long placeId, Map<Long, String> placeNames,
+                                                           Map<Long, PlaceLocationInfo> placeLocations) {
+        PlaceLocationInfo location = placeLocations.get(placeId);
+
+        return new VisitedPlaceMarkerInfo(
+                placeId,
+                placeNames.getOrDefault(placeId, UNKNOWN_PLACE_NAME),
+                null,
+                location.latitude(),
+                location.longitude(),
+                0L,
+                true,
+                null
         );
     }
 }

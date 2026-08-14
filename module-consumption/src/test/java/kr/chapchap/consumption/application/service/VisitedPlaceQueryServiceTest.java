@@ -6,7 +6,6 @@ import kr.chapchap.consumption.application.info.VisitedPlaceMarkersInfo;
 import kr.chapchap.consumption.application.port.PlaceLikeLookupPort;
 import kr.chapchap.consumption.application.port.PlaceLocationLookupPort;
 import kr.chapchap.consumption.application.port.PlaceNameLookupPort;
-import kr.chapchap.consumption.domain.entity.Consumption;
 import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
 import kr.chapchap.consumption.domain.entity.PlaceFirstStickerRow;
 import kr.chapchap.consumption.domain.entity.StickerItem;
@@ -21,7 +20,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
@@ -66,19 +64,20 @@ class VisitedPlaceQueryServiceTest {
     }
 
     @Test
-    void 방문한_장소가_없으면_빈_마커_리스트를_반환하고_이름_위치_조회는_하지_않는다() {
+    void 방문도_좋아요도_없으면_빈_마커_리스트를_반환하고_이름_위치_조회는_하지_않는다() {
         // given
         when(consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, null)).thenReturn(List.of());
-        when(consumptionQueryRepository.findAllByUserAndDateRange(
+        when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of());
+        when(consumptionQueryRepository.countDistinctPlacesByUserAndDateRange(
                 eq(1L), eq(LocalDate.of(2026, 8, 1)), eq(LocalDate.of(2026, 9, 1))))
-                .thenReturn(List.of());
+                .thenReturn(0L);
 
         // when
         VisitedPlaceMarkersInfo result = sut.getVisitedPlaceMarkers(1L, null);
 
         // then
         assertThat(result.markers()).isEmpty();
-        verifyNoInteractions(placeNameLookupPort, placeLocationLookupPort, placeLikeLookupPort);
+        verifyNoInteractions(placeNameLookupPort, placeLocationLookupPort);
     }
 
     @Test
@@ -93,9 +92,9 @@ class VisitedPlaceQueryServiceTest {
                 101L, new PlaceLocationInfo(101L, 37.5447, 127.0557),
                 102L, new PlaceLocationInfo(102L, 37.4999, 127.0364)
         ));
-        when(placeLikeLookupPort.findLikedPlaceIds(eq(1L), any())).thenReturn(Set.of());
+        when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of());
         when(consumptionQueryRepository.findFirstStickerItemIdsByPlace(eq(1L), any())).thenReturn(List.of());
-        when(consumptionQueryRepository.findAllByUserAndDateRange(eq(1L), any(), any())).thenReturn(List.of());
+        when(consumptionQueryRepository.countDistinctPlacesByUserAndDateRange(eq(1L), any(), any())).thenReturn(0L);
 
         // when
         VisitedPlaceMarkersInfo result = sut.getVisitedPlaceMarkers(1L, null);
@@ -119,9 +118,9 @@ class VisitedPlaceQueryServiceTest {
         when(placeLocationLookupPort.findLocations(any())).thenReturn(Map.of(
                 101L, new PlaceLocationInfo(101L, 37.5447, 127.0557)
         ));
-        when(placeLikeLookupPort.findLikedPlaceIds(eq(1L), any())).thenReturn(Set.of());
+        when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of());
         when(consumptionQueryRepository.findFirstStickerItemIdsByPlace(eq(1L), any())).thenReturn(List.of());
-        when(consumptionQueryRepository.findAllByUserAndDateRange(eq(1L), any(), any())).thenReturn(List.of());
+        when(consumptionQueryRepository.countDistinctPlacesByUserAndDateRange(eq(1L), any(), any())).thenReturn(0L);
 
         // when
         VisitedPlaceMarkersInfo result = sut.getVisitedPlaceMarkers(1L, null);
@@ -140,12 +139,12 @@ class VisitedPlaceQueryServiceTest {
         when(placeLocationLookupPort.findLocations(any())).thenReturn(Map.of(
                 101L, new PlaceLocationInfo(101L, 37.5447, 127.0557)
         ));
-        when(placeLikeLookupPort.findLikedPlaceIds(eq(1L), any())).thenReturn(Set.of(101L));
+        when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of(101L));
         when(consumptionQueryRepository.findFirstStickerItemIdsByPlace(eq(1L), any()))
                 .thenReturn(List.of(new PlaceFirstStickerRow(101L, 3L)));
         StickerItem donut = createStickerItem(3L, "도넛");
         when(stickerItemRepository.findAllById(any())).thenReturn(List.of(donut));
-        when(consumptionQueryRepository.findAllByUserAndDateRange(eq(1L), any(), any())).thenReturn(List.of());
+        when(consumptionQueryRepository.countDistinctPlacesByUserAndDateRange(eq(1L), any(), any())).thenReturn(0L);
 
         // when
         VisitedPlaceMarkersInfo result = sut.getVisitedPlaceMarkers(1L, null);
@@ -157,10 +156,40 @@ class VisitedPlaceQueryServiceTest {
     }
 
     @Test
+    void 방문한_적_없어도_좋아요한_장소는_카테고리_없이_마커로_포함된다() {
+        // given: 101L은 방문 기록 있음, 102L은 방문 기록 없이 좋아요만 함
+        when(consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, null)).thenReturn(List.of(
+                new PlaceCategoryVisitRow(101L, "카페", 5L)
+        ));
+        when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of(102L));
+        when(placeNameLookupPort.findNames(any())).thenReturn(Map.of(101L, "투썸플레이스", 102L, "국밥집"));
+        when(placeLocationLookupPort.findLocations(any())).thenReturn(Map.of(
+                101L, new PlaceLocationInfo(101L, 37.5447, 127.0557),
+                102L, new PlaceLocationInfo(102L, 37.4999, 127.0364)
+        ));
+        when(consumptionQueryRepository.findFirstStickerItemIdsByPlace(eq(1L), any())).thenReturn(List.of());
+        when(consumptionQueryRepository.countDistinctPlacesByUserAndDateRange(eq(1L), any(), any())).thenReturn(0L);
+
+        // when
+        VisitedPlaceMarkersInfo result = sut.getVisitedPlaceMarkers(1L, null);
+
+        // then
+        assertThat(result.markers()).hasSize(2);
+        VisitedPlaceMarkerInfo likedOnly = result.markers().stream()
+                .filter(marker -> marker.placeId().equals(102L))
+                .findFirst().orElseThrow();
+        assertThat(likedOnly.liked()).isTrue();
+        assertThat(likedOnly.category()).isNull();
+        assertThat(likedOnly.visitCount()).isZero();
+        assertThat(likedOnly.stickerName()).isNull();
+    }
+
+    @Test
     void 현재_월을_month_필드로_반환한다() {
         // given
         when(consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, null)).thenReturn(List.of());
-        when(consumptionQueryRepository.findAllByUserAndDateRange(eq(1L), any(), any())).thenReturn(List.of());
+        when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of());
+        when(consumptionQueryRepository.countDistinctPlacesByUserAndDateRange(eq(1L), any(), any())).thenReturn(0L);
 
         // when
         VisitedPlaceMarkersInfo result = sut.getVisitedPlaceMarkers(1L, null);
@@ -170,29 +199,19 @@ class VisitedPlaceQueryServiceTest {
     }
 
     @Test
-    void 이번_달_1일부터_오늘까지의_소비_건수를_monthlyCount로_반환한다() {
+    void 이번_달_방문한_서로_다른_장소_수를_monthlyPlaceCount로_반환한다() {
         // given
         when(consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, null)).thenReturn(List.of());
-        when(consumptionQueryRepository.findAllByUserAndDateRange(
+        when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of());
+        when(consumptionQueryRepository.countDistinctPlacesByUserAndDateRange(
                 eq(1L), eq(LocalDate.of(2026, 8, 1)), eq(LocalDate.of(2026, 9, 1))))
-                .thenReturn(List.of(createConsumption(), createConsumption(), createConsumption()));
+                .thenReturn(3L);
 
         // when
         VisitedPlaceMarkersInfo result = sut.getVisitedPlaceMarkers(1L, null);
 
         // then
-        assertThat(result.monthlyCount()).isEqualTo(3);
-    }
-
-    private Consumption createConsumption() {
-        return Consumption.builder()
-                .userId(1L)
-                .placeId(101L)
-                .category("카페")
-                .amount(5000L)
-                .purchaseDate(LocalDate.of(2026, 8, 10))
-                .purchaseTime(LocalTime.of(12, 0))
-                .build();
+        assertThat(result.monthlyPlaceCount()).isEqualTo(3);
     }
 
     private StickerItem createStickerItem(Long id, String name) {

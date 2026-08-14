@@ -46,8 +46,8 @@ public class PlaceQueryService {
         return locations;
     }
 
-    public Set<Long> findLikedPlaceIds(Long userId, List<Long> placeIds) {
-        return placeLikeRepository.findByUserIdAndPlaceIdIn(userId, placeIds).stream()
+    public Set<Long> findLikedPlaceIds(Long userId) {
+        return placeLikeRepository.findByUserId(userId).stream()
                 .map(PlaceLike::getPlaceId)
                 .collect(Collectors.toSet());
     }

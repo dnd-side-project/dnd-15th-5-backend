@@ -62,6 +62,22 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
     }
 
     @Override
+    public long countDistinctPlacesByUserAndDateRange(Long userId, LocalDate from, LocalDate toExclusive) {
+        QConsumption consumption = QConsumption.consumption;
+
+        Long count = queryFactory
+                .select(consumption.placeId.countDistinct())
+                .from(consumption)
+                .where(
+                        consumption.userId.eq(userId),
+                        consumption.purchaseDate.goe(from),
+                        consumption.purchaseDate.lt(toExclusive)
+                )
+                .fetchOne();
+        return count == null ? 0 : count;
+    }
+
+    @Override
     public List<Consumption> findAllByUserAndDateRange(Long userId, LocalDate from, LocalDate toExclusive) {
         QConsumption consumption = QConsumption.consumption;
 

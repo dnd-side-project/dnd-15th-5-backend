@@ -10,5 +10,5 @@ public interface PlaceLikeRepository extends JpaRepository<PlaceLike, Long> {
 
     Optional<PlaceLike> findByUserIdAndPlaceId(Long userId, Long placeId);
 
-    List<PlaceLike> findByUserIdAndPlaceIdIn(Long userId, List<Long> placeIds);
+    List<PlaceLike> findByUserId(Long userId);
 }
