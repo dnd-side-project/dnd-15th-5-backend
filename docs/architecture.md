@@ -12,7 +12,7 @@
 | API | REST API | — |
 | API Documentation | springdoc-openapi + Swagger UI | — |
 | Validation | Jakarta Bean Validation | Spring Boot BOM |
-| Social Authentication | Kakao OAuth 2.0 REST API | — |
+| Social Authentication | Kakao OAuth 2.0 / Google OpenID Connect | — |
 | API Authentication | Spring Security OAuth 2.0 Resource Server | Spring Boot BOM |
 | Authorization Token | JWT | — |
 | External API Client | Spring RestClient | Spring Boot BOM |
