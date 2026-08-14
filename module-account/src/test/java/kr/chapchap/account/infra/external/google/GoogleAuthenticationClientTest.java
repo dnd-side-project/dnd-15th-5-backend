@@ -73,7 +73,7 @@ class GoogleAuthenticationClientTest {
     }
 
     @Test
-    void Google_인가_URI에_OpenID_scope와_state와_nonce를_포함한다() {
+    void Google_인가_URI에_OpenID와_email_scope와_state와_nonce를_포함한다() {
         // when
         URI authorizationUri = googleAuthenticationClient.createAuthorizationUri(STATE);
 
@@ -86,7 +86,7 @@ class GoogleAuthenticationClientTest {
         assertThat(components.getQueryParams().getFirst("client_id")).isEqualTo(CLIENT_ID);
         assertThat(components.getQueryParams().getFirst("redirect_uri"))
                 .isEqualTo(REDIRECT_URI.toString());
-        assertThat(components.getQueryParams().getFirst("scope")).isEqualTo("openid");
+        assertThat(components.getQueryParams().getFirst("scope")).isEqualTo("openid%20email");
         assertThat(components.getQueryParams().getFirst("state")).isEqualTo(STATE);
         assertThat(components.getQueryParams().getFirst("nonce")).isEqualTo(STATE);
         assertThat(components.getQueryParams()).doesNotContainKeys("access_type", "prompt");

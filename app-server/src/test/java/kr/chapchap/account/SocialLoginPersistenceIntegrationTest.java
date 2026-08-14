@@ -88,7 +88,6 @@ class SocialLoginPersistenceIntegrationTest {
         assertThat(countSocialAccounts()).isEqualTo(1L);
         Map<String, Object> userData = findUserData(firstUserId);
         assertThat(userData.get("profile_image_key")).isNull();
-        assertThat(userData.get("email")).isNull();
     }
 
     @Test
@@ -126,7 +125,7 @@ class SocialLoginPersistenceIntegrationTest {
 
     private Map<String, Object> findUserData(Long userId) {
         return jdbcTemplate.queryForMap(
-                "SELECT profile_image_key, email FROM users WHERE id = ?",
+                "SELECT profile_image_key FROM users WHERE id = ?",
                 userId
         );
     }

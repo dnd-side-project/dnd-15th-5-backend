@@ -23,7 +23,7 @@ import java.util.Set;
 public class GoogleAuthenticationClient implements GoogleAuthenticationPort {
 
     private static final String AUTHORIZATION_CODE_GRANT = "authorization_code";
-    private static final String OPEN_ID_SCOPES = "openid";
+    private static final String OPEN_ID_SCOPES = "openid email";
     private static final Set<String> GOOGLE_ISSUERS = Set.of(
             "https://accounts.google.com",
             "accounts.google.com"
