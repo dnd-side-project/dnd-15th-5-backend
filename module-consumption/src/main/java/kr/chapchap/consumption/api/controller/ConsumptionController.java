@@ -64,11 +64,11 @@ public class ConsumptionController {
     )
     @GetMapping("/visited-places")
     public ApiResponse<VisitedPlaceMarkerResponse> getVisitedPlaceMarkers(
-//            @ChapChapUserId Long userId,
+            @ChapChapUserId Long userId,
             @Parameter(description = "필터링할 카테고리 (생략시 전체 카테고리)")
             @RequestParam(required = false) List<String> categories
     ) {
-        VisitedPlaceMarkersInfo info = visitedPlaceQueryService.getVisitedPlaceMarkers(1L, categories);
+        VisitedPlaceMarkersInfo info = visitedPlaceQueryService.getVisitedPlaceMarkers(userId, categories);
         return ApiResponse.success(VisitedPlaceMarkerResponse.from(info));
     }
 }

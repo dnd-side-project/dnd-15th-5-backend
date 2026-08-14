@@ -5,11 +5,11 @@ import kr.chapchap.consumption.application.info.VisitedPlaceMarkersInfo;
 
 import java.util.List;
 
-public record VisitedPlaceMarkerResponse(List<VisitedPlaceMarkerItem> places, int monthlyCount) {
+public record VisitedPlaceMarkerResponse(List<VisitedPlaceMarkerItem> places, int month, int monthlyCount) {
 
     public static VisitedPlaceMarkerResponse from(VisitedPlaceMarkersInfo info) {
         List<VisitedPlaceMarkerItem> items = info.markers().stream().map(VisitedPlaceMarkerItem::from).toList();
-        return new VisitedPlaceMarkerResponse(items, info.monthlyCount());
+        return new VisitedPlaceMarkerResponse(items, info.month(), info.monthlyCount());
     }
 
     public record VisitedPlaceMarkerItem(
@@ -18,12 +18,15 @@ public record VisitedPlaceMarkerResponse(List<VisitedPlaceMarkerItem> places, in
             String category,
             Double latitude,
             Double longitude,
-            long visitCount
+            long visitCount,
+            boolean liked,
+            String stickerName
     ) {
         public static VisitedPlaceMarkerItem from(VisitedPlaceMarkerInfo info) {
             return new VisitedPlaceMarkerItem(
                     info.placeId(), info.placeName(), info.category(),
-                    info.latitude(), info.longitude(), info.visitCount()
+                    info.latitude(), info.longitude(), info.visitCount(),
+                    info.liked(), info.stickerName()
             );
         }
     }

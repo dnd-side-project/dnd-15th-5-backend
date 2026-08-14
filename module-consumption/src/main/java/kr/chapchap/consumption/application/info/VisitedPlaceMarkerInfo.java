@@ -6,6 +6,8 @@ public record VisitedPlaceMarkerInfo(
         String category,
         Double latitude,
         Double longitude,
-        long visitCount
+        long visitCount,
+        boolean liked,
+        String stickerName
 ) {
 }

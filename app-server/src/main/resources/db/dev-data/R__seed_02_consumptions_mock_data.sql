@@ -4,7 +4,7 @@ TRUNCATE TABLE receipt_images RESTART IDENTITY CASCADE;
 TRUNCATE TABLE consumptions RESTART IDENTITY CASCADE;
 
 INSERT INTO consumptions (purchase_date, purchase_time, amount, category, user_id, place_id) VALUES
-    -- ===== 수민(user_id=1) — 6월(이전 달 이력) =====
+    -- ===== 수민(user_id=1) =====
     ('2026-06-03', '20:15:00', 5500,  '카페',        1, 101),
     ('2026-06-10', '20:45:00', 5500,  '카페',        1, 101),
     ('2026-06-17', '21:10:00', 5500,  '카페',        1, 101),
@@ -32,7 +32,7 @@ INSERT INTO consumptions (purchase_date, purchase_time, amount, category, user_i
     ('2026-08-07', '19:30:00', 7200,  '카페',        1, 102),
 
 
-    -- ===== 지호(user_id=2) — 6월(이전 달 이력, 최소한만) =====
+    -- ===== 지호(user_id=2)=====
     ('2026-06-02', '12:00:00', 15000, '음식점',      2, 301),
 
     ('2026-07-02', '12:30:00', 15000, '음식점',      2, 301),
@@ -56,3 +56,22 @@ INSERT INTO consumptions (purchase_date, purchase_time, amount, category, user_i
     ('2026-07-21', '11:50:00', 9000,  '음식점',      3, 403),
     ('2026-07-24', '08:30:00', 4300,  '카페',        3, 106),
     ('2026-07-28', '14:15:00', 16000, '음식점',      3, 402);
+
+
+WITH numbered AS (
+    SELECT id, category, row_number() OVER (PARTITION BY category ORDER BY id) - 1 AS rn
+    FROM consumptions
+    WHERE category IN ('카페', '음식점')
+),
+     category_stickers AS (
+         SELECT category, id,
+                row_number() OVER (PARTITION BY category ORDER BY id) - 1 AS idx,
+                count(*) OVER (PARTITION BY category)                    AS cnt
+         FROM sticker_item
+     )
+UPDATE consumptions c
+SET sticker_item_id = cs.id
+FROM numbered n
+         JOIN category_stickers cs
+              ON cs.category = n.category AND cs.idx = n.rn % cs.cnt
+WHERE c.id = n.id;
