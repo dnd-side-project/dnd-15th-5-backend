@@ -22,6 +22,10 @@ chapchap:
       client-secret: local-kakao-client-secret
       admin-key: local-kakao-admin-key
       redirect-uri: http://localhost:8080/oauth/kakao/callback
+    google:
+      client-id: local-google-client-id
+      client-secret: local-google-client-secret
+      redirect-uri: http://localhost:8080/oauth/google/callback
     client:
       web-redirect-uri: http://localhost:3000/oauth/callback
       app-redirect-uri: chapchap://oauth/callback

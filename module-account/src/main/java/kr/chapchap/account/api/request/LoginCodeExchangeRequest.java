@@ -4,10 +4,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
-@Schema(description = "카카오 로그인 코드 교환 요청")
+@Schema(description = "소셜 로그인 코드 교환 요청")
 public record LoginCodeExchangeRequest(
         @Schema(
-                description = "카카오 콜백 이후 클라이언트 리디렉션 URI로 전달된 일회용 로그인 코드",
+                description = "소셜 로그인 콜백 이후 클라이언트 리디렉션 URI로 전달된 일회용 로그인 코드",
                 example = "login-code"
         )
         @NotBlank(message = "로그인 코드는 필수입니다.")

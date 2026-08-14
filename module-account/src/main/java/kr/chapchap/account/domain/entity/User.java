@@ -38,10 +38,6 @@ public class User extends BaseTimeEntity {
     @Column(name = "profile_image_key", length = 1024)
     private String profileImageKey;
 
-    // TODO: 이메일 수집 미확정, 현재 소셜 제공자의 이메일 동의항목은 사용하지 않음
-    @Column(name = "email", length = 320)
-    private String email;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private UserStatus status;

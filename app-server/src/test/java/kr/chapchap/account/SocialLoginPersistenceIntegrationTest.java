@@ -88,7 +88,23 @@ class SocialLoginPersistenceIntegrationTest {
         assertThat(countSocialAccounts()).isEqualTo(1L);
         Map<String, Object> userData = findUserData(firstUserId);
         assertThat(userData.get("profile_image_key")).isNull();
-        assertThat(userData.get("email")).isNull();
+    }
+
+    @Test
+    void Google_sub로_로그인하면_GOOGLE_소셜_계정을_저장한다() {
+        // given
+        String googleSubject = "google-subject";
+
+        // when
+        Long userId = socialLoginService.login(SocialProvider.GOOGLE, googleSubject);
+
+        // then
+        Map<String, Object> socialAccount = jdbcTemplate.queryForMap(
+                "SELECT provider, provider_user_id FROM social_accounts WHERE user_id = ?",
+                userId
+        );
+        assertThat(socialAccount.get("provider")).isEqualTo("GOOGLE");
+        assertThat(socialAccount.get("provider_user_id")).isEqualTo(googleSubject);
     }
 
     private long countUsers() {
@@ -109,7 +125,7 @@ class SocialLoginPersistenceIntegrationTest {
 
     private Map<String, Object> findUserData(Long userId) {
         return jdbcTemplate.queryForMap(
-                "SELECT profile_image_key, email FROM users WHERE id = ?",
+                "SELECT profile_image_key FROM users WHERE id = ?",
                 userId
         );
     }
