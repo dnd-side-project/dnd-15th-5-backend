@@ -71,4 +71,8 @@ public class ConsumptionQueryService {
                 .map(ConsumptionActivityInfo::from)
                 .toList();
     }
+
+    public List<Long> getActiveUserIds(LocalDate from, LocalDate toExclusive) {
+        return consumptionQueryRepository.findDistinctUserIdsByDateRange(from, toExclusive);
+    }
 }
