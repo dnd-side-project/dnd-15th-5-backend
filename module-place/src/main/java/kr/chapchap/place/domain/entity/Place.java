@@ -11,14 +11,13 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.locationtech.jts.geom.Point;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "places")
 public class Place extends BaseTimeEntity {
-
-    // location(GEOGRAPHY)는 위치 기반 조회를 만들 때 다루기로 하고 현재 엔티티 필드에서는 제외함
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,13 +38,25 @@ public class Place extends BaseTimeEntity {
     @Column(name = "administrative_dong_name", nullable = false, length = 100)
     private String administrativeDongName;
 
+    @Column(name = "location", columnDefinition = "geography(Point,4326)", nullable = false)
+    private Point location;
+
     @Builder
     private Place(String googlePlaceId, String name, String roadAddress, String administrativeDongCode,
-                   String administrativeDongName) {
+                   String administrativeDongName, Point location) {
         this.googlePlaceId = googlePlaceId;
         this.name = name;
         this.roadAddress = roadAddress;
         this.administrativeDongCode = administrativeDongCode;
         this.administrativeDongName = administrativeDongName;
+        this.location = location;
+    }
+
+    public double getLatitude() {
+        return location.getY();
+    }
+
+    public double getLongitude() {
+        return location.getX();
     }
 }

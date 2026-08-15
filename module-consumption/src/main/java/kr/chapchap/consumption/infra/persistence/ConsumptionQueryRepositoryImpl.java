@@ -1,9 +1,14 @@
 package kr.chapchap.consumption.infra.persistence;
 
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import kr.chapchap.consumption.domain.entity.Consumption;
+import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
+import kr.chapchap.consumption.domain.entity.PlaceFirstStickerRow;
 import kr.chapchap.consumption.domain.entity.QConsumption;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +22,11 @@ import java.util.List;
 @Repository
 public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepository {
 
+
+    private static final long MAX_VISITED_PLACE_ROWS = 2000;
+
     private final JPAQueryFactory queryFactory;
+    private final EntityManager entityManager;
 
     @Override
     public List<Consumption> searchByCursor(Long userId, LocalDate monthStart, LocalDate monthEndExclusive,
@@ -53,6 +62,22 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
     }
 
     @Override
+    public long countDistinctPlacesByUserAndDateRange(Long userId, LocalDate from, LocalDate toExclusive) {
+        QConsumption consumption = QConsumption.consumption;
+
+        Long count = queryFactory
+                .select(consumption.placeId.countDistinct())
+                .from(consumption)
+                .where(
+                        consumption.userId.eq(userId),
+                        consumption.purchaseDate.goe(from),
+                        consumption.purchaseDate.lt(toExclusive)
+                )
+                .fetchOne();
+        return count == null ? 0 : count;
+    }
+
+    @Override
     public List<Consumption> findAllByUserAndDateRange(Long userId, LocalDate from, LocalDate toExclusive) {
         QConsumption consumption = QConsumption.consumption;
 
@@ -79,5 +104,50 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
                         consumption.purchaseDate.lt(toExclusive)
                 )
                 .fetch();
+    }
+
+    @Override
+    public List<PlaceCategoryVisitRow> aggregateVisitedPlacesByCategory(Long userId, List<String> categories) {
+        QConsumption consumption = QConsumption.consumption;
+
+        BooleanBuilder condition = new BooleanBuilder()
+                .and(consumption.userId.eq(userId));
+        if (categories != null && !categories.isEmpty()) {
+            condition.and(consumption.category.in(categories));
+        }
+
+        return queryFactory
+                .select(Projections.constructor(PlaceCategoryVisitRow.class,
+                        consumption.placeId,
+                        consumption.category.max(),
+                        consumption.count()))
+                .from(consumption)
+                .where(condition)
+                .groupBy(consumption.placeId)
+                .orderBy(consumption.count().desc())
+                .limit(MAX_VISITED_PLACE_ROWS)
+                .fetch();
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public List<PlaceFirstStickerRow> findFirstStickerItemIdsByPlace(Long userId, List<Long> placeIds) {
+        if (placeIds == null || placeIds.isEmpty()) {
+            return List.of();
+        }
+
+        Query query = entityManager.createNativeQuery(
+                "SELECT DISTINCT ON (place_id) place_id, sticker_item_id "
+                        + "FROM consumptions "
+                        + "WHERE user_id = :userId AND place_id IN (:placeIds) AND sticker_item_id IS NOT NULL "
+                        + "ORDER BY place_id, purchase_date, purchase_time NULLS LAST, id"
+        );
+        query.setParameter("userId", userId);
+        query.setParameter("placeIds", placeIds);
+
+        List<Object[]> rows = query.getResultList();
+        return rows.stream()
+                .map(row -> new PlaceFirstStickerRow(((Number) row[0]).longValue(), ((Number) row[1]).longValue()))
+                .toList();
     }
 }

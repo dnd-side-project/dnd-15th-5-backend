@@ -5,6 +5,7 @@ import jakarta.persistence.EntityManager;
 import kr.chapchap.core.test.JpaAuditingTestConfig;
 import kr.chapchap.core.test.TestcontainersConfiguration;
 import kr.chapchap.consumption.domain.entity.Consumption;
+import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
 import kr.chapchap.consumption.domain.repository.ConsumptionRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +23,7 @@ import java.time.LocalTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 // 테스트 클래스가 domain.repository/domain.entity와 다른 가지(infra.persistence)에 있어서
 // @DataJpaTest의 기본 스캔 범위 밖이다. 명시적으로 지정해줘야 ConsumptionRepository/Consumption을 찾는다.
@@ -62,8 +64,11 @@ class ConsumptionQueryRepositoryImplTest {
         entityManager.createNativeQuery(
                 "INSERT INTO places "
                         + "(id, name, road_address, administrative_dong_code, administrative_dong_name, location, created_at, updated_at) "
-                        + "VALUES (101, '테스트 가게', '서울 성동구 테스트로 1', '1120510100', '성수동', "
-                        + "ST_SetSRID(ST_MakePoint(127.0557, 37.5447), 4326), now(), now())"
+                        + "VALUES "
+                        + "(101, '테스트 가게', '서울 성동구 테스트로 1', '1120510100', '성수동', "
+                        + "ST_SetSRID(ST_MakePoint(127.0557, 37.5447), 4326), now(), now()), "
+                        + "(102, '테스트 가게2', '서울 강남구 테스트로 2', '1168010700', '역삼동', "
+                        + "ST_SetSRID(ST_MakePoint(127.0364, 37.4999), 4326), now(), now())"
         ).executeUpdate();
     }
 
@@ -137,11 +142,72 @@ class ConsumptionQueryRepositoryImplTest {
         assertThat(result).hasSize(3);
     }
 
+    @Test
+    void 장소별로_소비건수를_집계해서_방문횟수가_많은_순으로_반환한다() {
+        // given
+        consumptionRepository.saveAll(List.of(
+                createConsumption(1L, 101L, "카페", LocalDate.of(2026, 7, 1), LocalTime.of(12, 0)),
+                createConsumption(1L, 101L, "카페", LocalDate.of(2026, 7, 8), LocalTime.of(12, 0)),
+                createConsumption(1L, 102L, "음식점", LocalDate.of(2026, 7, 3), LocalTime.of(19, 0))
+        ));
+
+        // when
+        List<PlaceCategoryVisitRow> result = consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, null);
+
+        // then
+        assertThat(result)
+                .extracting(PlaceCategoryVisitRow::placeId, PlaceCategoryVisitRow::visitCount)
+                .containsExactly(
+                        tuple(101L, 2L),
+                        tuple(102L, 1L)
+                );
+    }
+
+    @Test
+    void 카테고리_필터를_주면_해당_카테고리의_장소만_집계한다() {
+        // given
+        consumptionRepository.saveAll(List.of(
+                createConsumption(1L, 101L, "카페", LocalDate.of(2026, 7, 1), LocalTime.of(12, 0)),
+                createConsumption(1L, 102L, "음식점", LocalDate.of(2026, 7, 3), LocalTime.of(19, 0))
+        ));
+
+        // when
+        List<PlaceCategoryVisitRow> result =
+                consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, List.of("카페"));
+
+        // then
+        assertThat(result)
+                .extracting(PlaceCategoryVisitRow::placeId)
+                .containsExactly(101L);
+    }
+
+    @Test
+    void 다른_유저의_소비기록은_집계에_포함되지_않는다() {
+        // given
+        consumptionRepository.saveAll(List.of(
+                createConsumption(1L, 101L, "카페", LocalDate.of(2026, 7, 1), LocalTime.of(12, 0)),
+                createConsumption(2L, 102L, "음식점", LocalDate.of(2026, 7, 3), LocalTime.of(19, 0))
+        ));
+
+        // when
+        List<PlaceCategoryVisitRow> result = consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, null);
+
+        // then
+        assertThat(result)
+                .extracting(PlaceCategoryVisitRow::placeId)
+                .containsExactly(101L);
+    }
+
     private Consumption createConsumption(Long userId, LocalDate purchaseDate, LocalTime purchaseTime) {
+        return createConsumption(userId, 101L, "카페", purchaseDate, purchaseTime);
+    }
+
+    private Consumption createConsumption(Long userId, Long placeId, String category,
+                                           LocalDate purchaseDate, LocalTime purchaseTime) {
         return Consumption.builder()
                 .userId(userId)
-                .placeId(101L)
-                .category("카페")
+                .placeId(placeId)
+                .category(category)
                 .amount(5000L)
                 .purchaseDate(purchaseDate)
                 .purchaseTime(purchaseTime)
