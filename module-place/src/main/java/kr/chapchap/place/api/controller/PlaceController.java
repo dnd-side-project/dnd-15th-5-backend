@@ -28,10 +28,10 @@ public class PlaceController {
     )
     @PutMapping("/{placeId}/likes")
     public ApiResponse<PlaceLikeResponse> toggleLike(
-//            @ChapChapUserId Long userId,
+            @ChapChapUserId Long userId,
             @PathVariable Long placeId
     ) {
-        boolean liked = placeLikeCommandService.toggle(1L, placeId);
+        boolean liked = placeLikeCommandService.toggle(userId, placeId);
         return ApiResponse.success(new PlaceLikeResponse(liked));
     }
 }
