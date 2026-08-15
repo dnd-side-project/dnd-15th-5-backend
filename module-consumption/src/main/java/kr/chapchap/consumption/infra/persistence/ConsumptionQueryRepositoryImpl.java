@@ -6,9 +6,11 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
+import kr.chapchap.consumption.domain.entity.CategoryCountRow;
 import kr.chapchap.consumption.domain.entity.Consumption;
 import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
 import kr.chapchap.consumption.domain.entity.PlaceFirstStickerRow;
+import kr.chapchap.consumption.domain.entity.PlacePopularityRow;
 import kr.chapchap.consumption.domain.entity.QConsumption;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
 import lombok.RequiredArgsConstructor;
@@ -149,5 +151,43 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
         return rows.stream()
                 .map(row -> new PlaceFirstStickerRow(((Number) row[0]).longValue(), ((Number) row[1]).longValue()))
                 .toList();
+    }
+
+    @Override
+    public List<PlacePopularityRow> aggregatePopularityByPlaceIds(List<Long> placeIds) {
+        if (placeIds == null || placeIds.isEmpty()) {
+            return List.of();
+        }
+
+        QConsumption consumption = QConsumption.consumption;
+
+        return queryFactory
+                .select(Projections.constructor(PlacePopularityRow.class,
+                        consumption.placeId,
+                        consumption.category,
+                        consumption.count(),
+                        consumption.purchaseDate.max()))
+                .from(consumption)
+                .where(consumption.placeId.in(placeIds))
+                .groupBy(consumption.placeId, consumption.category)
+                .fetch();
+    }
+
+    @Override
+    public List<CategoryCountRow> aggregateCategoryCounts(Long userId, LocalDate from, LocalDate toExclusive) {
+        QConsumption consumption = QConsumption.consumption;
+
+        return queryFactory
+                .select(Projections.constructor(CategoryCountRow.class,
+                        consumption.category,
+                        consumption.count()))
+                .from(consumption)
+                .where(
+                        consumption.userId.eq(userId),
+                        consumption.purchaseDate.goe(from),
+                        consumption.purchaseDate.lt(toExclusive)
+                )
+                .groupBy(consumption.category)
+                .fetch();
     }
 }

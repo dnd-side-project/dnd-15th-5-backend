@@ -7,6 +7,7 @@ import kr.chapchap.place.domain.entity.PlaceLike;
 import kr.chapchap.place.domain.repository.PlaceLikeRepository;
 import kr.chapchap.place.domain.repository.PlaceRepository;
 import kr.chapchap.place.exception.PlaceErrorCode;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,11 +38,14 @@ class PlaceQueryServiceTest {
     @Mock
     private PlaceLikeRepository placeLikeRepository;
 
+    @Mock
+    private EntityManager entityManager;
+
     private PlaceQueryService sut;
 
     @BeforeEach
     void setUp() {
-        sut = new PlaceQueryService(placeRepository, placeLikeRepository);
+        sut = new PlaceQueryService(placeRepository, placeLikeRepository, entityManager);
     }
 
     @Test
