@@ -13,5 +13,6 @@ include(
         "module-consumption",
         "module-report",
         "module-place",
+        "module-recommendation",
         "module-core"
 )
