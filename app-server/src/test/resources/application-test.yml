@@ -1,4 +1,10 @@
 chapchap:
+  consumption:
+    receipt-ocr:
+      clova:
+        invoke-url: https://example.com/clova-ocr
+        secret-key: test-clova-ocr-secret-key
+        api-gateway-key: test-clova-ocr-api-gateway-key
   oauth:
     kakao:
       client-id: test-client-id
@@ -14,3 +20,7 @@ chapchap:
       app-redirect-uri: chapchap://oauth/callback
   jwt:
     secret: test-jwt-secret-key-with-at-least-32-bytes
+  place:
+    sgis:
+      consumer-key: test-sgis-consumer-key
+      consumer-secret: test-sgis-consumer-secret

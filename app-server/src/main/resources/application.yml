@@ -45,6 +45,15 @@ chapchap:
     profile-image:
       bucket: chapchap-profile-images
       read-url-expiration: 2m
+  consumption:
+    receipt-image:
+      bucket: chapchap-receipt-images
+    receipt-ocr:
+      clova:
+        connect-timeout: 3s
+        read-timeout: 15s
+        request-interval: 1100ms
+        max-wait: 5s
   aws:
     s3:
       region: ap-northeast-2
@@ -73,3 +82,9 @@ chapchap:
     signup-expiration: 15m
     access-expiration: 30m
     refresh-expiration: 14d
+  place:
+    sgis:
+      authentication-uri: https://sgisapi.mods.go.kr/OpenAPI3/auth/authentication.json
+      geocoding-uri: https://sgisapi.mods.go.kr/OpenAPI3/addr/geocodewgs84.json
+      connect-timeout: 3s
+      read-timeout: 5s
