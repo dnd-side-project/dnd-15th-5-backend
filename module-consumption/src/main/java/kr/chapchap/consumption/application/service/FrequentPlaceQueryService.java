@@ -2,10 +2,10 @@ package kr.chapchap.consumption.application.service;
 
 import kr.chapchap.consumption.application.command.FrequentPlaceRankCommand;
 import kr.chapchap.consumption.application.command.RankingPeriod;
-import kr.chapchap.consumption.application.info.FrequentPlaceInfo;
 import kr.chapchap.consumption.application.info.FrequentPlaceRankInfo;
-import kr.chapchap.consumption.application.port.PlaceDongNameLookupPort;
-import kr.chapchap.consumption.application.port.PlaceNameLookupPort;
+import kr.chapchap.consumption.application.info.FrequentPlaceRankInfo.PlaceRankInfo;
+import kr.chapchap.consumption.application.info.PlaceSummaryInfo;
+import kr.chapchap.consumption.application.port.PlaceSummaryLookupPort;
 import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,12 +24,11 @@ import java.util.stream.IntStream;
 @Service
 public class FrequentPlaceQueryService {
 
-    private static final String UNKNOWN_PLACE_NAME = "알 수 없는 가게";
-    private static final String UNKNOWN_DONG_NAME = "알 수 없는 지역";
+    private static final PlaceSummaryInfo UNKNOWN_PLACE_SUMMARY =
+            new PlaceSummaryInfo("알 수 없는 가게", "알 수 없는 지역", null, null, null);
 
     private final ConsumptionQueryRepository consumptionQueryRepository;
-    private final PlaceNameLookupPort placeNameLookupPort;
-    private final PlaceDongNameLookupPort placeDongNameLookupPort;
+    private final PlaceSummaryLookupPort placeSummaryLookupPort;
     private final Clock clock;
 
     public FrequentPlaceRankInfo getFrequentPlaces(FrequentPlaceRankCommand command) {
@@ -53,18 +52,18 @@ public class FrequentPlaceQueryService {
         List<PlaceCategoryVisitRow> content = hasNext ? fetched.subList(0, command.size()) : fetched;
 
         List<Long> placeIds = content.stream().map(PlaceCategoryVisitRow::placeId).toList();
-        Map<Long, String> placeNames = placeNameLookupPort.findNames(placeIds);
-        Map<Long, String> dongNames = placeDongNameLookupPort.findDongNames(placeIds);
+        Map<Long, PlaceSummaryInfo> summaries = placeSummaryLookupPort.findSummaries(placeIds);
 
-        List<FrequentPlaceInfo> places = IntStream.range(0, content.size())
+        List<PlaceRankInfo> places = IntStream.range(0, content.size())
                 .mapToObj(i -> {
                     PlaceCategoryVisitRow row = content.get(i);
-                    return new FrequentPlaceInfo(
+                    PlaceSummaryInfo summary = summaries.getOrDefault(row.placeId(), UNKNOWN_PLACE_SUMMARY);
+                    return new PlaceRankInfo(
                             command.cursorRank() + i + 1,
                             row.placeId(),
-                            placeNames.getOrDefault(row.placeId(), UNKNOWN_PLACE_NAME),
+                            summary.name(),
                             row.category(),
-                            dongNames.getOrDefault(row.placeId(), UNKNOWN_DONG_NAME),
+                            summary.dongName(),
                             row.visitCount()
                     );
                 })

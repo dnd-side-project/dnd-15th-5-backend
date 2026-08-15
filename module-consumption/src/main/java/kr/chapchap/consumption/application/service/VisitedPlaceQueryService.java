@@ -1,16 +1,17 @@
 package kr.chapchap.consumption.application.service;
 
-import kr.chapchap.consumption.application.info.PlaceLocationInfo;
+import kr.chapchap.consumption.application.info.PlaceSummaryInfo;
 import kr.chapchap.consumption.application.info.VisitedPlaceMarkerInfo;
 import kr.chapchap.consumption.application.info.VisitedPlaceMarkersInfo;
 import kr.chapchap.consumption.application.port.PlaceLikeLookupPort;
-import kr.chapchap.consumption.application.port.PlaceLocationLookupPort;
-import kr.chapchap.consumption.application.port.PlaceNameLookupPort;
+import kr.chapchap.consumption.application.port.PlaceSummaryLookupPort;
 import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
 import kr.chapchap.consumption.domain.entity.PlaceFirstStickerRow;
 import kr.chapchap.consumption.domain.entity.StickerItem;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
 import kr.chapchap.consumption.domain.repository.StickerItemRepository;
+import kr.chapchap.consumption.exception.ConsumptionErrorCode;
+import kr.chapchap.core.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,8 +34,7 @@ public class VisitedPlaceQueryService {
     private static final String UNKNOWN_PLACE_NAME = "알 수 없는 가게";
 
     private final ConsumptionQueryRepository consumptionQueryRepository; //소비 집계
-    private final PlaceNameLookupPort placeNameLookupPort; //가게 이름 조회
-    private final PlaceLocationLookupPort placeLocationLookupPort; //위치 정보 조회
+    private final PlaceSummaryLookupPort placeSummaryLookupPort; //가게 이름/위치 등 조회
     private final PlaceLikeLookupPort placeLikeLookupPort; //좋아요 여부 조회
     private final StickerItemRepository stickerItemRepository; //스티커 이름 조회
     private final Clock clock;
@@ -56,17 +56,17 @@ public class VisitedPlaceQueryService {
         }
 
         List<Long> allPlaceIds = Stream.concat(visitedPlaceIds.stream(), likedOnlyPlaceIds.stream()).toList();
-        Map<Long, String> placeNames = placeNameLookupPort.findNames(allPlaceIds);
-        Map<Long, PlaceLocationInfo> placeLocations = placeLocationLookupPort.findLocations(allPlaceIds);
+        Map<Long, PlaceSummaryInfo> summaries = placeSummaryLookupPort.findSummaries(allPlaceIds);
+        requireAllLocationsPresent(allPlaceIds, summaries);
         Map<Long, StickerItem> firstStickerByPlace = findFirstStickerByPlace(userId, visitedPlaceIds);
 
         List<VisitedPlaceMarkerInfo> visitedMarkers = rows.stream()
-                .map(row -> toMarkerInfo(row, placeNames, placeLocations, likedPlaceIds, firstStickerByPlace))
+                .map(row -> toMarkerInfo(row, summaries, likedPlaceIds, firstStickerByPlace))
                 .toList();
 
         // 방문X 좋아요
         List<VisitedPlaceMarkerInfo> likedOnlyMarkers = likedOnlyPlaceIds.stream()
-                .map(placeId -> toLikedOnlyMarkerInfo(placeId, placeNames, placeLocations))
+                .map(placeId -> toLikedOnlyMarkerInfo(placeId, summaries))
                 .toList();
 
         List<VisitedPlaceMarkerInfo> markers = Stream.concat(visitedMarkers.stream(), likedOnlyMarkers.stream())
@@ -102,34 +102,40 @@ public class VisitedPlaceQueryService {
                         row -> stickerItemsById.get(row.stickerItemId())));
     }
 
-    private VisitedPlaceMarkerInfo toMarkerInfo(PlaceCategoryVisitRow row, Map<Long, String> placeNames,
-                                                 Map<Long, PlaceLocationInfo> placeLocations, Set<Long> likedPlaceIds,
-                                                 Map<Long, StickerItem> firstStickerByPlace) {
-        PlaceLocationInfo location = placeLocations.get(row.placeId());
+    private void requireAllLocationsPresent(List<Long> placeIds, Map<Long, PlaceSummaryInfo> summaries) {
+        boolean anyMissing = placeIds.stream().distinct()
+                .anyMatch(placeId -> summaries.get(placeId) == null || summaries.get(placeId).latitude() == null);
+        if (anyMissing) {
+            throw new BusinessException(ConsumptionErrorCode.PLACE_LOCATION_NOT_FOUND);
+        }
+    }
+
+    private VisitedPlaceMarkerInfo toMarkerInfo(PlaceCategoryVisitRow row, Map<Long, PlaceSummaryInfo> summaries,
+                                                 Set<Long> likedPlaceIds, Map<Long, StickerItem> firstStickerByPlace) {
+        PlaceSummaryInfo summary = summaries.get(row.placeId());
         StickerItem firstSticker = firstStickerByPlace.get(row.placeId());
 
         return new VisitedPlaceMarkerInfo(
                 row.placeId(),
-                placeNames.getOrDefault(row.placeId(), UNKNOWN_PLACE_NAME),
+                summary.name() != null ? summary.name() : UNKNOWN_PLACE_NAME,
                 row.category(),
-                location.latitude(),
-                location.longitude(),
+                summary.latitude(),
+                summary.longitude(),
                 row.visitCount(),
                 likedPlaceIds.contains(row.placeId()),
                 firstSticker != null ? firstSticker.getName() : null
         );
     }
 
-    private VisitedPlaceMarkerInfo toLikedOnlyMarkerInfo(Long placeId, Map<Long, String> placeNames,
-                                                           Map<Long, PlaceLocationInfo> placeLocations) {
-        PlaceLocationInfo location = placeLocations.get(placeId);
+    private VisitedPlaceMarkerInfo toLikedOnlyMarkerInfo(Long placeId, Map<Long, PlaceSummaryInfo> summaries) {
+        PlaceSummaryInfo summary = summaries.get(placeId);
 
         return new VisitedPlaceMarkerInfo(
                 placeId,
-                placeNames.getOrDefault(placeId, UNKNOWN_PLACE_NAME),
+                summary.name() != null ? summary.name() : UNKNOWN_PLACE_NAME,
                 null,
-                location.latitude(),
-                location.longitude(),
+                summary.latitude(),
+                summary.longitude(),
                 0L,
                 true,
                 null

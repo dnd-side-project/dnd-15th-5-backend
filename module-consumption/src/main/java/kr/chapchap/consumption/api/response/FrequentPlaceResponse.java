@@ -1,7 +1,7 @@
 package kr.chapchap.consumption.api.response;
 
-import kr.chapchap.consumption.application.info.FrequentPlaceInfo;
 import kr.chapchap.consumption.application.info.FrequentPlaceRankInfo;
+import kr.chapchap.consumption.application.info.FrequentPlaceRankInfo.PlaceRankInfo;
 
 import java.util.List;
 
@@ -27,7 +27,7 @@ public record FrequentPlaceResponse(
             String dongname,
             long visitCount
     ) {
-        public static FrequentPlaceItem from(FrequentPlaceInfo info) {
+        public static FrequentPlaceItem from(PlaceRankInfo info) {
             return new FrequentPlaceItem(
                     info.rank(), info.placeId(), info.placeName(), info.category(), info.dongName(), info.visitCount()
             );
