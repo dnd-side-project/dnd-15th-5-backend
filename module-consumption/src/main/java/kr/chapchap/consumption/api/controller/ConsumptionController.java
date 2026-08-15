@@ -7,11 +7,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.chapchap.core.web.auth.ChapChapUserId;
 import kr.chapchap.core.web.response.ApiResponse;
 import kr.chapchap.consumption.api.response.ConsumptionScrollResponse;
+import kr.chapchap.consumption.api.response.FrequentPlaceResponse;
 import kr.chapchap.consumption.api.response.VisitedPlaceMarkerResponse;
 import kr.chapchap.consumption.application.command.ConsumptionSearchCommand;
+import kr.chapchap.consumption.application.command.FrequentPlaceRankCommand;
+import kr.chapchap.consumption.application.command.RankingPeriod;
 import kr.chapchap.consumption.application.info.ConsumptionScrollInfo;
+import kr.chapchap.consumption.application.info.FrequentPlaceRankInfo;
 import kr.chapchap.consumption.application.info.VisitedPlaceMarkersInfo;
 import kr.chapchap.consumption.application.service.ConsumptionQueryService;
+import kr.chapchap.consumption.application.service.FrequentPlaceQueryService;
 import kr.chapchap.consumption.application.service.VisitedPlaceQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -34,6 +39,7 @@ public class ConsumptionController {
 
     private final ConsumptionQueryService consumptionQueryService;
     private final VisitedPlaceQueryService visitedPlaceQueryService;
+    private final FrequentPlaceQueryService frequentPlaceQueryService;
 
     @Operation(
             summary = "월별 소비내역 무한스크롤 조회",
@@ -70,5 +76,32 @@ public class ConsumptionController {
     ) {
         VisitedPlaceMarkersInfo info = visitedPlaceQueryService.getVisitedPlaceMarkers(userId, categories);
         return ApiResponse.success(VisitedPlaceMarkerResponse.from(info));
+    }
+
+    @Operation(
+            summary = "자주 소비한 곳 랭킹 무한스크롤 조회",
+            description = "방문 횟수 내림차순으로 장소 랭킹을 커서 기반으로 조회합니다. "
+                    + "period [이번달/전체누적]  category로 필터링 가능 (생략시 전체 카테고리). "
+                    + "nextCursorVisitCount/nextCursorPlaceId/nextCursorRank를 다음 요청에 그대로 넣어 보내면 됩니다."
+    )
+    @GetMapping("/places/rank")
+    public ApiResponse<FrequentPlaceResponse> getFrequentPlaces(
+            @ChapChapUserId Long userId,
+            @Parameter(description = "조회 기간, 기본값 THIS_MONTH") @RequestParam(defaultValue = "THIS_MONTH") RankingPeriod period,
+            @Parameter(description = "필터링할 카테고리 (생략시 전체 카테고리)")
+            @RequestParam(required = false) List<String> category,
+            @Parameter(description = "이전 응답의 nextCursorVisitCount (첫 조회 시 생략)")
+            @RequestParam(required = false) Long cursorVisitCount,
+            @Parameter(description = "이전 응답의 nextCursorPlaceId (첫 조회 시 생략)")
+            @RequestParam(required = false) Long cursorPlaceId,
+            @Parameter(description = "이전 응답의 nextCursorRank (첫 조회 시 생략)")
+            @RequestParam(defaultValue = "0") int cursorRank,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        FrequentPlaceRankCommand command = new FrequentPlaceRankCommand(
+                userId, period, category, cursorVisitCount, cursorPlaceId, cursorRank, size
+        );
+        FrequentPlaceRankInfo info = frequentPlaceQueryService.getFrequentPlaces(command);
+        return ApiResponse.success(FrequentPlaceResponse.from(info));
     }
 }

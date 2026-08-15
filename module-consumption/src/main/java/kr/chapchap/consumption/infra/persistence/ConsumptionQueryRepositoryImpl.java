@@ -190,4 +190,43 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
                 .groupBy(consumption.category)
                 .fetch();
     }
+
+    @Override
+    public List<PlaceCategoryVisitRow> aggregatePlaceRankingByCursor(Long userId, LocalDate from, LocalDate toExclusive,
+                                                                       List<String> categories, Long cursorVisitCount,
+                                                                       Long cursorPlaceId, int fetchSize) {
+        QConsumption consumption = QConsumption.consumption;
+
+        BooleanBuilder condition = new BooleanBuilder()
+                .and(consumption.userId.eq(userId));
+
+        if (categories != null && !categories.isEmpty()) {
+            condition.and(consumption.category.in(categories));
+        }
+        if (from != null && toExclusive != null) {
+            condition.and(consumption.purchaseDate.goe(from))
+                    .and(consumption.purchaseDate.lt(toExclusive));
+        }
+
+        BooleanBuilder having = new BooleanBuilder();
+        if (cursorVisitCount != null && cursorPlaceId != null) {
+            having.and(
+                    consumption.count().lt(cursorVisitCount)
+                            .or(consumption.count().eq(cursorVisitCount).and(consumption.placeId.lt(cursorPlaceId)))
+            );
+        }
+
+        return queryFactory
+                .select(Projections.constructor(PlaceCategoryVisitRow.class,
+                        consumption.placeId,
+                        consumption.category.max(),
+                        consumption.count()))
+                .from(consumption)
+                .where(condition)
+                .groupBy(consumption.placeId)
+                .having(having)
+                .orderBy(consumption.count().desc(), consumption.placeId.desc())
+                .limit(fetchSize)
+                .fetch();
+    }
 }

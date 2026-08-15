@@ -30,4 +30,8 @@ public interface ConsumptionQueryRepository {
     List<PlacePopularityRow> aggregatePopularityByPlaceIds(List<Long> placeIds);
 
     List<CategoryCountRow> aggregateCategoryCounts(Long userId, LocalDate from, LocalDate toExclusive);
+
+    List<PlaceCategoryVisitRow> aggregatePlaceRankingByCursor(Long userId, LocalDate from, LocalDate toExclusive,
+                                                                List<String> categories, Long cursorVisitCount,
+                                                                Long cursorPlaceId, int fetchSize);
 }
