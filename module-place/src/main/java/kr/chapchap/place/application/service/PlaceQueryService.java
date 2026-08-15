@@ -5,6 +5,7 @@ import jakarta.persistence.Query;
 import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.place.application.info.NearbyPlaceInfo;
 import kr.chapchap.place.application.info.PlaceLocationInfo;
+import kr.chapchap.place.application.info.PlaceSummaryInfo;
 import kr.chapchap.place.domain.entity.Place;
 import kr.chapchap.place.domain.entity.PlaceLike;
 import kr.chapchap.place.domain.repository.PlaceLikeRepository;
@@ -37,6 +38,12 @@ public class PlaceQueryService {
     public Map<Long, String> findDongNamesByIds(List<Long> placeIds) {
         return placeRepository.findAllById(placeIds).stream()
                 .collect(Collectors.toMap(Place::getId, Place::getAdministrativeDongName));
+    }
+
+
+    public Map<Long, PlaceSummaryInfo> findSummariesByIds(List<Long> placeIds) {
+        return placeRepository.findAllById(placeIds).stream()
+                .collect(Collectors.toMap(Place::getId, PlaceSummaryInfo::from));
     }
 
     public Map<Long, PlaceLocationInfo> findLocationsByIds(List<Long> placeIds) {

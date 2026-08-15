@@ -5,10 +5,14 @@ import kr.chapchap.consumption.domain.entity.Consumption;
 import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
 import kr.chapchap.consumption.domain.entity.PlaceFirstStickerRow;
 import kr.chapchap.consumption.domain.entity.PlacePopularityRow;
+import kr.chapchap.consumption.domain.entity.PlaceStickerRow;
+import kr.chapchap.consumption.domain.entity.PlaceVisitStatsRow;
+import kr.chapchap.consumption.domain.entity.StickerCountRow;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface ConsumptionQueryRepository {
 
@@ -34,4 +38,16 @@ public interface ConsumptionQueryRepository {
     List<PlaceCategoryVisitRow> aggregatePlaceRankingByCursor(Long userId, LocalDate from, LocalDate toExclusive,
                                                                 List<String> categories, Long cursorVisitCount,
                                                                 Long cursorPlaceId, int fetchSize);
+
+    // 장소 상세
+    Optional<PlaceVisitStatsRow> findVisitStats(Long userId, Long placeId);
+
+    long countVisits(Long userId, Long placeId, LocalDate from, LocalDate toExclusive);
+
+    List<PlaceStickerRow> findRecentStickersByPlace(Long userId, Long placeId, int limit);
+
+    List<StickerCountRow> aggregateStickerCountsByPlace(Long userId, Long placeId);
+
+    List<Consumption> searchPlaceVisitsByCursor(Long userId, Long placeId, LocalDate cursorPurchaseDate,
+                                                 LocalTime cursorPurchaseTime, Long cursorId, int fetchSize);
 }

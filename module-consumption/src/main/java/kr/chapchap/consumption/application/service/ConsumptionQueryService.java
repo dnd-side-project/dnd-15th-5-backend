@@ -4,7 +4,8 @@ import kr.chapchap.consumption.application.command.ConsumptionSearchCommand;
 import kr.chapchap.consumption.application.info.ConsumptionActivityInfo;
 import kr.chapchap.consumption.application.info.ConsumptionInfo;
 import kr.chapchap.consumption.application.info.ConsumptionScrollInfo;
-import kr.chapchap.consumption.application.port.PlaceNameLookupPort;
+import kr.chapchap.consumption.application.info.PlaceSummaryInfo;
+import kr.chapchap.consumption.application.port.PlaceSummaryLookupPort;
 import kr.chapchap.consumption.domain.entity.Consumption;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +23,11 @@ import java.util.Map;
 public class ConsumptionQueryService {
 
     private static final String UNKNOWN_PLACE_NAME = "알 수 없는 가게";
+    private static final PlaceSummaryInfo UNKNOWN_PLACE_SUMMARY =
+            new PlaceSummaryInfo(UNKNOWN_PLACE_NAME, null, null, null, null);
 
     private final ConsumptionQueryRepository consumptionQueryRepository;
-    private final PlaceNameLookupPort placeNameLookupPort;
+    private final PlaceSummaryLookupPort placeSummaryLookupPort;
 
     public ConsumptionScrollInfo search(ConsumptionSearchCommand command) {
         YearMonth yearMonth = command.yearMonth();
@@ -46,12 +49,12 @@ public class ConsumptionQueryService {
         List<Consumption> content = hasNext ? fetched.subList(0, command.size()) : fetched;
 
         List<Long> placeIds = content.stream().map(Consumption::getPlaceId).distinct().toList();
-        Map<Long, String> placeNames = placeNameLookupPort.findNames(placeIds);
+        Map<Long, PlaceSummaryInfo> summaries = placeSummaryLookupPort.findSummaries(placeIds);
 
         List<ConsumptionInfo> consumptions = content.stream()
                 .map(consumption -> ConsumptionInfo.of(
                         consumption,
-                        placeNames.getOrDefault(consumption.getPlaceId(), UNKNOWN_PLACE_NAME)
+                        summaries.getOrDefault(consumption.getPlaceId(), UNKNOWN_PLACE_SUMMARY).name()
                 ))
                 .toList();
 

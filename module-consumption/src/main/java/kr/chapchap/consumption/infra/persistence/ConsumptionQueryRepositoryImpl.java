@@ -11,7 +11,10 @@ import kr.chapchap.consumption.domain.entity.Consumption;
 import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
 import kr.chapchap.consumption.domain.entity.PlaceFirstStickerRow;
 import kr.chapchap.consumption.domain.entity.PlacePopularityRow;
+import kr.chapchap.consumption.domain.entity.PlaceStickerRow;
+import kr.chapchap.consumption.domain.entity.PlaceVisitStatsRow;
 import kr.chapchap.consumption.domain.entity.QConsumption;
+import kr.chapchap.consumption.domain.entity.StickerCountRow;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -19,6 +22,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 @Repository
@@ -41,17 +45,9 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
                 .and(consumption.purchaseDate.goe(monthStart))
                 .and(consumption.purchaseDate.lt(monthEndExclusive));
 
-        if (cursorPurchaseDate != null && cursorId != null) {
-            BooleanExpression sameDateTieBreak = cursorPurchaseTime == null
-                    ? consumption.purchaseTime.isNull().and(consumption.id.lt(cursorId))
-                    : consumption.purchaseTime.isNull()
-                            .or(consumption.purchaseTime.lt(cursorPurchaseTime))
-                            .or(consumption.purchaseTime.eq(cursorPurchaseTime).and(consumption.id.lt(cursorId)));
-
-            condition.and(
-                    consumption.purchaseDate.lt(cursorPurchaseDate)
-                            .or(consumption.purchaseDate.eq(cursorPurchaseDate).and(sameDateTieBreak))
-            );
+        BooleanExpression dateCursorCondition = dateCursorCondition(consumption, cursorPurchaseDate, cursorPurchaseTime, cursorId);
+        if (dateCursorCondition != null) {
+            condition.and(dateCursorCondition);
         }
 
         return queryFactory
@@ -61,6 +57,23 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
                         consumption.id.desc())
                 .limit(fetchSize)
                 .fetch();
+    }
+
+    // purchaseDate/purchaseTime/id 커서 무한스크롤 공통 타이브레이크 조건. 첫 페이지(커서 없음)는 null.
+    private BooleanExpression dateCursorCondition(QConsumption consumption, LocalDate cursorPurchaseDate,
+                                                   LocalTime cursorPurchaseTime, Long cursorId) {
+        if (cursorPurchaseDate == null || cursorId == null) {
+            return null;
+        }
+
+        BooleanExpression sameDateTieBreak = cursorPurchaseTime == null
+                ? consumption.purchaseTime.isNull().and(consumption.id.lt(cursorId))
+                : consumption.purchaseTime.isNull()
+                        .or(consumption.purchaseTime.lt(cursorPurchaseTime))
+                        .or(consumption.purchaseTime.eq(cursorPurchaseTime).and(consumption.id.lt(cursorId)));
+
+        return consumption.purchaseDate.lt(cursorPurchaseDate)
+                .or(consumption.purchaseDate.eq(cursorPurchaseDate).and(sameDateTieBreak));
     }
 
     @Override
@@ -226,6 +239,104 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
                 .groupBy(consumption.placeId)
                 .having(having)
                 .orderBy(consumption.count().desc(), consumption.placeId.desc())
+                .limit(fetchSize)
+                .fetch();
+    }
+
+    @Override
+    public Optional<PlaceVisitStatsRow> findVisitStats(Long userId, Long placeId) {
+        QConsumption consumption = QConsumption.consumption;
+
+        PlaceVisitStatsRow row = queryFactory
+                .select(Projections.constructor(PlaceVisitStatsRow.class,
+                        consumption.category.max(),
+                        consumption.count(),
+                        consumption.purchaseDate.min()))
+                .from(consumption)
+                .where(
+                        consumption.userId.eq(userId),
+                        consumption.placeId.eq(placeId)
+                )
+                .fetchOne();
+
+        return Optional.ofNullable(row).filter(r -> r.totalVisitCount() != null && r.totalVisitCount() > 0);
+    }
+
+    @Override
+    public long countVisits(Long userId, Long placeId, LocalDate from, LocalDate toExclusive) {
+        QConsumption consumption = QConsumption.consumption;
+
+        Long count = queryFactory
+                .select(consumption.count())
+                .from(consumption)
+                .where(
+                        consumption.userId.eq(userId),
+                        consumption.placeId.eq(placeId),
+                        consumption.purchaseDate.goe(from),
+                        consumption.purchaseDate.lt(toExclusive)
+                )
+                .fetchOne();
+        return count == null ? 0 : count;
+    }
+
+    @Override
+    public List<PlaceStickerRow> findRecentStickersByPlace(Long userId, Long placeId, int limit) {
+        QConsumption consumption = QConsumption.consumption;
+
+        return queryFactory
+                .select(Projections.constructor(PlaceStickerRow.class,
+                        consumption.stickerItemId,
+                        consumption.purchaseDate))
+                .from(consumption)
+                .where(
+                        consumption.userId.eq(userId),
+                        consumption.placeId.eq(placeId),
+                        consumption.stickerItemId.isNotNull()
+                )
+                .orderBy(consumption.purchaseDate.desc(), consumption.purchaseTime.desc().nullsLast(),
+                        consumption.id.desc())
+                .limit(limit)
+                .fetch();
+    }
+
+    @Override
+    public List<StickerCountRow> aggregateStickerCountsByPlace(Long userId, Long placeId) {
+        QConsumption consumption = QConsumption.consumption;
+
+        return queryFactory
+                .select(Projections.constructor(StickerCountRow.class,
+                        consumption.stickerItemId,
+                        consumption.count()))
+                .from(consumption)
+                .where(
+                        consumption.userId.eq(userId),
+                        consumption.placeId.eq(placeId),
+                        consumption.stickerItemId.isNotNull()
+                )
+                .groupBy(consumption.stickerItemId)
+                .orderBy(consumption.count().desc())
+                .fetch();
+    }
+
+    @Override
+    public List<Consumption> searchPlaceVisitsByCursor(Long userId, Long placeId, LocalDate cursorPurchaseDate,
+                                                         LocalTime cursorPurchaseTime, Long cursorId, int fetchSize) {
+        QConsumption consumption = QConsumption.consumption;
+
+        BooleanBuilder condition = new BooleanBuilder()
+                .and(consumption.userId.eq(userId))
+                .and(consumption.placeId.eq(placeId));
+
+        BooleanExpression dateCursorCondition = dateCursorCondition(consumption, cursorPurchaseDate, cursorPurchaseTime, cursorId);
+        if (dateCursorCondition != null) {
+            condition.and(dateCursorCondition);
+        }
+
+        return queryFactory
+                .selectFrom(consumption)
+                .where(condition)
+                .orderBy(consumption.purchaseDate.desc(), consumption.purchaseTime.desc().nullsLast(),
+                        consumption.id.desc())
                 .limit(fetchSize)
                 .fetch();
     }
