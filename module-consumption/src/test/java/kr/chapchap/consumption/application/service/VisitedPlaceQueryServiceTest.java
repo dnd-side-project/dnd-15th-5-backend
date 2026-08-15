@@ -7,9 +7,7 @@ import kr.chapchap.consumption.application.port.PlaceLikeLookupPort;
 import kr.chapchap.consumption.application.port.PlaceSummaryLookupPort;
 import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
 import kr.chapchap.consumption.domain.entity.PlaceFirstStickerRow;
-import kr.chapchap.consumption.domain.entity.StickerItem;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
-import kr.chapchap.consumption.domain.repository.StickerItemRepository;
 import kr.chapchap.consumption.exception.ConsumptionErrorCode;
 import kr.chapchap.core.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,7 +29,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -51,7 +48,7 @@ class VisitedPlaceQueryServiceTest {
     private PlaceLikeLookupPort placeLikeLookupPort;
 
     @Mock
-    private StickerItemRepository stickerItemRepository;
+    private StickerQueryService stickerQueryService;
 
     private VisitedPlaceQueryService sut;
 
@@ -59,7 +56,7 @@ class VisitedPlaceQueryServiceTest {
     void setUp() {
         sut = new VisitedPlaceQueryService(
                 consumptionQueryRepository, placeSummaryLookupPort,
-                placeLikeLookupPort, stickerItemRepository, fixedClock);
+                placeLikeLookupPort, stickerQueryService, fixedClock);
     }
 
     @Test
@@ -134,8 +131,7 @@ class VisitedPlaceQueryServiceTest {
         when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of(101L));
         when(consumptionQueryRepository.findFirstStickerItemIdsByPlace(eq(1L), any()))
                 .thenReturn(List.of(new PlaceFirstStickerRow(101L, 3L)));
-        StickerItem donut = createStickerItem(3L, "도넛");
-        when(stickerItemRepository.findAllById(any())).thenReturn(List.of(donut));
+        when(stickerQueryService.findNames(any())).thenReturn(Map.of(3L, "도넛"));
         when(consumptionQueryRepository.countDistinctPlacesByUserAndDateRange(eq(1L), any(), any())).thenReturn(0L);
 
         // when
@@ -203,12 +199,5 @@ class VisitedPlaceQueryServiceTest {
 
         // then
         assertThat(result.monthlyPlaceCount()).isEqualTo(3);
-    }
-
-    private StickerItem createStickerItem(Long id, String name) {
-        StickerItem stickerItem = mock(StickerItem.class);
-        when(stickerItem.getId()).thenReturn(id);
-        when(stickerItem.getName()).thenReturn(name);
-        return stickerItem;
     }
 }

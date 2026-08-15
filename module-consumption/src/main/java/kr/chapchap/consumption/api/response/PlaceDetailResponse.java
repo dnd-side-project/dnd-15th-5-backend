@@ -28,10 +28,10 @@ public record PlaceDetailResponse(
     }
 
     public record StatsResponse(LocalDate firstVisitedDate, int monthlyVisitCount, long totalVisitCount,
-                                 String monthlyComment) {
+                                 String totalVisitComment) {
         public static StatsResponse from(StatsInfo info) {
             return new StatsResponse(info.firstVisitedDate(), info.monthlyVisitCount(), info.totalVisitCount(),
-                    info.monthlyComment());
+                    info.totalVisitComment());
         }
     }
 

@@ -44,10 +44,13 @@ public interface ConsumptionQueryRepository {
 
     long countVisits(Long userId, Long placeId, LocalDate from, LocalDate toExclusive);
 
-    List<PlaceStickerRow> findRecentStickersByPlace(Long userId, Long placeId, int limit);
+    // from/toExclusive가 둘 다 null이면 전체기간 (장소 상세용), 아니면 그 기간으로 좁힘 (월간 리포트 1위 장소용)
+    List<PlaceStickerRow> findRecentStickersByPlace(Long userId, Long placeId, LocalDate from, LocalDate toExclusive, int limit);
 
     List<StickerCountRow> aggregateStickerCountsByPlace(Long userId, Long placeId);
 
     List<Consumption> searchPlaceVisitsByCursor(Long userId, Long placeId, LocalDate cursorPurchaseDate,
                                                  LocalTime cursorPurchaseTime, Long cursorId, int fetchSize);
+
+    List<Long> findRecentStickerItemIdsByUser(Long userId, LocalDate from, LocalDate toExclusive);
 }

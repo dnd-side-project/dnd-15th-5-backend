@@ -14,9 +14,7 @@ import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
 import kr.chapchap.consumption.domain.entity.PlaceStickerRow;
 import kr.chapchap.consumption.domain.entity.PlaceVisitStatsRow;
 import kr.chapchap.consumption.domain.entity.StickerCountRow;
-import kr.chapchap.consumption.domain.entity.StickerItem;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
-import kr.chapchap.consumption.domain.repository.StickerItemRepository;
 import kr.chapchap.consumption.domain.service.PlaceVisitCommentGenerator;
 import kr.chapchap.consumption.exception.ConsumptionErrorCode;
 import kr.chapchap.core.exception.BusinessException;
@@ -29,7 +27,6 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -42,7 +39,7 @@ public class PlaceDetailQueryService {
     private static final PlaceSummaryInfo UNKNOWN_PLACE_SUMMARY = new PlaceSummaryInfo("알 수 없는 가게", null, "주소 정보 없음", null, null);
 
     private final ConsumptionQueryRepository consumptionQueryRepository;
-    private final StickerItemRepository stickerItemRepository;
+    private final StickerQueryService stickerQueryService;
     private final PlaceSummaryLookupPort placeSummaryLookupPort;
     private final PlaceVisitCommentGenerator placeVisitCommentGenerator;
     private final Clock clock;
@@ -65,7 +62,7 @@ public class PlaceDetailQueryService {
                 stats.firstVisitedDate(),
                 (int) monthlyVisitCount,
                 stats.totalVisitCount(),
-                placeVisitCommentGenerator.generate((int) monthlyVisitCount)
+                placeVisitCommentGenerator.generate(stats.totalVisitCount().intValue())
         );
 
         return new PlaceDetailInfo(
@@ -116,8 +113,9 @@ public class PlaceDetailQueryService {
     }
 
     private List<StickerInfo> resolveRecentStickers(Long userId, Long placeId) {
-        List<PlaceStickerRow> rows = consumptionQueryRepository.findRecentStickersByPlace(userId, placeId, RECENT_STICKER_LIMIT);
-        Map<Long, String> stickerNames = findStickerNames(rows.stream().map(PlaceStickerRow::stickerItemId).toList());
+        List<PlaceStickerRow> rows = consumptionQueryRepository.findRecentStickersByPlace(
+                userId, placeId, null, null, RECENT_STICKER_LIMIT);
+        Map<Long, String> stickerNames = stickerQueryService.findNames(rows.stream().map(PlaceStickerRow::stickerItemId).toList());
 
         return rows.stream()
                 .map(row -> new StickerInfo(stickerNames.get(row.stickerItemId()), row.receivedAt()))
@@ -126,19 +124,10 @@ public class PlaceDetailQueryService {
 
     private List<StickerCountInfo> resolveStickerSummary(Long userId, Long placeId) {
         List<StickerCountRow> rows = consumptionQueryRepository.aggregateStickerCountsByPlace(userId, placeId);
-        Map<Long, String> stickerNames = findStickerNames(rows.stream().map(StickerCountRow::stickerItemId).toList());
+        Map<Long, String> stickerNames = stickerQueryService.findNames(rows.stream().map(StickerCountRow::stickerItemId).toList());
 
         return rows.stream()
                 .map(row -> new StickerCountInfo(stickerNames.get(row.stickerItemId()), row.count()))
                 .toList();
-    }
-
-    private Map<Long, String> findStickerNames(List<Long> stickerItemIds) {
-        List<Long> distinctIds = stickerItemIds.stream().distinct().toList();
-        if (distinctIds.isEmpty()) {
-            return Map.of();
-        }
-        return stickerItemRepository.findAllById(distinctIds).stream()
-                .collect(Collectors.toMap(StickerItem::getId, StickerItem::getName));
     }
 }

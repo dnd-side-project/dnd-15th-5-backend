@@ -6,6 +6,7 @@ import kr.chapchap.core.test.TestcontainersConfiguration;
 import kr.chapchap.report.application.command.GetMonthlyReportCommand;
 import kr.chapchap.report.application.info.MonthlyReportInfo;
 import kr.chapchap.report.application.port.ConsumptionActivityPort;
+import kr.chapchap.report.application.port.PlaceStickerLookupPort;
 import kr.chapchap.report.domain.entity.Report;
 import kr.chapchap.report.domain.repository.ReportCategoryStatRepository;
 import kr.chapchap.report.domain.repository.ReportPlaceRankRepository;
@@ -61,6 +62,7 @@ class MonthlyReportQueryServiceIntegrationTest {
 
     // module-consumption의 실제 구현이 아니라 순수 Port라, DataJpaTest 컨텍스트에는 빈이 없어 직접 mock한다.
     private final ConsumptionActivityPort consumptionActivityPort = org.mockito.Mockito.mock(ConsumptionActivityPort.class);
+    private final PlaceStickerLookupPort placeStickerLookupPort = org.mockito.Mockito.mock(PlaceStickerLookupPort.class);
 
     private MonthlyReportQueryService sut;
 
@@ -72,7 +74,8 @@ class MonthlyReportQueryServiceIntegrationTest {
                 reportTownRankRepository,
                 reportPlaceRankRepository,
                 reportTimePatternRepository,
-                consumptionActivityPort
+                consumptionActivityPort,
+                placeStickerLookupPort
         );
 
         entityManager.createNativeQuery(
@@ -136,13 +139,12 @@ class MonthlyReportQueryServiceIntegrationTest {
         assertThat(info.townRanks()).hasSize(3);
         assertThat(info.townRanks().get(0).townName()).isEqualTo("연남동");
 
-        assertThat(info.discovery().newStickerCount()).isEqualTo(3);
         assertThat(info.summary().totalVisitCount()).isEqualTo(24);
 
         assertThat(info.categoryStats()).hasSize(3);
 
         assertThat(info.timePattern().peakDayOfWeek()).isEqualTo(5);
-        assertThat(info.timePattern().peakHour()).isEqualTo(22);
+        assertThat(info.timePattern().peakTimeSlot()).isEqualTo(kr.chapchap.report.domain.entity.TimeSlot.NIGHT);
         assertThat(info.timePattern().dayOfWeekPattern()).hasSize(7);
     }
 

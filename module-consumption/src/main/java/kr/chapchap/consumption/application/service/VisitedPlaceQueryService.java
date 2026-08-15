@@ -7,9 +7,7 @@ import kr.chapchap.consumption.application.port.PlaceLikeLookupPort;
 import kr.chapchap.consumption.application.port.PlaceSummaryLookupPort;
 import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
 import kr.chapchap.consumption.domain.entity.PlaceFirstStickerRow;
-import kr.chapchap.consumption.domain.entity.StickerItem;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
-import kr.chapchap.consumption.domain.repository.StickerItemRepository;
 import kr.chapchap.consumption.exception.ConsumptionErrorCode;
 import kr.chapchap.core.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +34,7 @@ public class VisitedPlaceQueryService {
     private final ConsumptionQueryRepository consumptionQueryRepository; //소비 집계
     private final PlaceSummaryLookupPort placeSummaryLookupPort; //가게 이름/위치 등 조회
     private final PlaceLikeLookupPort placeLikeLookupPort; //좋아요 여부 조회
-    private final StickerItemRepository stickerItemRepository; //스티커 이름 조회
+    private final StickerQueryService stickerQueryService; //스티커 이름 조회
     private final Clock clock;
 
     public VisitedPlaceMarkersInfo getVisitedPlaceMarkers(Long userId, List<String> categories) {
@@ -58,10 +56,10 @@ public class VisitedPlaceQueryService {
         List<Long> allPlaceIds = Stream.concat(visitedPlaceIds.stream(), likedOnlyPlaceIds.stream()).toList();
         Map<Long, PlaceSummaryInfo> summaries = placeSummaryLookupPort.findSummaries(allPlaceIds);
         requireAllLocationsPresent(allPlaceIds, summaries);
-        Map<Long, StickerItem> firstStickerByPlace = findFirstStickerByPlace(userId, visitedPlaceIds);
+        Map<Long, String> firstStickerNameByPlace = findFirstStickerNamesByPlace(userId, visitedPlaceIds);
 
         List<VisitedPlaceMarkerInfo> visitedMarkers = rows.stream()
-                .map(row -> toMarkerInfo(row, summaries, likedPlaceIds, firstStickerByPlace))
+                .map(row -> toMarkerInfo(row, summaries, likedPlaceIds, firstStickerNameByPlace))
                 .toList();
 
         // 방문X 좋아요
@@ -83,7 +81,7 @@ public class VisitedPlaceQueryService {
     }
 
 
-    private Map<Long, StickerItem> findFirstStickerByPlace(Long userId, List<Long> visitedPlaceIds) {
+    private Map<Long, String> findFirstStickerNamesByPlace(Long userId, List<Long> visitedPlaceIds) {
         if (visitedPlaceIds.isEmpty()) {
             return Map.of();
         }
@@ -93,13 +91,13 @@ public class VisitedPlaceQueryService {
             return Map.of();
         }
 
-        List<Long> stickerItemIds = firstStickerRows.stream().map(PlaceFirstStickerRow::stickerItemId).distinct().toList();
-        Map<Long, StickerItem> stickerItemsById = stickerItemRepository.findAllById(stickerItemIds).stream()
-                .collect(Collectors.toMap(StickerItem::getId, stickerItem -> stickerItem));
+        List<Long> stickerItemIds = firstStickerRows.stream().map(PlaceFirstStickerRow::stickerItemId).toList();
+        Map<Long, String> namesById = stickerQueryService.findNames(stickerItemIds);
 
         return firstStickerRows.stream()
+                .filter(row -> namesById.containsKey(row.stickerItemId()))
                 .collect(Collectors.toMap(PlaceFirstStickerRow::placeId,
-                        row -> stickerItemsById.get(row.stickerItemId())));
+                        row -> namesById.get(row.stickerItemId())));
     }
 
     private void requireAllLocationsPresent(List<Long> placeIds, Map<Long, PlaceSummaryInfo> summaries) {
@@ -111,9 +109,8 @@ public class VisitedPlaceQueryService {
     }
 
     private VisitedPlaceMarkerInfo toMarkerInfo(PlaceCategoryVisitRow row, Map<Long, PlaceSummaryInfo> summaries,
-                                                 Set<Long> likedPlaceIds, Map<Long, StickerItem> firstStickerByPlace) {
+                                                 Set<Long> likedPlaceIds, Map<Long, String> firstStickerNameByPlace) {
         PlaceSummaryInfo summary = summaries.get(row.placeId());
-        StickerItem firstSticker = firstStickerByPlace.get(row.placeId());
 
         return new VisitedPlaceMarkerInfo(
                 row.placeId(),
@@ -123,7 +120,7 @@ public class VisitedPlaceQueryService {
                 summary.longitude(),
                 row.visitCount(),
                 likedPlaceIds.contains(row.placeId()),
-                firstSticker != null ? firstSticker.getName() : null
+                firstStickerNameByPlace.get(row.placeId())
         );
     }
 

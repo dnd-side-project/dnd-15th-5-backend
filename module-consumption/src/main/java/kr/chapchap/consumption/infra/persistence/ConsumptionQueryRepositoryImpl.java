@@ -280,19 +280,25 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
     }
 
     @Override
-    public List<PlaceStickerRow> findRecentStickersByPlace(Long userId, Long placeId, int limit) {
+    public List<PlaceStickerRow> findRecentStickersByPlace(Long userId, Long placeId, LocalDate from,
+                                                             LocalDate toExclusive, int limit) {
         QConsumption consumption = QConsumption.consumption;
+
+        BooleanBuilder condition = new BooleanBuilder()
+                .and(consumption.userId.eq(userId))
+                .and(consumption.placeId.eq(placeId))
+                .and(consumption.stickerItemId.isNotNull());
+        if (from != null && toExclusive != null) {
+            condition.and(consumption.purchaseDate.goe(from))
+                    .and(consumption.purchaseDate.lt(toExclusive));
+        }
 
         return queryFactory
                 .select(Projections.constructor(PlaceStickerRow.class,
                         consumption.stickerItemId,
                         consumption.purchaseDate))
                 .from(consumption)
-                .where(
-                        consumption.userId.eq(userId),
-                        consumption.placeId.eq(placeId),
-                        consumption.stickerItemId.isNotNull()
-                )
+                .where(condition)
                 .orderBy(consumption.purchaseDate.desc(), consumption.purchaseTime.desc().nullsLast(),
                         consumption.id.desc())
                 .limit(limit)
@@ -338,6 +344,24 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
                 .orderBy(consumption.purchaseDate.desc(), consumption.purchaseTime.desc().nullsLast(),
                         consumption.id.desc())
                 .limit(fetchSize)
+                .fetch();
+    }
+
+    @Override
+    public List<Long> findRecentStickerItemIdsByUser(Long userId, LocalDate from, LocalDate toExclusive) {
+        QConsumption consumption = QConsumption.consumption;
+
+        return queryFactory
+                .select(consumption.stickerItemId)
+                .from(consumption)
+                .where(
+                        consumption.userId.eq(userId),
+                        consumption.purchaseDate.goe(from),
+                        consumption.purchaseDate.lt(toExclusive),
+                        consumption.stickerItemId.isNotNull()
+                )
+                .orderBy(consumption.purchaseDate.desc(), consumption.purchaseTime.desc().nullsLast(),
+                        consumption.id.desc())
                 .fetch();
     }
 }

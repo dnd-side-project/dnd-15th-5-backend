@@ -15,7 +15,7 @@ public record PlaceDetailInfo(
 ) {
 
     public record StatsInfo(LocalDate firstVisitedDate, int monthlyVisitCount, long totalVisitCount,
-                             String monthlyComment) {
+                             String totalVisitComment) {
     }
 
     public record StickerInfo(String itemName, LocalDate receivedAt) {

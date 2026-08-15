@@ -6,7 +6,6 @@ import kr.chapchap.report.application.info.ConsumptionActivity;
 import kr.chapchap.report.application.info.MonthlyReportInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.CategoryStatInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.DayOfWeekCountInfo;
-import kr.chapchap.report.application.info.MonthlyReportInfo.DiscoveryInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.PersonaInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.PlaceRankInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.ScoresInfo;
@@ -14,11 +13,13 @@ import kr.chapchap.report.application.info.MonthlyReportInfo.SummaryInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.TimePatternInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.TownRankInfo;
 import kr.chapchap.report.application.port.ConsumptionActivityPort;
+import kr.chapchap.report.application.port.PlaceStickerLookupPort;
 import kr.chapchap.report.domain.entity.Report;
 import kr.chapchap.report.domain.entity.ReportCategoryStat;
 import kr.chapchap.report.domain.entity.ReportPlaceRank;
 import kr.chapchap.report.domain.entity.ReportTimePattern;
 import kr.chapchap.report.domain.entity.ReportTownRank;
+import kr.chapchap.report.domain.entity.TimeSlot;
 import kr.chapchap.report.domain.repository.ReportCategoryStatRepository;
 import kr.chapchap.report.domain.repository.ReportPlaceRankRepository;
 import kr.chapchap.report.domain.repository.ReportRepository;
@@ -30,8 +31,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.IntStream;
 
 @RequiredArgsConstructor
@@ -39,9 +42,9 @@ import java.util.stream.IntStream;
 @Service
 public class MonthlyReportQueryService {
 
-    private static final int NO_VISIT_HOUR = 0;
     private static final int NO_DAY_OF_WEEK = 0;
     private static final int TOP_PLACE_RANK = 1;
+    private static final int TOP_PLACE_STICKER_LIMIT = 5;
 
     private final ReportRepository reportRepository;
     private final ReportCategoryStatRepository reportCategoryStatRepository;
@@ -49,6 +52,7 @@ public class MonthlyReportQueryService {
     private final ReportPlaceRankRepository reportPlaceRankRepository;
     private final ReportTimePatternRepository reportTimePatternRepository;
     private final ConsumptionActivityPort consumptionActivityPort;
+    private final PlaceStickerLookupPort placeStickerLookupPort;
 
     public MonthlyReportInfo getMonthlyReport(GetMonthlyReportCommand command) {
         Report report = reportRepository.findByUserIdAndReportMonth(command.userId(), command.yearMonth().atDay(1))
@@ -65,7 +69,6 @@ public class MonthlyReportQueryService {
                 toPersonaInfo(report),
                 toPlaceRankInfos(placeRanks, command),
                 toTownRankInfos(townRanks),
-                toDiscoveryInfo(report),
                 toSummaryInfo(report),
                 toCategoryStatInfos(categoryStats),
                 toTimePatternInfo(timePatterns)
@@ -76,6 +79,7 @@ public class MonthlyReportQueryService {
         return new PersonaInfo(
                 report.getPersonaType().name(),
                 report.getPersonaType().getTypeName(),
+                report.getPersonaType().getKeywords(),
                 new ScoresInfo(
                         report.getScoreExploration(),
                         report.getScoreTownExpansion(),
@@ -87,13 +91,17 @@ public class MonthlyReportQueryService {
 
     private List<PlaceRankInfo> toPlaceRankInfos(List<ReportPlaceRank> placeRanks, GetMonthlyReportCommand command) {
         return placeRanks.stream()
-                .map(placeRank -> new PlaceRankInfo(
-                        placeRank.getRank(),
-                        placeRank.getPlaceName(),
-                        placeRank.getVisitCount(),
-                        placeRank.getFirstVisitedDate(),
-                        placeRank.getRank() == TOP_PLACE_RANK ? findCategory(command, placeRank.getPlaceId()) : null
-                ))
+                .map(placeRank -> {
+                    boolean isTopPlace = placeRank.getRank() == TOP_PLACE_RANK;
+                    return new PlaceRankInfo(
+                            placeRank.getRank(),
+                            placeRank.getPlaceName(),
+                            placeRank.getVisitCount(),
+                            placeRank.getFirstVisitedDate(),
+                            isTopPlace ? findCategory(command, placeRank.getPlaceId()) : null,
+                            isTopPlace ? findStickerNames(command, placeRank.getPlaceId()) : List.of()
+                    );
+                })
                 .toList();
     }
 
@@ -109,16 +117,18 @@ public class MonthlyReportQueryService {
                 .orElse(null);
     }
 
+    private List<String> findStickerNames(GetMonthlyReportCommand command, Long placeId) {
+        LocalDate monthStart = command.yearMonth().atDay(1);
+        LocalDate monthEndExclusive = command.yearMonth().plusMonths(1).atDay(1);
+
+        return placeStickerLookupPort.findRecentStickerNames(
+                command.userId(), placeId, monthStart, monthEndExclusive, TOP_PLACE_STICKER_LIMIT);
+    }
+
     private List<TownRankInfo> toTownRankInfos(List<ReportTownRank> townRanks) {
         return townRanks.stream()
                 .map(townRank -> new TownRankInfo(townRank.getRank(), townRank.getTownName(), townRank.getVisitCount()))
                 .toList();
-    }
-
-    private DiscoveryInfo toDiscoveryInfo(Report report) {
-        int newStickerCount = report.getNewStickerCount();
-        String message = "지난달 대비 새로운 스티커가 " + newStickerCount + "개가 추가되었어요.";
-        return new DiscoveryInfo(message, newStickerCount);
     }
 
     private SummaryInfo toSummaryInfo(Report report) {
@@ -131,19 +141,28 @@ public class MonthlyReportQueryService {
                 .toList();
     }
 
+    // 정확한 시(hour) 단위 대신 새벽/아침/점심/저녁/밤 시간대로 묶어서 peak을 구한다 (한두 건 차이로 엇갈리는 걸 방지)
     private TimePatternInfo toTimePatternInfo(List<ReportTimePattern> timePatterns) {
         List<DayOfWeekCountInfo> dayOfWeekPattern = aggregateByDayOfWeek(timePatterns);
 
-        ReportTimePattern peak = timePatterns.stream()
-                .max(Comparator.comparingInt(ReportTimePattern::getVisitCount)
-                        .thenComparing(Comparator.comparingInt(ReportTimePattern::getDayOfWeek).reversed())
-                        .thenComparing(Comparator.comparingInt(ReportTimePattern::getVisitHour).reversed()))
-                .orElse(null);
+        Map<DaySlotKey, Integer> countsBySlot = new LinkedHashMap<>();
+        for (ReportTimePattern timePattern : timePatterns) {
+            DaySlotKey key = new DaySlotKey(timePattern.getDayOfWeek(), TimeSlot.from(timePattern.getVisitHour()));
+            countsBySlot.merge(key, timePattern.getVisitCount(), Integer::sum);
+        }
 
-        int peakDayOfWeek = peak != null ? peak.getDayOfWeek() : NO_DAY_OF_WEEK;
-        int peakHour = peak != null ? peak.getVisitHour() : NO_VISIT_HOUR;
+        Optional<Map.Entry<DaySlotKey, Integer>> peak = countsBySlot.entrySet().stream()
+                .max(Map.Entry.<DaySlotKey, Integer>comparingByValue()
+                        .thenComparing(entry -> entry.getKey().dayOfWeek())
+                        .thenComparing(entry -> entry.getKey().timeSlot()));
 
-        return new TimePatternInfo(peakDayOfWeek, peakHour, dayOfWeekPattern);
+        int peakDayOfWeek = peak.map(entry -> entry.getKey().dayOfWeek()).orElse(NO_DAY_OF_WEEK);
+        TimeSlot peakTimeSlot = peak.map(entry -> entry.getKey().timeSlot()).orElse(null);
+
+        return new TimePatternInfo(peakDayOfWeek, peakTimeSlot, dayOfWeekPattern);
+    }
+
+    private record DaySlotKey(int dayOfWeek, TimeSlot timeSlot) {
     }
 
     private List<DayOfWeekCountInfo> aggregateByDayOfWeek(List<ReportTimePattern> timePatterns) {

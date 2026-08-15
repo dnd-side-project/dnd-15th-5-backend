@@ -11,7 +11,8 @@ public record CurrentStatusResponse(
         List<Integer> weeklyCounts,
         int monthlyCount,
         Map<String, Integer> monthlyCategoryCounts,
-        String recentDiscoveryMessage
+        String recentDiscoveryMessage,
+        List<String> monthlyStickerNames
 ) {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM");
@@ -22,7 +23,8 @@ public record CurrentStatusResponse(
                 info.weeklyCounts(),
                 info.monthlyCount(),
                 info.monthlyCategoryCounts(),
-                info.recentDiscoveryMessage()
+                info.recentDiscoveryMessage(),
+                info.monthlyStickerNames()
         );
     }
 }

@@ -18,14 +18,14 @@ class MonthlyReportResponseTest {
         MonthlyReportInfo info = new MonthlyReportInfo(
                 1L,
                 YearMonth.of(2026, 7),
-                new MonthlyReportInfo.PersonaInfo("RHDP", "테스트", new MonthlyReportInfo.ScoresInfo(
-                        BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO)),
+                new MonthlyReportInfo.PersonaInfo("RHDP", "테스트", List.of("단골 반복형", "동네 집중형", "낮소비형", "규칙형"),
+                        new MonthlyReportInfo.ScoresInfo(
+                                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO)),
                 List.of(),
                 List.of(),
-                new MonthlyReportInfo.DiscoveryInfo("메시지", 0),
                 new MonthlyReportInfo.SummaryInfo(3, 0, 0),
                 List.of(),
-                new MonthlyReportInfo.TimePatternInfo(0, 0, List.of())
+                new MonthlyReportInfo.TimePatternInfo(0, null, List.of())
         );
 
         // when & then

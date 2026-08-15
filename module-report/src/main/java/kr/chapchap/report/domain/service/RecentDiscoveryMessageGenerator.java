@@ -1,8 +1,8 @@
 package kr.chapchap.report.domain.service;
 
+import kr.chapchap.report.domain.entity.TimeSlot;
 import kr.chapchap.report.domain.entity.VisitActivity;
 
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -27,40 +27,6 @@ public class RecentDiscoveryMessageGenerator {
             "이번 달 소비 기록을 꾸준히 남겨봐요",
             "오늘은 어떤 곳을 다녀오셨나요?"
     );
-
-    private enum TimeSlot{
-        DAWN("새벽"),
-        MORNING("아침"),
-        LUNCH("점심"),
-        EVENING("저녁"),
-        NIGHT("밤");
-
-        private final String label;
-
-        TimeSlot(String label){
-            this.label=label;
-        }
-
-        public String getLabel(){
-            return label;
-        }
-
-        public static TimeSlot from(LocalTime time) {
-            int hour = time.getHour();
-            if (hour >= 2 && hour < 6) {
-                return DAWN;
-            }
-            if (hour >= 6 && hour < 11) {
-                return MORNING;
-            }
-            if (hour >= 11 && hour < 16) {
-                return LUNCH;
-            }
-            if (hour >=16 && hour < 21 )
-                return EVENING;
-            return NIGHT;
-        }
-    }
 
     public String generate(List<VisitActivity> recentActivities, List<VisitActivity> previousActivities) {
         List<String> candidates = new ArrayList<>();

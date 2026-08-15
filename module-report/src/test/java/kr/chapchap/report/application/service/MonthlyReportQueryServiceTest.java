@@ -5,8 +5,10 @@ import kr.chapchap.report.application.command.GetMonthlyReportCommand;
 import kr.chapchap.report.application.info.ConsumptionActivity;
 import kr.chapchap.report.application.info.MonthlyReportInfo;
 import kr.chapchap.report.application.port.ConsumptionActivityPort;
+import kr.chapchap.report.application.port.PlaceStickerLookupPort;
 import kr.chapchap.report.domain.entity.PersonaType;
 import kr.chapchap.report.domain.entity.Report;
+import kr.chapchap.report.domain.entity.TimeSlot;
 import kr.chapchap.report.domain.entity.ReportCategoryStat;
 import kr.chapchap.report.domain.entity.ReportPlaceRank;
 import kr.chapchap.report.domain.entity.ReportTimePattern;
@@ -33,6 +35,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
@@ -61,6 +64,9 @@ class MonthlyReportQueryServiceTest {
     @Mock
     private ConsumptionActivityPort consumptionActivityPort;
 
+    @Mock
+    private PlaceStickerLookupPort placeStickerLookupPort;
+
     private MonthlyReportQueryService sut;
 
     @BeforeEach
@@ -71,7 +77,8 @@ class MonthlyReportQueryServiceTest {
                 reportTownRankRepository,
                 reportPlaceRankRepository,
                 reportTimePatternRepository,
-                consumptionActivityPort
+                consumptionActivityPort,
+                placeStickerLookupPort
         );
     }
 
@@ -108,6 +115,8 @@ class MonthlyReportQueryServiceTest {
         when(consumptionActivityPort.findActivities(eq(USER_ID), any(), any())).thenReturn(List.of(
                 new ConsumptionActivity(101L, "카페", LocalDate.of(2026, 7, 3), null)
         ));
+        when(placeStickerLookupPort.findRecentStickerNames(eq(USER_ID), eq(101L), any(), any(), anyInt()))
+                .thenReturn(List.of("도넛", "아이스"));
 
         // when
         MonthlyReportInfo info = sut.getMonthlyReport(new GetMonthlyReportCommand(USER_ID, YEAR_MONTH));
@@ -116,12 +125,12 @@ class MonthlyReportQueryServiceTest {
         assertThat(info.reportId()).isEqualTo(REPORT_ID);
         assertThat(info.persona().type()).isEqualTo("RHMP");
         assertThat(info.persona().typeName()).isEqualTo("단골 반복형 · 동네 집중형 · 밤소비형 · 규칙형");
+        assertThat(info.persona().keywords()).containsExactly("단골 반복형", "동네 집중형", "밤소비형", "규칙형");
         assertThat(info.placeRanks()).hasSize(1);
         assertThat(info.placeRanks().get(0).placeName()).isEqualTo("투썸 플레이스 뚝섬지점");
         assertThat(info.placeRanks().get(0).category()).isEqualTo("카페");
+        assertThat(info.placeRanks().get(0).stickerNames()).containsExactly("도넛", "아이스");
         assertThat(info.townRanks()).hasSize(1);
-        assertThat(info.discovery().newStickerCount()).isEqualTo(3);
-        assertThat(info.discovery().message()).contains("3개");
         assertThat(info.summary().totalVisitCount()).isEqualTo(24);
     }
 
@@ -145,7 +154,7 @@ class MonthlyReportQueryServiceTest {
 
         // then
         assertThat(info.timePattern().peakDayOfWeek()).isEqualTo(5);
-        assertThat(info.timePattern().peakHour()).isEqualTo(22);
+        assertThat(info.timePattern().peakTimeSlot()).isEqualTo(TimeSlot.NIGHT);
         assertThat(info.timePattern().dayOfWeekPattern()).hasSize(7);
         assertThat(info.timePattern().dayOfWeekPattern().get(4).visitCount()).isEqualTo(8); // 5번째 = 금요일
     }
