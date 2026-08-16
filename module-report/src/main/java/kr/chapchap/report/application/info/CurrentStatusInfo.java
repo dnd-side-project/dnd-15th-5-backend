@@ -9,6 +9,7 @@ public record CurrentStatusInfo(
         List<Integer> weeklyCounts,
         int monthlyCount,
         Map<String, Integer> monthlyCategoryCounts,
-        String recentDiscoveryMessage
+        String recentDiscoveryMessage,
+        List<String> monthlyStickerNames
 ) {
 }

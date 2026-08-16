@@ -27,7 +27,8 @@ class ArchitectureTest {
             "kr.chapchap.account",
             "kr.chapchap.consumption",
             "kr.chapchap.report",
-            "kr.chapchap.place"
+            "kr.chapchap.place",
+            "kr.chapchap.recommendation"
     );
 
     private static final String[] DOMAIN_MODULE_PACKAGE_PATTERNS = DOMAIN_MODULE_PACKAGES.stream()

@@ -5,5 +5,9 @@ plugins {
 dependencies {
     implementation project(":module-core")
 
+
+    implementation "org.hibernate.orm:hibernate-spatial"
+    implementation "org.locationtech.jts:jts-core:${libs.versions.jts.get()}"
+
     testImplementation testFixtures(project(":module-core"))
 }

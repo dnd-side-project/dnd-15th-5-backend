@@ -1,0 +1,12 @@
+plugins {
+    id "chapchap.spring-library-conventions"
+}
+
+dependencies {
+    implementation project(":module-core")
+
+    implementation project(":module-consumption")
+    implementation project(":module-place")
+
+    testImplementation testFixtures(project(":module-core"))
+}

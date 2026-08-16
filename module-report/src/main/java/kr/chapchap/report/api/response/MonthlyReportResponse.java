@@ -15,7 +15,6 @@ public record MonthlyReportResponse(
         PersonaResponse persona,
         List<PlaceRankResponse> placeRanks,
         List<TownRankResponse> townRanks,
-        DiscoveryResponse discovery,
         SummaryResponse summary,
         List<CategoryStatResponse> categoryStats,
         TimePatternResponse timePattern
@@ -31,17 +30,16 @@ public record MonthlyReportResponse(
                 PersonaResponse.from(info.persona()),
                 info.placeRanks().stream().map(PlaceRankResponse::from).toList(),
                 info.townRanks().stream().map(TownRankResponse::from).toList(),
-                DiscoveryResponse.from(info.discovery()),
                 SummaryResponse.from(info.summary()),
                 info.categoryStats().stream().map(CategoryStatResponse::from).toList(),
                 TimePatternResponse.from(info.timePattern())
         );
     }
 
-    public record PersonaResponse(String type, String typeName, ScoresResponse scores) {
+    public record PersonaResponse(String type, String typeName, List<String> keywords, ScoresResponse scores) {
 
         public static PersonaResponse from(MonthlyReportInfo.PersonaInfo info) {
-            return new PersonaResponse(info.type(), info.typeName(), ScoresResponse.from(info.scores()));
+            return new PersonaResponse(info.type(), info.typeName(), info.keywords(), ScoresResponse.from(info.scores()));
         }
     }
 
@@ -62,11 +60,13 @@ public record MonthlyReportResponse(
         }
     }
 
-    public record PlaceRankResponse(int rank, String placeName, int visitCount, String firstVisitedDate, String category) {
+    public record PlaceRankResponse(int rank, String placeName, int visitCount, String firstVisitedDate, String category,
+                                     List<String> stickerNames) {
 
         public static PlaceRankResponse from(MonthlyReportInfo.PlaceRankInfo info) {
             String firstVisitedDate = info.firstVisitedDate() != null ? DATE_FORMAT.format(info.firstVisitedDate()) : null;
-            return new PlaceRankResponse(info.rank(), info.placeName(), info.visitCount(), firstVisitedDate, info.category());
+            return new PlaceRankResponse(info.rank(), info.placeName(), info.visitCount(), firstVisitedDate, info.category(),
+                    info.stickerNames());
         }
     }
 
@@ -74,13 +74,6 @@ public record MonthlyReportResponse(
 
         public static TownRankResponse from(MonthlyReportInfo.TownRankInfo info) {
             return new TownRankResponse(info.rank(), info.townName(), info.visitCount());
-        }
-    }
-
-    public record DiscoveryResponse(String message, int newStickerCount) {
-
-        public static DiscoveryResponse from(MonthlyReportInfo.DiscoveryInfo info) {
-            return new DiscoveryResponse(info.message(), info.newStickerCount());
         }
     }
 
@@ -98,12 +91,12 @@ public record MonthlyReportResponse(
         }
     }
 
-    public record TimePatternResponse(String peakDayOfWeek, int peakHour, List<DayOfWeekCountResponse> dayOfWeekPattern) {
+    public record TimePatternResponse(String peakDayOfWeek, String peakTimeSlot, List<DayOfWeekCountResponse> dayOfWeekPattern) {
 
         public static TimePatternResponse from(MonthlyReportInfo.TimePatternInfo info) {
             return new TimePatternResponse(
                     toDayOfWeekCode(info.peakDayOfWeek()),
-                    info.peakHour(),
+                    info.peakTimeSlot(),
                     info.dayOfWeekPattern().stream().map(DayOfWeekCountResponse::from).toList()
             );
         }

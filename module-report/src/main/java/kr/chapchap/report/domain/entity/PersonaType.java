@@ -3,6 +3,7 @@ package kr.chapchap.report.domain.entity;
 import lombok.Getter;
 
 import java.util.Arrays;
+import java.util.List;
 
 
 @Getter
@@ -56,6 +57,11 @@ public enum PersonaType {
     public String getDescription() {
         return visitStyle.description + " " + activityRange.description + " "
                 + consumptionTime.description + " " + consumptionRhythm.description;
+    }
+
+
+    public List<String> getKeywords() {
+        return List.of(visitStyle.label, activityRange.label, consumptionTime.label, consumptionRhythm.label);
     }
 
 

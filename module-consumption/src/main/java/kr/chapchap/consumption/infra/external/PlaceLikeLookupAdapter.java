@@ -1,22 +1,21 @@
 package kr.chapchap.consumption.infra.external;
 
+import kr.chapchap.consumption.application.port.PlaceLikeLookupPort;
 import kr.chapchap.place.application.service.PlaceQueryService;
-import kr.chapchap.consumption.application.port.PlaceNameLookupPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.Map;
+import java.util.Set;
 
 
 @RequiredArgsConstructor
 @Component
-public class PlaceNameLookupAdapter implements PlaceNameLookupPort {
+public class PlaceLikeLookupAdapter implements PlaceLikeLookupPort {
 
     private final PlaceQueryService placeQueryService;
 
     @Override
-    public Map<Long, String> findNames(List<Long> placeIds) {
-        return placeQueryService.findNamesByIds(placeIds);
+    public Set<Long> findLikedPlaceIds(Long userId) {
+        return placeQueryService.findLikedPlaceIds(userId);
     }
 }

@@ -5,6 +5,7 @@ import kr.chapchap.report.application.info.ConsumptionActivity;
 import kr.chapchap.report.application.info.CurrentStatusInfo;
 import kr.chapchap.report.application.port.ConsumptionActivityPort;
 import kr.chapchap.report.application.port.DongNameLookupPort;
+import kr.chapchap.report.application.port.MonthlyStickerLookupPort;
 import kr.chapchap.report.domain.service.RecentDiscoveryMessageGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,6 +40,9 @@ class ReportQueryServiceTest {
     @Mock
     private DongNameLookupPort dongNameLookupPort;
 
+    @Mock
+    private MonthlyStickerLookupPort monthlyStickerLookupPort;
+
     private ReportQueryService sut;
 
     @BeforeEach
@@ -46,9 +51,11 @@ class ReportQueryServiceTest {
         sut = new ReportQueryService(
                 consumptionActivityPort,
                 dongNameLookupPort,
+                monthlyStickerLookupPort,
                 new RecentDiscoveryMessageGenerator(),
                 fixedClock
         );
+        lenient().when(monthlyStickerLookupPort.findRecentStickerNames(any(), any(), any())).thenReturn(List.of());
     }
 
     @Test
@@ -113,5 +120,25 @@ class ReportQueryServiceTest {
 
         // then
         assertThat(result.weeklyCounts()).containsExactly(1, 0, 0, 0, 0, 0, 0);
+    }
+
+    @Test
+    void 이번_달_받은_스티커_이름을_포트가_반환한_순서_그대로_반환한다() {
+        // given
+        Long userId = 1L;
+        YearMonth yearMonth = YearMonth.of(2026, 8);
+
+        when(consumptionActivityPort.findActivities(eq(userId), any(), any())).thenReturn(List.of());
+        when(dongNameLookupPort.findDongNames(any())).thenReturn(Map.of());
+        // fixedClock = 2026-08-09이므로 "이번달"은 1일~오늘(9일)까지, toExclusive는 10일
+        when(monthlyStickerLookupPort.findRecentStickerNames(
+                eq(userId), eq(LocalDate.of(2026, 8, 1)), eq(LocalDate.of(2026, 8, 10))))
+                .thenReturn(List.of("커피", "도넛"));
+
+        // when
+        CurrentStatusInfo result = sut.getCurrentStatus(new CurrentStatusCommand(userId, yearMonth));
+
+        // then
+        assertThat(result.monthlyStickerNames()).containsExactly("커피", "도넛");
     }
 }

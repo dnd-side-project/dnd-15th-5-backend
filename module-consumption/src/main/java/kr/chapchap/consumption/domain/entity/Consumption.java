@@ -43,13 +43,19 @@ public class Consumption extends BaseTimeEntity {
     @Column(name = "place_id", nullable = false)
     private Long placeId;
 
+
+    @Column(name = "sticker_item_id")
+    private Long stickerItemId;
+
     @Builder
-    private Consumption(LocalDate purchaseDate, LocalTime purchaseTime, Long amount, String category, Long userId, Long placeId) {
+    private Consumption(LocalDate purchaseDate, LocalTime purchaseTime, Long amount, String category, Long userId,
+                         Long placeId, Long stickerItemId) {
         this.purchaseDate = purchaseDate;
         this.purchaseTime = purchaseTime;
         this.amount = amount;
         this.category = category;
         this.userId = userId;
         this.placeId = placeId;
+        this.stickerItemId = stickerItemId;
     }
 }

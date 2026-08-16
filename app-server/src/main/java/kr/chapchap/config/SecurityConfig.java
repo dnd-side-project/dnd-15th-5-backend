@@ -85,7 +85,9 @@ public class SecurityConfig {
                                 "/reports/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui",
-                                "/swagger-ui/**"
+                                "/swagger-ui/**",
+                                "/places/**",
+                                "/recommendations/**"
                         ).permitAll()
                         .anyRequest().hasAuthority("SCOPE_user")
                 );
