@@ -202,6 +202,24 @@ class ConsumptionCommandServiceTest {
                 );
     }
 
+    @Test
+    void 정리_중인_영수증_이미지면_만료_예외가_발생한다() {
+        // given
+        ConsumptionCreateCommand command = createCommand(RECEIPT_IMAGE_ID);
+        ReceiptImage receiptImage = createTemporaryReceiptImage(NOW.minusSeconds(1));
+        receiptImage.markDeleting(NOW);
+        givenSuccessfulConsumptionSave();
+        given(receiptImageRepository.findByIdAndUserIdForUpdate(RECEIPT_IMAGE_ID, USER_ID))
+                .willReturn(Optional.of(receiptImage));
+        ConsumptionCommandService service = createService();
+
+        // when & then
+        assertThatThrownBy(() -> service.create(command, PLACE_ID))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ConsumptionErrorCode.RECEIPT_IMAGE_EXPIRED)
+                );
+    }
+
     private ConsumptionCommandService createService() {
         return new ConsumptionCommandService(
                 consumptionRepository,

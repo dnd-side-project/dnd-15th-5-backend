@@ -70,6 +70,42 @@ class ReceiptImageTest {
     }
 
     @Test
+    void 만료된_임시_영수증_이미지를_정리_중_상태로_변경한다() {
+        // given
+        LocalDateTime cleanupAt = LocalDateTime.of(2026, 8, 17, 3, 0);
+        ReceiptImage receiptImage = ReceiptImage.createTemporary(
+                1L,
+                "receipts/1/receipt-key",
+                "image/png",
+                1024L,
+                cleanupAt.minusSeconds(1)
+        );
+
+        // when
+        receiptImage.markDeleting(cleanupAt);
+
+        // then
+        assertThat(receiptImage.getStatus()).isEqualTo(ReceiptImageStatus.DELETING);
+    }
+
+    @Test
+    void 만료되지_않은_영수증_이미지는_정리_중_상태로_변경할_수_없다() {
+        // given
+        LocalDateTime cleanupAt = LocalDateTime.of(2026, 8, 17, 3, 0);
+        ReceiptImage receiptImage = ReceiptImage.createTemporary(
+                1L,
+                "receipts/1/receipt-key",
+                "image/png",
+                1024L,
+                cleanupAt.plusSeconds(1)
+        );
+
+        // when & then
+        assertThatThrownBy(() -> receiptImage.markDeleting(cleanupAt))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
     void 이미_연결된_영수증_이미지는_다시_연결할_수_없다() {
         // given
         LocalDateTime attachedAt = LocalDateTime.of(2026, 8, 16, 12, 0);

@@ -104,6 +104,17 @@ public class ReceiptImage extends BaseTimeEntity {
         return expiresAt != null && !expiresAt.isAfter(dateTime);
     }
 
+    public void markDeleting(LocalDateTime cleanupAt) {
+        if (status != ReceiptImageStatus.TEMPORARY || isAttached()) {
+            throw new IllegalStateException("임시 상태의 영수증 이미지만 정리할 수 있습니다.");
+        }
+        if (!isExpiredAt(cleanupAt)) {
+            throw new IllegalStateException("만료된 영수증 이미지만 정리할 수 있습니다.");
+        }
+
+        this.status = ReceiptImageStatus.DELETING;
+    }
+
     public void attach(Long consumptionId, LocalDateTime attachedAt) {
         if (isAttached() || status != ReceiptImageStatus.TEMPORARY) {
             throw new IllegalStateException("임시 상태의 영수증 이미지만 소비 기록에 연결할 수 있습니다.");

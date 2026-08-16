@@ -6,7 +6,6 @@ import kr.chapchap.report.application.service.MonthlyReportAggregationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.Clock;
@@ -16,7 +15,6 @@ import java.time.ZoneId;
 
 @Slf4j
 @RequiredArgsConstructor
-@EnableScheduling
 @Configuration
 public class ReportBatchSchedulerConfig {
 

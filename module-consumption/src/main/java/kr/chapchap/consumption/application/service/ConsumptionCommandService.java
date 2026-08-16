@@ -72,12 +72,13 @@ public class ConsumptionCommandService {
                 )
                 .orElseThrow(() -> new BusinessException(ConsumptionErrorCode.RECEIPT_IMAGE_NOT_FOUND));
 
-        if (receiptImage.isAttached() || receiptImage.getStatus() != ReceiptImageStatus.TEMPORARY) {
+        if (receiptImage.isAttached()) {
             throw new BusinessException(ConsumptionErrorCode.RECEIPT_IMAGE_ALREADY_ATTACHED);
         }
 
         LocalDateTime attachedAt = LocalDateTime.now(clock);
-        if (receiptImage.isExpiredAt(attachedAt)) {
+        if (receiptImage.getStatus() != ReceiptImageStatus.TEMPORARY
+                || receiptImage.isExpiredAt(attachedAt)) {
             throw new BusinessException(ConsumptionErrorCode.RECEIPT_IMAGE_EXPIRED);
         }
 
