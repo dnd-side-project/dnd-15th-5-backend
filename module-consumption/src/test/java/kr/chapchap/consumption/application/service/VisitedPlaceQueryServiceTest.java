@@ -120,6 +120,24 @@ class VisitedPlaceQueryServiceTest {
     }
 
     @Test
+    void 위도만_있고_경도가_없는_장소가_있으면_위치정보없음_예외를_던진다() {
+        // given: latitude만 검증하고 longitude를 빠뜨리면 안 됨
+        when(consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, null)).thenReturn(List.of(
+                new PlaceCategoryVisitRow(101L, "카페", 1L)
+        ));
+        when(placeSummaryLookupPort.findSummaries(any())).thenReturn(Map.of(
+                101L, new PlaceSummaryInfo("투썸플레이스", "역삼동", "주소1", 37.5447, null)
+        ));
+        when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of());
+
+        // when & then
+        assertThatThrownBy(() -> sut.getVisitedPlaceMarkers(1L, null))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(ConsumptionErrorCode.PLACE_LOCATION_NOT_FOUND);
+    }
+
+    @Test
     void 좋아요한_장소는_liked가_true고_처음_받은_스티커_이름이_채워진다() {
         // given
         when(consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, null)).thenReturn(List.of(

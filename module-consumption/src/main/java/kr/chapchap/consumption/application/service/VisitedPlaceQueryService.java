@@ -102,7 +102,10 @@ public class VisitedPlaceQueryService {
 
     private void requireAllLocationsPresent(List<Long> placeIds, Map<Long, PlaceSummaryInfo> summaries) {
         boolean anyMissing = placeIds.stream().distinct()
-                .anyMatch(placeId -> summaries.get(placeId) == null || summaries.get(placeId).latitude() == null);
+                .anyMatch(placeId -> {
+                    PlaceSummaryInfo summary = summaries.get(placeId);
+                    return summary == null || summary.latitude() == null || summary.longitude() == null;
+                });
         if (anyMissing) {
             throw new BusinessException(ConsumptionErrorCode.PLACE_LOCATION_NOT_FOUND);
         }
