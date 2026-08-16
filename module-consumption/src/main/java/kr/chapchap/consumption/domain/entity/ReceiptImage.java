@@ -92,4 +92,35 @@ public class ReceiptImage extends BaseTimeEntity {
                 expiresAt
         );
     }
+
+    public boolean isAttached() {
+        return status == ReceiptImageStatus.ATTACHED || consumptionId != null;
+    }
+
+    public boolean isExpiredAt(LocalDateTime dateTime) {
+        if (dateTime == null) {
+            throw new IllegalArgumentException("만료 여부를 확인할 시각은 필수입니다.");
+        }
+        return expiresAt != null && !expiresAt.isAfter(dateTime);
+    }
+
+    public void attach(Long consumptionId, LocalDateTime attachedAt) {
+        if (isAttached() || status != ReceiptImageStatus.TEMPORARY) {
+            throw new IllegalStateException("임시 상태의 영수증 이미지만 소비 기록에 연결할 수 있습니다.");
+        }
+        if (consumptionId == null || consumptionId <= 0) {
+            throw new IllegalArgumentException("소비 기록 식별자는 0보다 커야 합니다.");
+        }
+        if (attachedAt == null) {
+            throw new IllegalArgumentException("영수증 이미지 연결 시각은 필수입니다.");
+        }
+        if (isExpiredAt(attachedAt)) {
+            throw new IllegalStateException("만료된 영수증 이미지는 소비 기록에 연결할 수 없습니다.");
+        }
+
+        this.status = ReceiptImageStatus.ATTACHED;
+        this.consumptionId = consumptionId;
+        this.attachedAt = attachedAt;
+        this.expiresAt = null;
+    }
 }

@@ -18,6 +18,10 @@ public enum ConsumptionErrorCode implements ErrorCode {
     RECEIPT_IMAGE_DIMENSION_EXCEEDED(HttpStatus.BAD_REQUEST, "CONSUMPTION007", "영수증 이미지 해상도는 4096x4096 이하여야 합니다."),
     RECEIPT_OCR_RECOGNITION_FAILED(HttpStatus.UNPROCESSABLE_ENTITY, "CONSUMPTION008", "영수증을 인식할 수 없습니다."),
     RECEIPT_OCR_REQUEST_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "CONSUMPTION009", "OCR 요청이 많습니다. 잠시 후 다시 시도해주세요."),
+    INVALID_CONSUMPTION_INPUT(HttpStatus.BAD_REQUEST, "CONSUMPTION010", "소비 기록 입력값이 올바르지 않습니다."),
+    RECEIPT_IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "CONSUMPTION011", "영수증 이미지를 찾을 수 없습니다."),
+    RECEIPT_IMAGE_ALREADY_ATTACHED(HttpStatus.CONFLICT, "CONSUMPTION012", "이미 소비 기록에 연결된 영수증 이미지입니다."),
+    RECEIPT_IMAGE_EXPIRED(HttpStatus.CONFLICT, "CONSUMPTION013", "영수증 이미지의 임시 저장 기간이 만료되었습니다."),
     ;
 
     private final HttpStatus status;
