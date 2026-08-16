@@ -3,19 +3,18 @@ package kr.chapchap.consumption.application.command;
 import kr.chapchap.consumption.exception.ConsumptionErrorCode;
 import kr.chapchap.core.exception.BusinessException;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.YearMonth;
+import java.util.List;
 
-public record ConsumptionSearchCommand(
+public record FrequentPlaceRankCommand(
         Long userId,
-        YearMonth yearMonth,
-        LocalDate cursorPurchaseDate,
-        LocalTime cursorPurchaseTime,
-        Long cursorId,
+        RankingPeriod period,
+        List<String> categories,
+        Long cursorVisitCount,
+        Long cursorPlaceId,
+        int cursorRank,
         int size
 ) {
-    public ConsumptionSearchCommand {
+    public FrequentPlaceRankCommand {
         if (size < 1) {
             throw new BusinessException(ConsumptionErrorCode.INVALID_SIZE);
         }

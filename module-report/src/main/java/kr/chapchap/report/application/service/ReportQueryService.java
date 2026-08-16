@@ -5,6 +5,7 @@ import kr.chapchap.report.application.info.ConsumptionActivity;
 import kr.chapchap.report.application.info.CurrentStatusInfo;
 import kr.chapchap.report.application.port.ConsumptionActivityPort;
 import kr.chapchap.report.application.port.DongNameLookupPort;
+import kr.chapchap.report.application.port.MonthlyStickerLookupPort;
 import kr.chapchap.report.domain.entity.VisitActivity;
 import kr.chapchap.report.domain.service.RecentDiscoveryMessageGenerator;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class ReportQueryService {
 
     private final ConsumptionActivityPort consumptionActivityPort;
     private final DongNameLookupPort dongNameLookupPort;
+    private final MonthlyStickerLookupPort monthlyStickerLookupPort;
     private final RecentDiscoveryMessageGenerator recentDiscoveryMessageGenerator;
     private final Clock clock;
 
@@ -53,8 +55,11 @@ public class ReportQueryService {
         int monthlyCount = calculateMonthlyCount(activities, monthStart, monthEndInclusive);
         Map<String, Integer> monthlyCategoryCounts = calculateMonthlyCategoryCounts(activities, monthStart, monthEndInclusive);
         String recentDiscoveryMessage = buildRecentDiscoveryMessage(activities, today, trendStart);
+        List<String> monthlyStickerNames = monthlyStickerLookupPort.findRecentStickerNames(
+                command.userId(), monthStart, monthEndInclusive.plusDays(1));
 
-        return new CurrentStatusInfo(yearMonth, weeklyCounts, monthlyCount, monthlyCategoryCounts, recentDiscoveryMessage);
+        return new CurrentStatusInfo(
+                yearMonth, weeklyCounts, monthlyCount, monthlyCategoryCounts, recentDiscoveryMessage, monthlyStickerNames);
     }
 
     // 일(0) ~ 토(6) 순서로 반환

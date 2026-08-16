@@ -5,17 +5,16 @@ import kr.chapchap.core.exception.BusinessException;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.YearMonth;
 
-public record ConsumptionSearchCommand(
+public record PlaceVisitSearchCommand(
         Long userId,
-        YearMonth yearMonth,
+        Long placeId,
         LocalDate cursorPurchaseDate,
         LocalTime cursorPurchaseTime,
         Long cursorId,
         int size
 ) {
-    public ConsumptionSearchCommand {
+    public PlaceVisitSearchCommand {
         if (size < 1) {
             throw new BusinessException(ConsumptionErrorCode.INVALID_SIZE);
         }
