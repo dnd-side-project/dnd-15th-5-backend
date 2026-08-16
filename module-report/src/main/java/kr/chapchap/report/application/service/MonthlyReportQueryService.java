@@ -157,7 +157,7 @@ public class MonthlyReportQueryService {
                         .thenComparing(entry -> entry.getKey().timeSlot()));
 
         int peakDayOfWeek = peak.map(entry -> entry.getKey().dayOfWeek()).orElse(NO_DAY_OF_WEEK);
-        TimeSlot peakTimeSlot = peak.map(entry -> entry.getKey().timeSlot()).orElse(null);
+        String peakTimeSlot = peak.map(entry -> entry.getKey().timeSlot().name()).orElse(null);
 
         return new TimePatternInfo(peakDayOfWeek, peakTimeSlot, dayOfWeekPattern);
     }

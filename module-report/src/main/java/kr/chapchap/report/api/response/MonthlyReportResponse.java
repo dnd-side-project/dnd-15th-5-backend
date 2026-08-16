@@ -96,7 +96,7 @@ public record MonthlyReportResponse(
         public static TimePatternResponse from(MonthlyReportInfo.TimePatternInfo info) {
             return new TimePatternResponse(
                     toDayOfWeekCode(info.peakDayOfWeek()),
-                    info.peakTimeSlot() != null ? info.peakTimeSlot().name() : null,
+                    info.peakTimeSlot(),
                     info.dayOfWeekPattern().stream().map(DayOfWeekCountResponse::from).toList()
             );
         }

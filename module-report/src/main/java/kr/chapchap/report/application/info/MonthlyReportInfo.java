@@ -1,7 +1,5 @@
 package kr.chapchap.report.application.info;
 
-import kr.chapchap.report.domain.entity.TimeSlot;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -44,7 +42,7 @@ public record MonthlyReportInfo(
     public record CategoryStatInfo(String category, BigDecimal percentage) {
     }
 
-    public record TimePatternInfo(int peakDayOfWeek, TimeSlot peakTimeSlot, List<DayOfWeekCountInfo> dayOfWeekPattern) {
+    public record TimePatternInfo(int peakDayOfWeek, String peakTimeSlot, List<DayOfWeekCountInfo> dayOfWeekPattern) {
     }
 
     public record DayOfWeekCountInfo(int dayOfWeek, int visitCount) {

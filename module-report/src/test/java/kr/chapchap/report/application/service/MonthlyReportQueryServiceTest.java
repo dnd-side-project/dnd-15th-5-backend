@@ -8,7 +8,6 @@ import kr.chapchap.report.application.port.ConsumptionActivityPort;
 import kr.chapchap.report.application.port.PlaceStickerLookupPort;
 import kr.chapchap.report.domain.entity.PersonaType;
 import kr.chapchap.report.domain.entity.Report;
-import kr.chapchap.report.domain.entity.TimeSlot;
 import kr.chapchap.report.domain.entity.ReportCategoryStat;
 import kr.chapchap.report.domain.entity.ReportPlaceRank;
 import kr.chapchap.report.domain.entity.ReportTimePattern;
@@ -154,7 +153,7 @@ class MonthlyReportQueryServiceTest {
 
         // then
         assertThat(info.timePattern().peakDayOfWeek()).isEqualTo(5);
-        assertThat(info.timePattern().peakTimeSlot()).isEqualTo(TimeSlot.NIGHT);
+        assertThat(info.timePattern().peakTimeSlot()).isEqualTo("NIGHT");
         assertThat(info.timePattern().dayOfWeekPattern()).hasSize(7);
         assertThat(info.timePattern().dayOfWeekPattern().get(4).visitCount()).isEqualTo(8); // 5번째 = 금요일
     }

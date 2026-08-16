@@ -144,7 +144,7 @@ class MonthlyReportQueryServiceIntegrationTest {
         assertThat(info.categoryStats()).hasSize(3);
 
         assertThat(info.timePattern().peakDayOfWeek()).isEqualTo(5);
-        assertThat(info.timePattern().peakTimeSlot()).isEqualTo(kr.chapchap.report.domain.entity.TimeSlot.NIGHT);
+        assertThat(info.timePattern().peakTimeSlot()).isEqualTo("NIGHT");
         assertThat(info.timePattern().dayOfWeekPattern()).hasSize(7);
     }
 
