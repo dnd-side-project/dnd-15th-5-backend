@@ -11,13 +11,19 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "places")
 public class Place extends BaseTimeEntity {
+
+    private static final GeometryFactory GEOMETRY_FACTORY =
+            new GeometryFactory(new PrecisionModel(), 4326);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -50,6 +56,26 @@ public class Place extends BaseTimeEntity {
         this.administrativeDongCode = administrativeDongCode;
         this.administrativeDongName = administrativeDongName;
         this.location = location;
+    }
+
+    public static Place create(
+            String googlePlaceId,
+            String name,
+            String roadAddress,
+            String administrativeDongCode,
+            String administrativeDongName,
+            double latitude,
+            double longitude
+    ) {
+        Point location = GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude));
+        return new Place(
+                googlePlaceId,
+                name,
+                roadAddress,
+                administrativeDongCode,
+                administrativeDongName,
+                location
+        );
     }
 
     public double getLatitude() {
