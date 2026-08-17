@@ -13,6 +13,12 @@ spring:
       port: 6379
 
 chapchap:
+  consumption:
+    receipt-ocr:
+      clova:
+        invoke-url: https://example.com/clova-ocr
+        secret-key: local-clova-ocr-secret-key
+        api-gateway-key: local-clova-ocr-api-gateway-key
   cors:
     allowed-origin-patterns:
       - "*"
@@ -31,3 +37,7 @@ chapchap:
       app-redirect-uri: chapchap://oauth/callback
   jwt:
     secret: local-development-jwt-secret-key-32-bytes-minimum
+  place:
+    sgis:
+      consumer-key: local-sgis-consumer-key
+      consumer-secret: local-sgis-consumer-secret

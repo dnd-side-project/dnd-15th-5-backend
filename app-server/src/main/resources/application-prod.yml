@@ -10,6 +10,12 @@ spring:
       port: ${REDIS_PORT}
 
 chapchap:
+  consumption:
+    receipt-ocr:
+      clova:
+        invoke-url: ${CLOVA_OCR_INVOKE_URL}
+        secret-key: ${CLOVA_OCR_SECRET_KEY}
+        api-gateway-key: ${CLOVA_OCR_API_GATEWAY_KEY}
   cors:
     allowed-origin-patterns: ${CORS_ALLOWED_ORIGIN_PATTERNS}
   oauth:
@@ -27,3 +33,7 @@ chapchap:
       app-redirect-uri: ${OAUTH_APP_REDIRECT_URI}
   jwt:
     secret: ${JWT_SECRET}
+  place:
+    sgis:
+      consumer-key: ${SGIS_CONSUMER_KEY}
+      consumer-secret: ${SGIS_CONSUMER_SECRET}
