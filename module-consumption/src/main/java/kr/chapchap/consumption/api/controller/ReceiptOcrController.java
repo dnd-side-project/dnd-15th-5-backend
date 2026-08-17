@@ -33,6 +33,7 @@ public class ReceiptOcrController {
             summary = "영수증 OCR 요청",
             description = """
                     영수증 이미지를 OCR 처리하고 사용자가 확인·수정할 인식 결과를 반환합니다.
+
                     인식하지 못한 항목은 null로 반환됩니다.
                     """
     )

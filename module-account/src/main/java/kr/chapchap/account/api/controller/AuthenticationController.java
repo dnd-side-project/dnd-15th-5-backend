@@ -46,10 +46,15 @@ public class AuthenticationController {
 
     @Operation(
             summary = "소셜 로그인 코드 교환",
-            description = "소셜 로그인 콜백이 전달한 일회용 loginCode와 로그인 시작 시 생성한 codeVerifier를 교환합니다.\n\n"
-                    + "가입이 완료된 사용자는 Access Token을 발급하고, 약관 동의가 필요한 사용자는 Signup Token을 발급합니다.\n\n"
-                    + "WEB의 Refresh Token은 HttpOnly 쿠키로, APP의 Refresh Token은 응답 본문으로 전달합니다.\n\n"
-                    + "Authorization 헤더 없이 호출합니다."
+            description = """
+                    소셜 로그인 콜백이 전달한 일회용 loginCode와 로그인 시작 시 생성한 codeVerifier를 교환합니다.
+
+                    가입이 완료된 사용자는 Access Token을 발급하고, 약관 동의가 필요한 사용자는 Signup Token을 발급합니다.
+
+                    WEB의 Refresh Token은 HttpOnly 쿠키로, APP의 Refresh Token은 응답 본문으로 전달합니다.
+
+                    Authorization 헤더 없이 호출합니다.
+                    """
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -93,9 +98,13 @@ public class AuthenticationController {
 
     @Operation(
             summary = "필수 약관 동의 및 회원가입 완료",
-            description = "로그인 코드 교환에서 발급된 Signup Token을 Bearer 토큰으로 사용합니다.\n\n"
-                    + "필수 약관 두 항목에 동의하면 회원가입을 완료하고 Access Token과 Refresh Token을 발급합니다.\n\n"
-                    + "Refresh Token 전달 방식은 로그인한 WEB/APP 유형을 따릅니다.",
+            description = """
+                    로그인 코드 교환에서 발급된 Signup Token을 Bearer 토큰으로 사용합니다.
+
+                    필수 약관 두 항목에 동의하면 회원가입을 완료하고 Access Token과 Refresh Token을 발급합니다.
+
+                    Refresh Token 전달 방식은 로그인한 WEB/APP 유형을 따릅니다.
+                    """,
             security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses({
@@ -144,9 +153,13 @@ public class AuthenticationController {
 
     @Operation(
             summary = "앱 토큰 재발급",
-            description = "APP Refresh Token을 요청 본문으로 받아 기존 토큰을 폐기하고 새 토큰 쌍을 발급합니다.\n\n"
-                    + "발급된 Access Token과 Refresh Token은 모두 응답 본문으로 전달합니다.\n\n"
-                    + "Authorization 헤더 없이 호출합니다."
+            description = """
+                    APP Refresh Token을 요청 본문으로 받아 기존 토큰을 폐기하고 새 토큰 쌍을 발급합니다.
+
+                    발급된 Access Token과 Refresh Token은 모두 응답 본문으로 전달합니다.
+
+                    Authorization 헤더 없이 호출합니다.
+                    """
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -186,9 +199,13 @@ public class AuthenticationController {
 
     @Operation(
             summary = "앱 로그아웃",
-            description = "APP Refresh Token을 요청 본문으로 받아 서버에 저장된 토큰을 폐기합니다.\n\n"
-                    + "앱은 응답을 받은 뒤 로컬에 저장한 Access Token과 Refresh Token을 삭제합니다.\n\n"
-                    + "Authorization 헤더 없이 호출합니다."
+            description = """
+                    APP Refresh Token을 요청 본문으로 받아 서버에 저장된 토큰을 폐기합니다.
+
+                    앱은 응답을 받은 뒤 로컬에 저장한 Access Token과 Refresh Token을 삭제합니다.
+
+                    Authorization 헤더 없이 호출합니다.
+                    """
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -217,9 +234,13 @@ public class AuthenticationController {
 
     @Operation(
             summary = "웹 토큰 재발급",
-            description = "HttpOnly 쿠키의 WEB Refresh Token을 사용해 기존 토큰을 폐기하고 새 토큰을 발급합니다.\n\n"
-                    + "Access Token은 응답 본문으로, 새 Refresh Token은 HttpOnly 쿠키로 전달합니다.\n\n"
-                    + "브라우저 요청에 credentials를 포함하고 Authorization 헤더 없이 호출합니다."
+            description = """
+                    HttpOnly 쿠키의 WEB Refresh Token을 사용해 기존 토큰을 폐기하고 새 토큰을 발급합니다.
+
+                    Access Token은 응답 본문으로, 새 Refresh Token은 HttpOnly 쿠키로 전달합니다.
+
+                    브라우저 요청에 credentials를 포함하고 Authorization 헤더 없이 호출합니다.
+                    """
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -263,8 +284,11 @@ public class AuthenticationController {
 
     @Operation(
             summary = "웹 로그아웃",
-            description = "HttpOnly 쿠키의 WEB Refresh Token을 서버에서 폐기하고 쿠키를 만료시킵니다.\n\n"
-                    + "브라우저 요청에 credentials를 포함하고 Authorization 헤더 없이 호출합니다."
+            description = """
+                    HttpOnly 쿠키의 WEB Refresh Token을 서버에서 폐기하고 쿠키를 만료시킵니다.
+
+                    브라우저 요청에 credentials를 포함하고 Authorization 헤더 없이 호출합니다.
+                    """
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
