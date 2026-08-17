@@ -35,8 +35,11 @@ public class ConsumptionCreateController {
             summary = "소비 기록 등록",
             description = """
                     사용자가 확인한 장소와 소비 정보를 최종 저장합니다.
+
                     Google Place ID가 이미 등록된 장소라면 기존 장소를 재사용합니다.
+
                     신규 장소라면 도로명주소를 SGIS로 조회해 행정동을 저장합니다.
+
                     receiptImageId는 영수증 OCR을 사용한 경우에만 전달합니다.
                     """
     )

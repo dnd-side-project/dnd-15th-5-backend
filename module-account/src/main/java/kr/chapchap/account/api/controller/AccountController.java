@@ -130,9 +130,13 @@ public class AccountController {
             summary = "회원 탈퇴",
             description = """
                     Kakao는 연결 해제와 회원 탈퇴를 즉시 처리하고 200 OK를 반환합니다.
+
                     Google은 202 Accepted와 Location 헤더를 반환하며, 클라이언트가 해당 URI로 이동해 재인증을 완료하면 callback에서 회원 탈퇴를 처리합니다.
+
                     Google의 202 Accepted 응답은 회원 탈퇴 완료를 의미하지 않습니다.
+
                     회원 탈퇴 완료 후 WEB과 APP은 보관 중인 Access Token을 삭제해야 합니다.
+
                     WEB은 Refresh Token 쿠키가 만료되며, APP은 로컬에 저장된 Refresh Token도 함께 삭제해야 합니다.
                     """
     )
