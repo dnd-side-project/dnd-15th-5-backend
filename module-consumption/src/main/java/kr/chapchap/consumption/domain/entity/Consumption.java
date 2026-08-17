@@ -28,7 +28,7 @@ public class Consumption extends BaseTimeEntity {
     @Column(name = "purchase_date", nullable = false)
     private LocalDate purchaseDate;
 
-    @Column(name = "purchase_time")
+    @Column(name = "purchase_time", nullable = false)
     private LocalTime purchaseTime;
 
     @Column(name = "amount", nullable = false)

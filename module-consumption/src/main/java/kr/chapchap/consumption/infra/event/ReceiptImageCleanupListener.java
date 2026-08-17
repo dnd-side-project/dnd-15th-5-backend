@@ -20,7 +20,11 @@ public class ReceiptImageCleanupListener {
         try {
             receiptImageStorage.delete(event.objectKey());
         } catch (RuntimeException exception) {
-            log.error("롤백된 영수증 이미지 정리에 실패했습니다.", exception);
+            log.error(
+                    "롤백된 영수증 이미지 정리에 실패했습니다. objectKey={}",
+                    event.objectKey(),
+                    exception
+            );
         }
     }
 }
