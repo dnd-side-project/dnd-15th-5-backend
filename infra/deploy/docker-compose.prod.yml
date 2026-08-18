@@ -6,6 +6,7 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./upstream.caddy:/etc/caddy/upstream.caddy:ro
+      - ./frontend:/srv/frontend:ro
       - caddy-data:/data
       - caddy-config:/config
     ports:
