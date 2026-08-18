@@ -547,3 +547,105 @@ resource "aws_iam_role_policy" "github_actions_ssm_deploy" {
     ]
   })
 }
+
+
+
+# 프론트엔드 정적 배포 (S3 + SSM)
+# 프론트 빌드 산출물(dist) 저장용 — public 아님, EC2가 IAM 권한으로 내려받음
+resource "aws_s3_bucket" "frontend_dist" {
+  bucket = "${var.project_name}-frontend-dist"
+
+  tags = {
+    Name = "${var.project_name}-frontend-dist"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "frontend_dist" {
+  bucket = aws_s3_bucket.frontend_dist.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# EC2 -> frontend_dist 버킷 읽기 권한 (기존 ec2_ssm Role에 정책만 추가)
+resource "aws_iam_role_policy" "ec2_s3_frontend" {
+  name = "${var.project_name}-ec2-s3-frontend-policy"
+  role = aws_iam_role.ec2_ssm.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:ListBucket"]
+        Resource = [aws_s3_bucket.frontend_dist.arn, "${aws_s3_bucket.frontend_dist.arn}/*"]
+      }
+    ]
+  })
+}
+
+
+resource "aws_iam_role" "github_actions_frontend" {
+  name = "${var.project_name}-github-actions-frontend-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = aws_iam_openid_connect_provider.github_actions.arn }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+        }
+        StringLike = {
+          "token.actions.githubusercontent.com:sub" = "repo:dnd-side-project@*/dnd-15th-5-frontend@*:*"
+        }
+      }
+    }]
+  })
+}
+
+
+resource "aws_iam_role_policy" "github_actions_frontend_s3" {
+  name = "${var.project_name}-github-actions-frontend-s3-policy"
+  role = aws_iam_role.github_actions_frontend.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:PutObject", "s3:DeleteObject", "s3:ListBucket"]
+        Resource = [aws_s3_bucket.frontend_dist.arn, "${aws_s3_bucket.frontend_dist.arn}/*"]
+      }
+    ]
+  })
+}
+
+# 프론트 GitHub Actions -> EC2에 SSM으로 배포 명령 전송 권한 (백엔드와 동일 패턴)
+resource "aws_iam_role_policy" "github_actions_frontend_ssm_deploy" {
+  name = "${var.project_name}-github-actions-frontend-ssm-policy"
+  role = aws_iam_role.github_actions_frontend.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = "ssm:SendCommand"
+        Resource = [
+          aws_instance.app.arn,
+          "arn:aws:ssm:${var.aws_region}::document/AWS-RunShellScript"
+        ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["ssm:GetCommandInvocation", "ssm:ListCommandInvocations"]
+        Resource = "*"
+      }
+    ]
+  })
+}
