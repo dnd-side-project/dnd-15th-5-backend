@@ -5,7 +5,9 @@ chapchap.kr {
     }
 
     handle {
-        root * /srv/frontend
+        # 프론트 배포 스크립트가 releases/<sha> + current 심볼릭 링크 구조로 배포하므로
+        # /srv/frontend가 아니라 그 심볼릭 링크(current)를 docroot로 잡아야 함
+        root * /srv/frontend/current
         try_files {path} /index.html
         file_server
     }
