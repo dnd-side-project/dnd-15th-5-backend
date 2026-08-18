@@ -32,3 +32,13 @@ output "ec2_instance_id" {
   description = "EC2 인스턴스 ID (SSM send-command 대상)"
   value       = aws_instance.app.id
 }
+
+output "frontend_s3_bucket_name" {
+  description = "프론트 dist 업로드용 S3 버킷 이름"
+  value       = aws_s3_bucket.frontend_dist.bucket
+}
+
+output "github_actions_frontend_role_arn" {
+  description = "프론트 GitHub Actions가 assume할 IAM Role ARN (프론트 레포 워크플로우의 role-to-assume 값)"
+  value       = aws_iam_role.github_actions_frontend.arn
+}
