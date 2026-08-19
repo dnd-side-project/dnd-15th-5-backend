@@ -43,7 +43,8 @@ class RecommendationIntegrationTest {
 
         jdbcTemplate.update(
                 "INSERT INTO users (id, nickname, status, created_at, updated_at) VALUES "
-                        + "(1, '테스트유저', 'ACTIVE', now(), now())");
+                        + "(1, '테스트유저', 'ACTIVE', now(), now()), "
+                        + "(2, '다른유저', 'ACTIVE', now(), now())");
 
         // 서울시청(37.5665, 126.9780) 기준 반경 1km 안
         // 반경 밖(부산): 103
@@ -55,32 +56,35 @@ class RecommendationIntegrationTest {
                         + "ST_SetSRID(ST_MakePoint(126.9790, 37.5660), 4326)::geography, now(), now()), "
                         + "(104, '반경안 카페2', '서울 중구 어딘가', '1100000', '태평로', "
                         + "ST_SetSRID(ST_MakePoint(126.9775, 37.5668), 4326)::geography, now(), now()), "
+                        + "(105, '반경안 카페3', '서울 중구 어딘가', '1100000', '태평로', "
+                        + "ST_SetSRID(ST_MakePoint(126.9782, 37.5663), 4326)::geography, now(), now()), "
                         + "(103, '반경밖 가게', '부산 어딘가', '2600000', '중앙동', "
                         + "ST_SetSRID(ST_MakePoint(129.0756, 35.1796), 4326)::geography, now(), now())");
 
         jdbcTemplate.update(
                 "INSERT INTO consumptions (purchase_date, purchase_time, amount, category, user_id, place_id, created_at, updated_at) VALUES "
                         // 101: 카페, 5회 방문 (myTownPlaces 1등)
-                        + "('2026-08-01', '09:00:00', 5000, '카페', 1, 101, now(), now()), "
-                        + "('2026-08-02', '09:00:00', 5000, '카페', 1, 101, now(), now()), "
-                        + "('2026-08-03', '09:00:00', 5000, '카페', 1, 101, now(), now()), "
-                        + "('2026-08-04', '09:00:00', 5000, '카페', 1, 101, now(), now()), "
-                        + "('2026-08-05', '09:00:00', 5000, '카페', 1, 101, now(), now()), "
+                        + "('2026-08-01', '09:00:00', 5000, '카페', 2, 101, now(), now()), "
+                        + "('2026-08-02', '09:00:00', 5000, '카페', 2, 101, now(), now()), "
+                        + "('2026-08-03', '09:00:00', 5000, '카페', 2, 101, now(), now()), "
+                        + "('2026-08-04', '09:00:00', 5000, '카페', 2, 101, now(), now()), "
+                        + "('2026-08-05', '09:00:00', 5000, '카페', 2, 101, now(), now()), "
                         // 102: 음식점, 4회 방문 (myTownPlaces 2등)
-                        + "('2026-08-01', '12:00:00', 12000, '음식점', 1, 102, now(), now()), "
-                        + "('2026-08-02', '12:00:00', 12000, '음식점', 1, 102, now(), now()), "
-                        + "('2026-08-03', '12:00:00', 12000, '음식점', 1, 102, now(), now()), "
-                        + "('2026-08-04', '12:00:00', 12000, '음식점', 1, 102, now(), now()), "
+                        + "('2026-08-01', '12:00:00', 12000, '음식점', 2, 102, now(), now()), "
+                        + "('2026-08-02', '12:00:00', 12000, '음식점', 2, 102, now(), now()), "
+                        + "('2026-08-03', '12:00:00', 12000, '음식점', 2, 102, now(), now()), "
+                        + "('2026-08-04', '12:00:00', 12000, '음식점', 2, 102, now(), now()), "
                         // 104: 카페, 3회 방문 (myTownPlaces엔 안 들고, 카페 중에선 101 다음 순위라 sameCategoryPlaces에 남아야 함)
-                        + "('2026-08-01', '10:00:00', 4500, '카페', 1, 104, now(), now()), "
-                        + "('2026-08-02', '10:00:00', 4500, '카페', 1, 104, now(), now()), "
-                        + "('2026-08-03', '10:00:00', 4500, '카페', 1, 104, now(), now()), "
+                        + "('2026-08-01', '10:00:00', 4500, '카페', 2, 104, now(), now()), "
+                        + "('2026-08-02', '10:00:00', 4500, '카페', 2, 104, now(), now()), "
+                        + "('2026-08-03', '10:00:00', 4500, '카페', 2, 104, now(), now()), "
                         // 103: 반경 밖인데 방문횟수는 훨씬 많음 — 그래도 결과에 안 나와야 함
-                        + "('2026-08-03', '18:00:00', 9000, '카페', 1, 103, now(), now()), "
-                        + "('2026-08-04', '18:00:00', 9000, '카페', 1, 103, now(), now()), "
-                        + "('2026-08-06', '18:00:00', 9000, '카페', 1, 103, now(), now()), "
-                        + "('2026-08-07', '18:00:00', 9000, '카페', 1, 103, now(), now()), "
-                        + "('2026-08-08', '18:00:00', 9000, '카페', 1, 103, now(), now())");
+                        + "('2026-08-03', '18:00:00', 9000, '카페', 2, 103, now(), now()), "
+                        + "('2026-08-04', '18:00:00', 9000, '카페', 2, 103, now(), now()), "
+                        + "('2026-08-06', '18:00:00', 9000, '카페', 2, 103, now(), now()), "
+                        + "('2026-08-07', '18:00:00', 9000, '카페', 2, 103, now(), now()), "
+                        + "('2026-08-08', '18:00:00', 9000, '카페', 2, 103, now(), now()), "
+                        + "('2026-08-01', '09:00:00', 4000, '카페', 1, 105, now(), now())");
     }
 
     @Test
@@ -126,6 +130,25 @@ class RecommendationIntegrationTest {
                 .findFirst().orElseThrow()
                 .liked();
         assertThat(liked102).isTrue();
+    }
+
+    @Test
+    void 본인이_방문한_장소는_추천_후보에서_제외한다() {
+        jdbcTemplate.update(
+                "INSERT INTO consumptions (purchase_date, purchase_time, amount, category, user_id, place_id, created_at, updated_at) VALUES "
+                        + "('2026-08-05', '13:00:00', 12000, '음식점', 1, 102, now(), now())");
+
+        // when
+        RecommendationInfo info = recommendationQueryService.getNearbyRecommendations(1L, 37.5665, 126.9780, 1000);
+
+        // then — 102는 방문했으므로 어떤 결과에도 나오지 않고, 다음 순위인 104가 myTownPlaces로 대신 올라옴
+        assertThat(info.myTownPlaces())
+                .extracting(RecommendedPlaceInfo::placeId)
+                .containsExactly(101L, 104L)
+                .doesNotContain(102L);
+        assertThat(info.sameCategoryPlaces())
+                .extracting(RecommendedPlaceInfo::placeId)
+                .doesNotContain(102L);
     }
 
     @Test

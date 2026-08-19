@@ -41,6 +41,8 @@ public interface ConsumptionQueryRepository {
     //  module-recommendation의 가게 추천 좁혀진 placeIds만 대상
     List<PlacePopularityRow> aggregatePopularityByPlaceIds(List<Long> placeIds);
 
+    List<Long> findDistinctVisitedPlaceIds(Long userId);
+
     List<CategoryCountRow> aggregateCategoryCounts(Long userId, LocalDate from, LocalDate toExclusive);
 
     List<PlaceCategoryVisitRow> aggregatePlaceRankingByCursor(Long userId, LocalDate from, LocalDate toExclusive,
@@ -60,5 +62,5 @@ public interface ConsumptionQueryRepository {
     List<Consumption> searchPlaceVisitsByCursor(Long userId, Long placeId, LocalDate cursorPurchaseDate,
                                                  LocalTime cursorPurchaseTime, Long cursorId, int fetchSize);
 
-    List<Long> findRecentStickerItemIdsByUser(Long userId, LocalDate from, LocalDate toExclusive);
+    List<PlaceStickerRow> findRecentStickerRowsByUser(Long userId, LocalDate from, LocalDate toExclusive);
 }

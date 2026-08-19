@@ -8,6 +8,7 @@ import kr.chapchap.recommendation.application.port.PlaceLikeLookupPort;
 import kr.chapchap.recommendation.application.port.PlaceRadiusLookupPort;
 import kr.chapchap.recommendation.application.port.PopularityLookupPort;
 import kr.chapchap.recommendation.application.port.UserTopCategoryLookupPort;
+import kr.chapchap.recommendation.application.port.VisitedPlaceLookupPort;
 import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.recommendation.exception.RecommendationErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ public class RecommendationQueryService {
     private final PopularityLookupPort popularityLookupPort;
     private final UserTopCategoryLookupPort userTopCategoryLookupPort;
     private final PlaceLikeLookupPort placeLikeLookupPort;
+    private final VisitedPlaceLookupPort visitedPlaceLookupPort;
     private final Clock clock;
 
     public RecommendationInfo getNearbyRecommendations(Long userId, double latitude, double longitude, double radiusMeters) {
@@ -58,9 +60,11 @@ public class RecommendationQueryService {
         Map<Long, NearbyPlaceInfo> placesById = candidates.stream()
                 .collect(Collectors.toMap(NearbyPlaceInfo::placeId, place -> place));
         Set<Long> likedPlaceIds = placeLikeLookupPort.findLikedPlaceIds(userId);
+        Set<Long> visitedPlaceIds = visitedPlaceLookupPort.findVisitedPlaceIds(userId);
 
         List<RecommendedPlaceInfo> allSortedByPopularity = popularityRows.stream()
                 .filter(row -> placesById.containsKey(row.placeId()))
+                .filter(row -> !visitedPlaceIds.contains(row.placeId()))
                 .sorted(Comparator.comparingDouble(this::decayScoreOf).reversed())
                 .map(row -> toRecommendedPlaceInfo(row, placesById.get(row.placeId()), likedPlaceIds))
                 .toList();

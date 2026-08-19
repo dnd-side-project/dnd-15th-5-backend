@@ -1,6 +1,7 @@
 package kr.chapchap.consumption.application.service;
 
 import kr.chapchap.consumption.application.command.ConsumptionSearchCommand;
+import kr.chapchap.consumption.application.info.AcquiredStickerInfo;
 import kr.chapchap.consumption.application.info.ConsumptionActivityInfo;
 import kr.chapchap.consumption.application.info.ConsumptionInfo;
 import kr.chapchap.consumption.application.info.ConsumptionScrollInfo;
@@ -82,9 +83,15 @@ public class ConsumptionQueryService {
     }
 
 
-    public List<String> findRecentStickerNames(Long userId, LocalDate from, LocalDate toExclusive) {
-        List<Long> stickerItemIds = consumptionQueryRepository.findRecentStickerItemIdsByUser(userId, from, toExclusive);
-        return resolveStickerNamesInOrder(stickerItemIds);
+    public List<AcquiredStickerInfo> findRecentAcquiredStickers(Long userId, LocalDate from, LocalDate toExclusive) {
+        List<PlaceStickerRow> rows = consumptionQueryRepository.findRecentStickerRowsByUser(userId, from, toExclusive);
+        Map<Long, String> namesById = stickerQueryService.findNames(
+                rows.stream().map(PlaceStickerRow::stickerItemId).toList());
+
+        return rows.stream()
+                .filter(row -> namesById.get(row.stickerItemId()) != null)
+                .map(row -> new AcquiredStickerInfo(namesById.get(row.stickerItemId()), row.receivedAt()))
+                .toList();
     }
 
     // 월간 리포트 1위 장소용 - 특정 장소+기간으로 좁힌 최근 스티커 이름 (최신순)
