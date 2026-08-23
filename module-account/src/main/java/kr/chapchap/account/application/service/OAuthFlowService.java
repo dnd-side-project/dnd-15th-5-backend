@@ -79,7 +79,7 @@ public class OAuthFlowService {
             Long userId = socialLoginService.login(socialProvider, providerUserId);
             String loginCode = oauthSessionStore.createLoginCode(
                     userId,
-                    authorizationSession.clientType(),
+                    authorizationSession.clientType().toAuthenticationClientType(),
                     authorizationSession.codeChallenge()
             );
             return oauthClientRedirectPort.createLoginRedirect(

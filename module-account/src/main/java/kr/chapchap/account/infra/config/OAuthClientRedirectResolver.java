@@ -44,6 +44,7 @@ public class OAuthClientRedirectResolver implements OAuthClientRedirectPort {
     private URI resolveRedirectUri(OAuthClientType clientType) {
         return switch (clientType) {
             case WEB -> properties.webRedirectUri();
+            case WEB_LOCAL -> properties.localWebRedirectUri();
             case APP -> properties.appRedirectUri();
         };
     }

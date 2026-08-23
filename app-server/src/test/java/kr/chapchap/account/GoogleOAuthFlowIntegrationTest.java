@@ -119,6 +119,53 @@ class GoogleOAuthFlowIntegrationTest {
                 .authenticate("authorization-code", state);
     }
 
+    @Test
+    void Google_WEB_LOCAL_로그인은_운영_백엔드_콜백_처리_후_로컬_프론트로_이동한다() throws Exception {
+        // given
+        MvcResult startResult = mockMvc.perform(get("/oauth/google/start")
+                        .param("client", "WEB_LOCAL")
+                        .param("codeChallenge", CODE_CHALLENGE))
+                .andExpect(status().isFound())
+                .andReturn();
+        String state = extractQueryParameter(
+                startResult.getResponse().getRedirectedUrl(),
+                "state"
+        );
+        given(googleAuthenticationPort.authenticate("authorization-code", state))
+                .willReturn("google-local-web-sub");
+
+        // when & then
+        MvcResult callbackResult = mockMvc.perform(get("/oauth/google/callback")
+                        .param("code", "authorization-code")
+                        .param("state", state))
+                .andExpect(status().isFound())
+                .andExpect(header().string(
+                        "Location",
+                        org.hamcrest.Matchers.startsWith(
+                                "http://localhost:5173/auth/callback?loginCode="
+                        )
+                ))
+                .andReturn();
+        String loginCode = extractQueryParameter(
+                callbackResult.getResponse().getRedirectedUrl(),
+                "loginCode"
+        );
+
+        mockMvc.perform(post("/auth/social/exchange")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "loginCode": "%s",
+                                  "codeVerifier": "%s"
+                                }
+                                """.formatted(loginCode, CODE_VERIFIER)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.requiresTermsAgreement").value(true));
+
+        then(googleAuthenticationPort).should()
+                .authenticate("authorization-code", state);
+    }
+
     private String extractQueryParameter(String uri, String name) {
         return UriComponentsBuilder.fromUriString(uri)
                 .build()
