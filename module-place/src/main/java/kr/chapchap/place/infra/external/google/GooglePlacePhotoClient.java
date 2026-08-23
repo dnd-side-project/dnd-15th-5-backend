@@ -23,11 +23,14 @@ public class GooglePlacePhotoClient implements PlacePhotoPort {
     private static final int MAX_PHOTO_WIDTH_PX = 4800;
 
     private final RestClient restClient;
+    private final GooglePlacePhotoRateLimiter rateLimiter;
 
     public GooglePlacePhotoClient(
-            @Qualifier("googlePlacesRestClient") RestClient restClient
+            @Qualifier("googlePlacesRestClient") RestClient restClient,
+            GooglePlacePhotoRateLimiter rateLimiter
     ) {
         this.restClient = restClient;
+        this.rateLimiter = rateLimiter;
     }
 
     @Override
@@ -60,6 +63,7 @@ public class GooglePlacePhotoClient implements PlacePhotoPort {
                 throw new IllegalArgumentException("Google Place 사진 너비가 유효하지 않습니다.");
             }
 
+            rateLimiter.acquirePermit();
             PhotoMediaResponse response = restClient.get()
                     .uri(builder -> builder
                             .pathSegment(photoNameSegments)

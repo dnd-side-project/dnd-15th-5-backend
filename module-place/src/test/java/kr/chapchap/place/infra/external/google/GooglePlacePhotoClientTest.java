@@ -18,6 +18,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -31,6 +34,7 @@ class GooglePlacePhotoClientTest {
     private static final String PHOTO_NAME = "places/ChIJ123/photos/ATKogpe_abc-123";
 
     private MockRestServiceServer server;
+    private GooglePlacePhotoRateLimiter rateLimiter;
     private GooglePlacePhotoClient client;
 
     @BeforeEach
@@ -39,7 +43,8 @@ class GooglePlacePhotoClientTest {
                 .baseUrl(BASE_URI)
                 .defaultHeader("X-Goog-Api-Key", API_KEY);
         server = MockRestServiceServer.bindTo(builder).build();
-        client = new GooglePlacePhotoClient(builder.build());
+        rateLimiter = mock(GooglePlacePhotoRateLimiter.class);
+        client = new GooglePlacePhotoClient(builder.build(), rateLimiter);
     }
 
     @Test
@@ -153,6 +158,23 @@ class GooglePlacePhotoClientTest {
 
         // then
         assertThat(result).isEqualTo(URI.create("https://lh3.googleusercontent.com/photo"));
+        verify(rateLimiter).acquirePermit();
+        server.verify();
+    }
+
+    @Test
+    void Photo_Media를_조회할_때_월간_한도를_초과하면_Google_API를_호출하지_않는다() {
+        // given
+        willThrow(new BusinessException(PlaceErrorCode.PHOTO_REQUEST_LIMIT_EXCEEDED))
+                .given(rateLimiter).acquirePermit();
+
+        // when & then
+        assertThatThrownBy(() -> client.resolvePhotoUri(PHOTO_NAME, 400))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(
+                                PlaceErrorCode.PHOTO_REQUEST_LIMIT_EXCEEDED
+                        )
+                );
         server.verify();
     }
 

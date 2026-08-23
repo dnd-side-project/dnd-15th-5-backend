@@ -5,6 +5,7 @@ import kr.chapchap.core.exception.CommonErrorCode;
 import kr.chapchap.place.application.info.PlacePhotoInfo;
 import kr.chapchap.place.application.info.PlacePhotoInfo.PhotoMetadataInfo;
 import kr.chapchap.place.application.port.PlacePhotoPort;
+import kr.chapchap.place.exception.PlaceErrorCode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -102,6 +103,24 @@ class PlacePhotoServiceTest {
         // then
         assertThat(result).containsOnlyKeys(102L);
         verify(placePhotoPort, never()).findPrimaryPhoto(" ");
+    }
+
+    @Test
+    void 장소_사진을_조회할_때_Photo_Media_월간_한도를_초과하면_사진을_반환하지_않는다() {
+        // given
+        PhotoMetadataInfo photo = new PhotoMetadataInfo(
+                "places/google-101/photos/photo-101",
+                "https://maps.google.com/photo"
+        );
+        when(placePhotoPort.findPrimaryPhoto("google-101")).thenReturn(Optional.of(photo));
+        when(placePhotoPort.resolvePhotoUri(photo.name(), THUMBNAIL_WIDTH))
+                .thenThrow(new BusinessException(PlaceErrorCode.PHOTO_REQUEST_LIMIT_EXCEEDED));
+
+        // when
+        Map<Long, PlacePhotoInfo> result = sut.findThumbnails(Map.of(101L, "google-101"));
+
+        // then
+        assertThat(result).isEmpty();
     }
 
     @Test
