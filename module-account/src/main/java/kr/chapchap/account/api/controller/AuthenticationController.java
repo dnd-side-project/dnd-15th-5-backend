@@ -97,11 +97,11 @@ public class AuthenticationController {
     }
 
     @Operation(
-            summary = "필수 약관 동의 및 회원가입 완료",
+            summary = "서비스 이용약관 동의 및 회원가입 완료",
             description = """
                     로그인 코드 교환에서 발급된 Signup Token을 Bearer 토큰으로 사용합니다.
 
-                    필수 약관 두 항목에 동의하면 회원가입을 완료하고 Access Token과 Refresh Token을 발급합니다.
+                    서비스 이용약관에 동의하면 회원가입을 완료하고 Access Token과 Refresh Token을 발급합니다.
 
                     Refresh Token 전달 방식은 로그인한 WEB/APP 유형을 따릅니다.
                     """,
@@ -119,7 +119,7 @@ public class AuthenticationController {
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
-                    description = "필수 약관 미동의 또는 요청 값 검증 실패 (C001)",
+                    description = "서비스 이용약관 미동의 또는 요청 값 검증 실패 (C001)",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class))
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(

@@ -171,12 +171,11 @@ class AuthenticationApiTest {
     }
 
     @Test
-    void WEB_signup_scope로_필수_약관에_동의하면_Access_Token은_JSON으로_Refresh_Token은_쿠키로_반환한다() throws Exception {
+    void WEB_signup_scope로_서비스_이용약관에_동의하면_Access_Token은_JSON으로_Refresh_Token은_쿠키로_반환한다() throws Exception {
         // given
         TermsAgreementCommand command = new TermsAgreementCommand(
                 1L,
                 OAuthClientType.WEB,
-                true,
                 true
         );
         given(termsAgreementService.agree(command))
@@ -192,8 +191,7 @@ class AuthenticationApiTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "serviceTermsAgreed": true,
-                                  "privacyPolicyAgreed": true
+                                  "serviceTermsAgreed": true
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -207,12 +205,11 @@ class AuthenticationApiTest {
     }
 
     @Test
-    void APP_signup_scope로_필수_약관에_동의하면_Access_Token과_Refresh_Token을_JSON으로_반환한다() throws Exception {
+    void APP_구버전_요청에_개인정보_동의_필드가_포함되어도_Access_Token과_Refresh_Token을_JSON으로_반환한다() throws Exception {
         // given
         TermsAgreementCommand command = new TermsAgreementCommand(
                 1L,
                 OAuthClientType.APP,
-                true,
                 true
         );
         given(termsAgreementService.agree(command))
@@ -252,8 +249,7 @@ class AuthenticationApiTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "serviceTermsAgreed": true,
-                                  "privacyPolicyAgreed": true
+                                  "serviceTermsAgreed": true
                                 }
                                 """))
                 .andExpect(status().isForbidden())
@@ -269,8 +265,7 @@ class AuthenticationApiTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "serviceTermsAgreed": true,
-                                  "privacyPolicyAgreed": true
+                                  "serviceTermsAgreed": true
                                 }
                                 """))
                 .andExpect(status().isUnauthorized())
