@@ -12,8 +12,6 @@ import kr.chapchap.account.domain.repository.UserTermsAgreementRepository;
 import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.core.exception.CommonErrorCode;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
@@ -53,13 +51,12 @@ class TermsAgreementServiceTest {
     private TermsAgreementService termsAgreementService;
 
     @Test
-    void 필수_약관에_모두_동의하면_동의_이력을_저장하고_사용자를_활성화한_뒤_토큰을_발급한다() {
+    void 서비스_이용약관에_동의하면_동의_이력을_저장하고_사용자를_활성화한_뒤_토큰을_발급한다() {
         // given
         User user = createUserWithId();
         TermsAgreementCommand command = new TermsAgreementCommand(
                 USER_ID,
                 OAuthClientType.WEB,
-                true,
                 true
         );
         AuthenticationInfo authenticationInfo = createAuthenticationInfo();
@@ -79,7 +76,7 @@ class TermsAgreementServiceTest {
         assertThat(agreedAt).isNotNull();
         assertThat(agreements)
                 .extracting(UserTermsAgreement::getTermsType)
-                .containsExactlyInAnyOrder(TermsType.SERVICE_TERMS, TermsType.PRIVACY_POLICY);
+                .containsExactly(TermsType.SERVICE_TERMS);
         assertThat(agreements)
                 .allSatisfy(agreement -> {
                     assertThat(agreement.getUserId()).isEqualTo(USER_ID);
@@ -91,21 +88,13 @@ class TermsAgreementServiceTest {
         then(loginTokenService).should().issueForActiveUser(USER_ID, OAuthClientType.WEB);
     }
 
-    @ParameterizedTest
-    @CsvSource({
-            "false, true",
-            "true, false"
-    })
-    void 필수_약관이_하나라도_누락되면_동의_이력을_저장하거나_사용자를_활성화하지_않는다(
-            boolean serviceTermsAgreed,
-            boolean privacyPolicyAgreed
-    ) {
+    @Test
+    void 서비스_이용약관에_동의하지_않으면_동의_이력을_저장하거나_사용자를_활성화하지_않는다() {
         // given
         TermsAgreementCommand command = new TermsAgreementCommand(
                 USER_ID,
                 OAuthClientType.WEB,
-                serviceTermsAgreed,
-                privacyPolicyAgreed
+                false
         );
 
         // when & then
@@ -126,7 +115,6 @@ class TermsAgreementServiceTest {
         TermsAgreementCommand command = new TermsAgreementCommand(
                 USER_ID,
                 OAuthClientType.WEB,
-                true,
                 true
         );
 

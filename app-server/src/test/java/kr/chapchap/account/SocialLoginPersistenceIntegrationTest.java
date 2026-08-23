@@ -40,7 +40,7 @@ class SocialLoginPersistenceIntegrationTest {
     }
 
     @Test
-    void 필수_약관에_동의하면_이력을_저장하고_사용자를_활성화한다() {
+    void 서비스_이용약관에_동의하면_이력을_저장하고_사용자를_활성화한다() {
         // given
         Long userId = socialLoginService.login(
                 SocialProvider.KAKAO,
@@ -52,7 +52,6 @@ class SocialLoginPersistenceIntegrationTest {
                 new TermsAgreementCommand(
                         userId,
                         OAuthClientType.WEB,
-                        true,
                         true
                 )
         );
@@ -63,7 +62,7 @@ class SocialLoginPersistenceIntegrationTest {
         assertThat(authenticationInfo.accessToken()).isNotBlank();
         assertThat(authenticationInfo.refreshToken()).isNotBlank();
         assertThat(findUserStatus(userId)).isEqualTo("ACTIVE");
-        assertThat(countTermsAgreements(userId)).isEqualTo(2L);
+        assertThat(countTermsAgreements(userId)).isEqualTo(1L);
     }
 
     @AfterEach

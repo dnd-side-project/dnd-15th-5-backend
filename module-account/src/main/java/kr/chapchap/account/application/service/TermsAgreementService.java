@@ -21,7 +21,6 @@ import java.util.List;
 public class TermsAgreementService {
 
     private static final String SERVICE_TERMS_VERSION = "1.0";
-    private static final String PRIVACY_POLICY_VERSION = "1.0";
 
     private final UserRepository userRepository;
     private final UserTermsAgreementRepository userTermsAgreementRepository;
@@ -29,7 +28,7 @@ public class TermsAgreementService {
 
     @Transactional
     public AuthenticationInfo agree(TermsAgreementCommand command) {
-        if (!command.serviceTermsAgreed() || !command.privacyPolicyAgreed()) {
+        if (!command.serviceTermsAgreed()) {
             throw new BusinessException(CommonErrorCode.INVALID_INPUT_VALUE);
         }
 
@@ -47,12 +46,6 @@ public class TermsAgreementService {
                         user.getId(),
                         TermsType.SERVICE_TERMS,
                         SERVICE_TERMS_VERSION,
-                        agreedAt
-                ),
-                UserTermsAgreement.create(
-                        user.getId(),
-                        TermsType.PRIVACY_POLICY,
-                        PRIVACY_POLICY_VERSION,
                         agreedAt
                 )
         ));
