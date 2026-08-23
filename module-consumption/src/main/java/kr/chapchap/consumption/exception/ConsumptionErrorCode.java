@@ -22,6 +22,21 @@ public enum ConsumptionErrorCode implements ErrorCode {
     RECEIPT_IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "CONSUMPTION011", "영수증 이미지를 찾을 수 없습니다."),
     RECEIPT_IMAGE_ALREADY_ATTACHED(HttpStatus.CONFLICT, "CONSUMPTION012", "이미 소비 기록에 연결된 영수증 이미지입니다."),
     RECEIPT_IMAGE_EXPIRED(HttpStatus.CONFLICT, "CONSUMPTION013", "영수증 이미지의 임시 저장 기간이 만료되었습니다."),
+    INVALID_VISITED_PLACE_SEARCH_SIZE(
+            HttpStatus.BAD_REQUEST,
+            "CONSUMPTION014",
+            "size는 1 이상 5 이하여야 합니다."
+    ),
+    INVALID_VISITED_PLACE_SEARCH_KEYWORD(
+            HttpStatus.BAD_REQUEST,
+            "CONSUMPTION015",
+            "검색어는 1자 이상 100자 이하여야 합니다."
+    ),
+    INVALID_VISITED_PLACE_SEARCH_CURSOR(
+            HttpStatus.BAD_REQUEST,
+            "CONSUMPTION016",
+            "유효하지 않은 방문 장소 검색 커서입니다."
+    ),
     ;
 
     private final HttpStatus status;

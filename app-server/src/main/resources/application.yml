@@ -85,6 +85,10 @@ chapchap:
     access-expiration: 30m
     refresh-expiration: 14d
   place:
+    google-places:
+      base-uri: https://places.googleapis.com/v1
+      connect-timeout: 3s
+      read-timeout: 5s
     sgis:
       authentication-uri: https://sgisapi.mods.go.kr/OpenAPI3/auth/authentication.json
       geocoding-uri: https://sgisapi.mods.go.kr/OpenAPI3/addr/geocodewgs84.json

@@ -38,6 +38,8 @@ chapchap:
   jwt:
     secret: local-development-jwt-secret-key-32-bytes-minimum
   place:
+    google-places:
+      api-key: local-google-places-api-key
     sgis:
       consumer-key: local-sgis-consumer-key
       consumer-secret: local-sgis-consumer-secret

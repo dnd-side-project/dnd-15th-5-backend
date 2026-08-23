@@ -20,6 +20,14 @@ public interface ConsumptionQueryRepository {
                                       LocalDate cursorPurchaseDate, LocalTime cursorPurchaseTime, Long cursorId,
                                       int fetchSize);
 
+    List<Consumption> searchLatestVisitedPlacesByCursor(
+            Long userId,
+            LocalDate cursorPurchaseDate,
+            LocalTime cursorPurchaseTime,
+            Long cursorId,
+            int fetchSize
+    );
+
     List<Consumption> findAllByUserAndDateRange(Long userId, LocalDate from, LocalDate toExclusive);
 
     long countDistinctPlacesByUserAndDateRange(Long userId, LocalDate from, LocalDate toExclusive);
