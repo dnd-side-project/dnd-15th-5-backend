@@ -9,6 +9,7 @@ import kr.chapchap.account.application.port.KakaoAuthenticationPort;
 import kr.chapchap.account.application.port.OAuthClientRedirectPort;
 import kr.chapchap.account.application.port.OAuthSessionStore;
 import kr.chapchap.account.domain.entity.SocialProvider;
+import kr.chapchap.account.exception.AccountErrorCode;
 import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.core.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class OAuthFlowService {
 
     private static final String OAUTH_CANCELLED = "oauth_cancelled";
     private static final String OAUTH_FAILED = "oauth_failed";
+    private static final String ACCOUNT_WITHDRAWN = "account_withdrawn";
     private static final Pattern CODE_CHALLENGE_PATTERN = Pattern.compile(
             "[A-Za-z0-9_-]{43}"
     );
@@ -94,7 +96,7 @@ public class OAuthFlowService {
             );
             return oauthClientRedirectPort.createErrorRedirect(
                     authorizationSession.clientType(),
-                    OAUTH_FAILED
+                    resolveOAuthError(exception)
             );
         }
     }
@@ -146,6 +148,13 @@ public class OAuthFlowService {
                     CommonErrorCode.INVALID_INPUT_VALUE
             );
         };
+    }
+
+    private String resolveOAuthError(BusinessException exception) {
+        if (exception.getErrorCode() == AccountErrorCode.ACCOUNT_WITHDRAWN) {
+            return ACCOUNT_WITHDRAWN;
+        }
+        return OAUTH_FAILED;
     }
 
     private String createCodeChallenge(String codeVerifier) {

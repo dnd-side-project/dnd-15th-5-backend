@@ -9,6 +9,7 @@ import kr.chapchap.account.application.port.KakaoAuthenticationPort;
 import kr.chapchap.account.application.port.OAuthClientRedirectPort;
 import kr.chapchap.account.application.port.OAuthSessionStore;
 import kr.chapchap.account.domain.entity.SocialProvider;
+import kr.chapchap.account.exception.AccountErrorCode;
 import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.core.exception.CommonErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -284,5 +285,43 @@ class OAuthFlowServiceTest {
                 OAuthClientType.WEB_LOCAL,
                 "oauth_failed"
         );
+    }
+
+    @Test
+    void 탈퇴한_계정의_OAuth_콜백은_탈퇴_계정_error가_포함된_클라이언트_URI로_복귀한다() {
+        // given
+        OAuthAuthorizationSession authorizationSession = new OAuthAuthorizationSession(
+                SocialProvider.GOOGLE,
+                OAuthClientType.WEB_LOCAL,
+                CODE_CHALLENGE
+        );
+        URI redirectUri = URI.create(
+                "http://localhost:5173/auth/callback?error=account_withdrawn"
+        );
+        given(oauthSessionStore.consumeState("google-state"))
+                .willReturn(Optional.of(authorizationSession));
+        given(googleAuthenticationPort.authenticate("authorization-code", "google-state"))
+                .willReturn("google-sub");
+        given(socialLoginService.login(SocialProvider.GOOGLE, "google-sub"))
+                .willThrow(new BusinessException(AccountErrorCode.ACCOUNT_WITHDRAWN));
+        given(oauthClientRedirectPort.createErrorRedirect(
+                OAuthClientType.WEB_LOCAL,
+                "account_withdrawn"
+        )).willReturn(redirectUri);
+
+        // when
+        URI result = oauthFlowService.handleCallback(
+                "google",
+                "authorization-code",
+                "google-state"
+        );
+
+        // then
+        assertThat(result).isEqualTo(redirectUri);
+        then(oauthClientRedirectPort).should().createErrorRedirect(
+                OAuthClientType.WEB_LOCAL,
+                "account_withdrawn"
+        );
+        then(loginTokenService).shouldHaveNoInteractions();
     }
 }

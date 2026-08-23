@@ -20,6 +20,7 @@ public enum AccountErrorCode implements ErrorCode {
     PROFILE_IMAGE_DIMENSION_EXCEEDED(HttpStatus.BAD_REQUEST, "A009", "프로필 이미지 해상도는 4096x4096 이하여야 합니다."),
     ACCOUNT_WITHDRAWAL_NOT_ALLOWED(HttpStatus.CONFLICT, "A010", "활성 상태에서만 탈퇴할 수 있습니다."),
     TERMS_AGREEMENT_NOT_ALLOWED(HttpStatus.CONFLICT, "A011", "약관 동의 대기 상태에서만 가입을 완료할 수 있습니다."),
+    ACCOUNT_WITHDRAWN(HttpStatus.FORBIDDEN, "A012", "탈퇴한 계정은 로그인할 수 없습니다."),
     ;
 
     private final HttpStatus status;

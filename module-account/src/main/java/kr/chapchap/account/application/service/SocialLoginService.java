@@ -6,6 +6,7 @@ import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.repository.SocialAccountRepository;
 import kr.chapchap.account.domain.repository.UserRepository;
 import kr.chapchap.account.domain.service.NicknameGenerator;
+import kr.chapchap.account.exception.AccountErrorCode;
 import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.core.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -64,7 +65,8 @@ public class SocialLoginService {
                 ));
         return switch (user.getStatus()) {
             case PENDING_TERMS, ACTIVE -> user.getId();
-            case SUSPENDED, WITHDRAWN -> throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
+            case SUSPENDED -> throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
+            case WITHDRAWN -> throw new BusinessException(AccountErrorCode.ACCOUNT_WITHDRAWN);
         };
     }
 }
