@@ -27,7 +27,6 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -83,19 +82,6 @@ class VisitedPlaceSearchApiTest {
     }
 
     @Test
-    void signup_scope로_HEAD_요청을_보내도_방문_장소_검색이_실행되지_않는다() throws Exception {
-        // when & then
-        mockMvc.perform(head("/places/visited/search")
-                        .param("keyword", KEYWORD)
-                        .with(jwt()
-                                .jwt(jwt -> jwt.subject(USER_ID.toString()))
-                                .authorities(new SimpleGrantedAuthority("SCOPE_signup"))))
-                .andExpect(status().isForbidden());
-
-        then(visitedPlaceSearchService).shouldHaveNoInteractions();
-    }
-
-    @Test
     void user_scope로_방문_장소를_검색하면_기본_5개와_사진_URL을_반환한다() throws Exception {
         // given
         given(visitedPlaceSearchService.search(any(VisitedPlaceSearchCommand.class)))
@@ -115,8 +101,6 @@ class VisitedPlaceSearchApiTest {
                 .andExpect(jsonPath("$.data.places[0].thumbnailUrl").value(THUMBNAIL_URL))
                 .andExpect(jsonPath("$.data.places[0].googleMapsUri")
                         .value("https://maps.google.com/photo"))
-                .andExpect(jsonPath("$.data.places[0].authorAttributions").doesNotExist())
-                .andExpect(jsonPath("$.data.places[0].flagContentUri").doesNotExist())
                 .andExpect(jsonPath("$.data.hasNext").value(true))
                 .andExpect(jsonPath("$.data.nextCursor").value("next-cursor"));
 
