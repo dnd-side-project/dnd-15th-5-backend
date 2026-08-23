@@ -68,7 +68,9 @@ class ConsumptionQueryRepositoryImplTest {
                         + "(101, '테스트 가게', '서울 성동구 테스트로 1', '1120510100', '성수동', "
                         + "ST_SetSRID(ST_MakePoint(127.0557, 37.5447), 4326), now(), now()), "
                         + "(102, '테스트 가게2', '서울 강남구 테스트로 2', '1168010700', '역삼동', "
-                        + "ST_SetSRID(ST_MakePoint(127.0364, 37.4999), 4326), now(), now())"
+                        + "ST_SetSRID(ST_MakePoint(127.0364, 37.4999), 4326), now(), now()), "
+                        + "(103, '테스트 가게3', '서울 마포구 테스트로 3', '1144010100', '아현동', "
+                        + "ST_SetSRID(ST_MakePoint(126.9565, 37.5574), 4326), now(), now())"
         ).executeUpdate();
     }
 
@@ -140,6 +142,70 @@ class ConsumptionQueryRepositoryImplTest {
 
         // then
         assertThat(result).hasSize(3);
+    }
+
+    @Test
+    void 장소별_최신_소비기록을_조회할_때_해당_사용자의_최근_방문순으로_반환한다() {
+        // given
+        Consumption oldPlace101 = createConsumption(
+                1L, 101L, "카페", LocalDate.of(2026, 8, 1), LocalTime.of(9, 0)
+        );
+        Consumption latestPlace101 = createConsumption(
+                1L, 101L, "카페", LocalDate.of(2026, 8, 20), LocalTime.of(18, 0)
+        );
+        Consumption latestPlace102 = createConsumption(
+                1L, 102L, "음식점", LocalDate.of(2026, 8, 15), LocalTime.of(12, 0)
+        );
+        Consumption otherUser = createConsumption(
+                2L, 103L, "카페", LocalDate.of(2026, 8, 21), LocalTime.of(20, 0)
+        );
+        consumptionRepository.saveAllAndFlush(List.of(
+                oldPlace101, latestPlace101, latestPlace102, otherUser
+        ));
+
+        // when
+        List<Consumption> result = consumptionQueryRepository.searchLatestVisitedPlacesByCursor(
+                1L, null, null, null, 10
+        );
+
+        // then
+        assertThat(result)
+                .extracting(Consumption::getId, Consumption::getPlaceId)
+                .containsExactly(
+                        tuple(latestPlace101.getId(), 101L),
+                        tuple(latestPlace102.getId(), 102L)
+                );
+    }
+
+    @Test
+    void 장소별_최신_소비기록을_조회할_때_방문일시가_같으면_ID_내림차순으로_정렬해_cursor_이후_기록을_반환한다() {
+        // given
+        LocalDate purchaseDate = LocalDate.of(2026, 8, 21);
+        LocalTime purchaseTime = LocalTime.of(12, 30);
+        Consumption firstSaved = createConsumption(1L, 101L, "카페", purchaseDate, purchaseTime);
+        Consumption secondSaved = createConsumption(1L, 102L, "카페", purchaseDate, purchaseTime);
+        Consumption thirdSaved = createConsumption(1L, 103L, "카페", purchaseDate, purchaseTime);
+        consumptionRepository.saveAllAndFlush(List.of(firstSaved, secondSaved, thirdSaved));
+
+        List<Consumption> firstPage = consumptionQueryRepository.searchLatestVisitedPlacesByCursor(
+                1L, null, null, null, 2
+        );
+
+        // when
+        Consumption cursor = firstPage.get(firstPage.size() - 1);
+        List<Consumption> secondPage = consumptionQueryRepository.searchLatestVisitedPlacesByCursor(
+                1L,
+                cursor.getPurchaseDate(),
+                cursor.getPurchaseTime(),
+                cursor.getId(),
+                2
+        );
+
+        // then
+        assertThat(firstPage).extracting(Consumption::getId)
+                .containsExactly(thirdSaved.getId(), secondSaved.getId());
+        assertThat(secondPage).extracting(Consumption::getId)
+                .containsExactly(firstSaved.getId());
     }
 
     @Test

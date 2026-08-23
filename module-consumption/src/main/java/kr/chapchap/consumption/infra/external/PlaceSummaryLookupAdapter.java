@@ -24,7 +24,8 @@ public class PlaceSummaryLookupAdapter implements PlaceSummaryLookupPort {
                         Map.Entry::getKey,
                         entry -> new PlaceSummaryInfo(
                                 entry.getValue().name(), entry.getValue().dongName(), entry.getValue().address(),
-                                entry.getValue().latitude(), entry.getValue().longitude())
+                                entry.getValue().latitude(), entry.getValue().longitude(),
+                                entry.getValue().googlePlaceId())
                 ));
     }
 }

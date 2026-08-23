@@ -18,6 +18,7 @@ import kr.chapchap.consumption.domain.entity.StickerCountRow;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -57,6 +58,49 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
                         consumption.id.desc())
                 .limit(fetchSize)
                 .fetch();
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    @Transactional(readOnly = true)
+    public List<Consumption> searchLatestVisitedPlacesByCursor(
+            Long userId,
+            LocalDate cursorPurchaseDate,
+            LocalTime cursorPurchaseTime,
+            Long cursorId,
+            int fetchSize
+    ) {
+        boolean hasCursor = cursorPurchaseDate != null || cursorPurchaseTime != null || cursorId != null;
+        if (hasCursor && (cursorPurchaseDate == null || cursorPurchaseTime == null || cursorId == null)) {
+            throw new IllegalArgumentException("커서 구성 값은 모두 있거나 모두 없어야 합니다.");
+        }
+
+        String cursorCondition = hasCursor
+                ? "WHERE (latest.purchase_date, latest.purchase_time, latest.id) "
+                        + "< (:cursorPurchaseDate, :cursorPurchaseTime, :cursorId) "
+                : "";
+        Query query = entityManager.createNativeQuery(
+                "SELECT latest.* "
+                        + "FROM ("
+                        + "    SELECT DISTINCT ON (consumption.place_id) consumption.* "
+                        + "    FROM consumptions consumption "
+                        + "    WHERE consumption.user_id = :userId "
+                        + "    ORDER BY consumption.place_id, consumption.purchase_date DESC, "
+                        + "             consumption.purchase_time DESC, consumption.id DESC"
+                        + ") latest "
+                        + cursorCondition
+                        + "ORDER BY latest.purchase_date DESC, latest.purchase_time DESC, latest.id DESC",
+                Consumption.class
+        );
+        query.setParameter("userId", userId);
+        if (hasCursor) {
+            query.setParameter("cursorPurchaseDate", cursorPurchaseDate);
+            query.setParameter("cursorPurchaseTime", cursorPurchaseTime);
+            query.setParameter("cursorId", cursorId);
+        }
+        query.setMaxResults(fetchSize);
+
+        return query.getResultList();
     }
 
     // purchaseDate/purchaseTime/id 커서 무한스크롤 공통 타이브레이크 조건. 첫 페이지(커서 없음)는 null.

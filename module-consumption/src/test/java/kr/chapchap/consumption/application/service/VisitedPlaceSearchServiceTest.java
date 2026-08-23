@@ -60,7 +60,7 @@ class VisitedPlaceSearchServiceTest {
     }
 
     @Test
-    void 최종_5개_장소만_사진을_조회하고_다음_커서를_반환한다() {
+    void 방문_장소를_검색할_때_결과가_size를_초과하면_5개_장소만_사진을_조회하고_nextCursor를_반환한다() {
         // given
         List<Consumption> latestVisits = List.of(
                 consumption(106L, 206L),
@@ -117,7 +117,7 @@ class VisitedPlaceSearchServiceTest {
     }
 
     @Test
-    void 이름과_도로명주소를_부분일치로_검색하고_스캔_배치를_이어서_조회한다() {
+    void 방문_장소를_검색할_때_첫_500개에_keyword와_일치하는_결과가_없으면_다음_배치에서_address가_부분_일치하는_장소를_반환한다() {
         // given
         List<Consumption> firstBatch = java.util.stream.LongStream.rangeClosed(1, 500)
                 .mapToObj(sequence -> consumption(1001L - sequence, 2000L - sequence))
@@ -166,7 +166,7 @@ class VisitedPlaceSearchServiceTest {
     }
 
     @Test
-    void 다음_커서는_직전_페이지의_마지막_반환_장소부터_이어진다() {
+    void nextCursor로_방문_장소를_검색할_때_이전_페이지의_마지막_장소_다음부터_조회한다() {
         // given
         List<Consumption> firstPage = List.of(
                 consumption(106L, 206L),
@@ -203,7 +203,7 @@ class VisitedPlaceSearchServiceTest {
     }
 
     @Test
-    void 손상된_커서면_조회하지_않고_예외가_발생한다() {
+    void 손상된_cursor로_방문_장소를_검색할_때_예외를_던지고_저장소를_조회하지_않는다() {
         // when & then
         assertThatThrownBy(() -> service.search(
                 new VisitedPlaceSearchCommand(USER_ID, "카페", "invalid-cursor", 5)

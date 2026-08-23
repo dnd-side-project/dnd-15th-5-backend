@@ -24,6 +24,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @RequiredArgsConstructor
 @Service
@@ -144,19 +145,19 @@ public class VisitedPlaceSearchService {
             return null;
         }
         if (cursor.length() > MAX_CURSOR_LENGTH) {
-            throw invalidCursor();
+            throw createInvalidCursorException();
         }
 
         try {
             String decoded = new String(Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8);
-            String[] parts = decoded.split("\\|", -1);
+            String[] parts = decoded.split(Pattern.quote(CURSOR_DELIMITER), -1);
             if (parts.length != CURSOR_PART_COUNT || !CURSOR_VERSION.equals(parts[0])) {
-                throw invalidCursor();
+                throw createInvalidCursorException();
             }
 
             long consumptionId = Long.parseLong(parts[3]);
             if (consumptionId < 1) {
-                throw invalidCursor();
+                throw createInvalidCursorException();
             }
             return new VisitCursor(
                     LocalDate.parse(parts[1]),
@@ -171,7 +172,7 @@ public class VisitedPlaceSearchService {
         }
     }
 
-    private BusinessException invalidCursor() {
+    private BusinessException createInvalidCursorException() {
         return new BusinessException(ConsumptionErrorCode.INVALID_VISITED_PLACE_SEARCH_CURSOR);
     }
 
