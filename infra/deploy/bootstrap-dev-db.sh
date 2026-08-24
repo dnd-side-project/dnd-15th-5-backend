@@ -60,6 +60,13 @@ WHERE NOT EXISTS (
 SELECT format('ALTER ROLE %I WITH LOGIN PASSWORD %L', :'dev_db_username', :'dev_db_password')
 \gexec
 
+SELECT format(
+    'GRANT %I TO %I WITH INHERIT FALSE, SET TRUE',
+    :'dev_db_username',
+    CURRENT_USER
+)
+\gexec
+
 SELECT format('CREATE DATABASE %I OWNER %I', :'dev_db_name', :'dev_db_username')
 WHERE NOT EXISTS (
     SELECT 1
