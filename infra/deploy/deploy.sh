@@ -5,6 +5,8 @@ APP_DIR="/app/chapchap"
 COMPOSE_FILE="$APP_DIR/docker-compose.prod.yml"
 UPSTREAM_FILE="$APP_DIR/upstream.caddy"
 DEV_CONTAINER="app-dev"
+DEV_HEALTH_TIMEOUT_SECONDS=90
+DEV_HEALTH_POLL_INTERVAL_SECONDS=3
 DEV_WAS_RUNNING=false
 ACTIVE=""
 STANDBY=""
@@ -13,6 +15,8 @@ TRAFFIC_SWITCHED=false
 
 restore_dev() {
   local exit_code=$?
+  local dev_health_status=""
+  local dev_health_deadline=0
   trap - EXIT INT TERM
 
   if [ "$exit_code" -ne 0 ] && [ "$STANDBY_STARTED" = true ] && [ "$TRAFFIC_SWITCHED" = false ]; then
@@ -24,7 +28,29 @@ restore_dev() {
 
   if [ "$DEV_WAS_RUNNING" = true ]; then
     if docker start "$DEV_CONTAINER" > /dev/null; then
-      echo "[deploy] $DEV_CONTAINER 복구 완료"
+      dev_health_deadline=$((SECONDS + DEV_HEALTH_TIMEOUT_SECONDS))
+
+      while (( SECONDS < dev_health_deadline )); do
+        dev_health_status="$(docker inspect --format='{{if .State.Running}}{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}{{else}}{{.State.Status}}{{end}}' "$DEV_CONTAINER" 2>/dev/null || echo "inspect-failed")"
+
+        case "$dev_health_status" in
+          healthy)
+            echo "[deploy] $DEV_CONTAINER 복구 완료"
+            break
+            ;;
+          starting|restarting)
+            sleep "$DEV_HEALTH_POLL_INTERVAL_SECONDS"
+            ;;
+          *)
+            break
+            ;;
+        esac
+      done
+
+      if [ "$dev_health_status" != "healthy" ]; then
+        echo "[deploy] $DEV_CONTAINER 복구 실패 (상태: ${dev_health_status:-timeout})"
+        [ "$exit_code" -ne 0 ] || exit_code=1
+      fi
     else
       echo "[deploy] $DEV_CONTAINER 복구 실패"
       [ "$exit_code" -ne 0 ] || exit_code=1
