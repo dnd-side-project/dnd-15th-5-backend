@@ -104,17 +104,17 @@ jobs:
           DB_HOST: ${{ secrets.DB_HOST }}
           DEV_DB_PASSWORD: ${{ secrets.DEV_DB_PASSWORD }}
           DEV_JWT_SECRET: ${{ secrets.DEV_JWT_SECRET }}
-          CORS_ALLOWED_ORIGIN_PATTERNS: ${{ vars.DEV_CORS_ALLOWED_ORIGIN_PATTERNS || 'http://localhost:5173' }}
+          CORS_ALLOWED_ORIGIN_PATTERNS: ${{ vars.DEV_CORS_ALLOWED_ORIGIN_PATTERNS }}
           KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID }}
           KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
           KAKAO_ADMIN_KEY: ${{ secrets.KAKAO_ADMIN_KEY }}
-          KAKAO_REDIRECT_URI: ${{ vars.DEV_KAKAO_REDIRECT_URI || 'https://chapchap.kr/dev/api/oauth/kakao/callback' }}
+          KAKAO_REDIRECT_URI: ${{ vars.DEV_KAKAO_REDIRECT_URI }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-          GOOGLE_REDIRECT_URI: ${{ vars.DEV_GOOGLE_REDIRECT_URI || 'https://chapchap.kr/dev/api/oauth/google/callback' }}
+          GOOGLE_REDIRECT_URI: ${{ vars.DEV_GOOGLE_REDIRECT_URI }}
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
-          OAUTH_WEB_REDIRECT_URI: ${{ vars.DEV_OAUTH_WEB_REDIRECT_URI || 'http://localhost:5173/auth/callback' }}
-          OAUTH_APP_REDIRECT_URI: ${{ vars.DEV_OAUTH_APP_REDIRECT_URI || 'chapchap://oauth/callback' }}
+          OAUTH_WEB_REDIRECT_URI: ${{ vars.DEV_OAUTH_WEB_REDIRECT_URI }}
+          OAUTH_APP_REDIRECT_URI: ${{ vars.DEV_OAUTH_APP_REDIRECT_URI }}
           CLOVA_OCR_INVOKE_URL: ${{ secrets.CLOVA_OCR_INVOKE_URL }}
           CLOVA_OCR_SECRET_KEY: ${{ secrets.CLOVA_OCR_SECRET_KEY }}
           CLOVA_OCR_API_GATEWAY_KEY: ${{ secrets.CLOVA_OCR_API_GATEWAY_KEY }}
