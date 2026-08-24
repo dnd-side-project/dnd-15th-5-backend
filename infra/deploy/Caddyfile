@@ -1,4 +1,9 @@
 chapchap.kr {
+    handle_path /dev/api/* {
+        request_header X-Forwarded-Prefix /dev/api
+        reverse_proxy app-dev:8080
+    }
+
     handle_path /api/* {
         request_header X-Forwarded-Prefix /api
         import upstream.caddy

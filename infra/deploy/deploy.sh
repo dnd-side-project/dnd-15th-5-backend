@@ -4,6 +4,39 @@ set -euo pipefail
 APP_DIR="/app/chapchap"
 COMPOSE_FILE="$APP_DIR/docker-compose.prod.yml"
 UPSTREAM_FILE="$APP_DIR/upstream.caddy"
+DEV_CONTAINER="app-dev"
+DEV_WAS_RUNNING=false
+ACTIVE=""
+STANDBY=""
+STANDBY_STARTED=false
+TRAFFIC_SWITCHED=false
+
+restore_dev() {
+  local exit_code=$?
+  trap - EXIT INT TERM
+
+  if [ "$exit_code" -ne 0 ] && [ "$STANDBY_STARTED" = true ] && [ "$TRAFFIC_SWITCHED" = false ]; then
+    echo "[deploy] 실패한 app-$STANDBY 정리 및 app-$ACTIVE upstream 복구"
+    echo "reverse_proxy app-$ACTIVE:8080" > "$UPSTREAM_FILE" || true
+    docker exec caddy caddy reload --config /etc/caddy/Caddyfile || true
+    docker stop "app-$STANDBY" || true
+  fi
+
+  if [ "$DEV_WAS_RUNNING" = true ]; then
+    if docker start "$DEV_CONTAINER" > /dev/null; then
+      echo "[deploy] $DEV_CONTAINER 복구 완료"
+    else
+      echo "[deploy] $DEV_CONTAINER 복구 실패"
+      [ "$exit_code" -ne 0 ] || exit_code=1
+    fi
+  fi
+
+  exit "$exit_code"
+}
+
+trap restore_dev EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 cd "$APP_DIR"
 
@@ -32,6 +65,14 @@ declare -x "$TAG_VAR=$TAG"
 docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" up -d --no-deps redis caddy
 
 docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" pull "app-$STANDBY"
+
+if [ "$(docker inspect --format='{{.State.Running}}' "$DEV_CONTAINER" 2>/dev/null || true)" = "true" ]; then
+  DEV_WAS_RUNNING=true
+  echo "[deploy] Prod blue/green 기동을 위해 $DEV_CONTAINER 일시 중지"
+  docker stop "$DEV_CONTAINER"
+fi
+
+STANDBY_STARTED=true
 docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" up -d --no-deps "app-$STANDBY"
 
 # 헬스체크
@@ -51,6 +92,7 @@ done
 
 echo "reverse_proxy app-$STANDBY:8080" > "$UPSTREAM_FILE"
 docker exec caddy caddy reload --config /etc/caddy/Caddyfile
+TRAFFIC_SWITCHED=true
 
 echo "[deploy] 트래픽 전환 완료: app-$STANDBY 활성화"
 

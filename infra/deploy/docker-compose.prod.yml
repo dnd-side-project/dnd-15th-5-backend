@@ -90,6 +90,7 @@ services:
 
 networks:
   app-net:
+    name: chapchap_app-net
     driver: bridge
 
 volumes:
