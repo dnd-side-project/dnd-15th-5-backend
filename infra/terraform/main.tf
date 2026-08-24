@@ -589,7 +589,7 @@ resource "aws_iam_role_policy" "github_actions_ssm_deploy" {
       },
       {
         Effect   = "Allow"
-        Action   = ["ssm:GetCommandInvocation", "ssm:ListCommandInvocations"]
+        Action   = ["ssm:GetCommandInvocation", "ssm:ListCommandInvocations", "ssm:CancelCommand"]
         Resource = "*"
       }
     ]
