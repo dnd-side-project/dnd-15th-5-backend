@@ -26,6 +26,20 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+data "aws_caller_identity" "current" {}
+
+locals {
+  secure_parameter_names = [
+    "/${var.project_name}/dev/bootstrap/config",
+    "/${var.project_name}/dev/deploy/app-env",
+    "/${var.project_name}/prod/deploy/app-env"
+  ]
+  secure_parameter_arns = [
+    for parameter_name in local.secure_parameter_names :
+    "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${parameter_name}"
+  ]
+}
+
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
@@ -188,6 +202,54 @@ resource "aws_iam_role_policy_attachment" "ec2_ssm" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
+resource "aws_kms_key" "parameter_store" {
+  description             = "${var.project_name} Parameter Store SecureString key"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+}
+
+resource "aws_kms_alias" "parameter_store" {
+  name          = "alias/${var.project_name}-parameter-store"
+  target_key_id = aws_kms_key.parameter_store.key_id
+}
+
+resource "aws_iam_role_policy" "ec2_secure_parameters" {
+  name = "${var.project_name}-ec2-secure-parameters-policy"
+  role = aws_iam_role.ec2_ssm.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "ssm:GetParameter"
+        Resource = local.secure_parameter_arns
+      },
+      {
+        Effect      = "Deny"
+        Action      = "ssm:GetParameter"
+        NotResource = local.secure_parameter_arns
+      },
+      {
+        Effect   = "Deny"
+        Action   = "ssm:GetParameters"
+        Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "kms:Decrypt"
+        Resource = aws_kms_key.parameter_store.arn
+        Condition = {
+          StringEquals = {
+            "kms:ViaService"                      = "ssm.${var.aws_region}.amazonaws.com"
+            "kms:EncryptionContext:PARAMETER_ARN" = local.secure_parameter_arns
+          }
+        }
+      }
+    ]
+  })
+}
+
 resource "aws_iam_instance_profile" "ec2_ssm" {
   name = "${var.project_name}-ec2-ssm-profile"
   role = aws_iam_role.ec2_ssm.name
@@ -202,14 +264,20 @@ resource "aws_iam_role_policy" "ec2_s3_receipts" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
-        Resource = "${aws_s3_bucket.receipts.arn}/*"
+        Effect = "Allow"
+        Action = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
+        Resource = [
+          "${aws_s3_bucket.receipts.arn}/*",
+          "${aws_s3_bucket.receipts_dev.arn}/*"
+        ]
       },
       {
-        Effect   = "Allow"
-        Action   = "s3:ListBucket"
-        Resource = aws_s3_bucket.receipts.arn
+        Effect = "Allow"
+        Action = "s3:ListBucket"
+        Resource = [
+          aws_s3_bucket.receipts.arn,
+          aws_s3_bucket.receipts_dev.arn
+        ]
       }
     ]
   })
@@ -224,14 +292,20 @@ resource "aws_iam_role_policy" "ec2_s3_profiles" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
-        Resource = "${aws_s3_bucket.profiles.arn}/*"
+        Effect = "Allow"
+        Action = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
+        Resource = [
+          "${aws_s3_bucket.profiles.arn}/*",
+          "${aws_s3_bucket.profiles_dev.arn}/*"
+        ]
       },
       {
-        Effect   = "Allow"
-        Action   = "s3:ListBucket"
-        Resource = aws_s3_bucket.profiles.arn
+        Effect = "Allow"
+        Action = "s3:ListBucket"
+        Resource = [
+          aws_s3_bucket.profiles.arn,
+          aws_s3_bucket.profiles_dev.arn
+        ]
       }
     ]
   })
@@ -360,6 +434,42 @@ resource "aws_s3_bucket" "profiles" {
 
 resource "aws_s3_bucket_public_access_block" "profiles" {
   bucket = aws_s3_bucket.profiles.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket" "receipts_dev" {
+  bucket = "${var.project_name}-dev-receipt-images"
+
+  tags = {
+    Name        = "${var.project_name}-dev-receipt-images"
+    Environment = "dev"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "receipts_dev" {
+  bucket = aws_s3_bucket.receipts_dev.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket" "profiles_dev" {
+  bucket = "${var.project_name}-dev-profile-images"
+
+  tags = {
+    Name        = "${var.project_name}-dev-profile-images"
+    Environment = "dev"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "profiles_dev" {
+  bucket = aws_s3_bucket.profiles_dev.id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -541,8 +651,24 @@ resource "aws_iam_role_policy" "github_actions_ssm_deploy" {
       },
       {
         Effect   = "Allow"
-        Action   = ["ssm:GetCommandInvocation", "ssm:ListCommandInvocations"]
+        Action   = ["ssm:GetCommandInvocation", "ssm:ListCommandInvocations", "ssm:CancelCommand"]
         Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "ssm:PutParameter"
+        Resource = local.secure_parameter_arns
+      },
+      {
+        Effect   = "Allow"
+        Action   = "kms:Encrypt"
+        Resource = aws_kms_key.parameter_store.arn
+        Condition = {
+          StringEquals = {
+            "kms:ViaService"                      = "ssm.${var.aws_region}.amazonaws.com"
+            "kms:EncryptionContext:PARAMETER_ARN" = local.secure_parameter_arns
+          }
+        }
       }
     ]
   })

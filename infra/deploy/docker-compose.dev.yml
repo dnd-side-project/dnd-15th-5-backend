@@ -1,0 +1,53 @@
+# 시크릿은 같은 디렉터리의 .env에서 공급.
+services:
+  redis-dev:
+    image: redis:7.4-alpine
+    container_name: redis-dev
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    volumes:
+      - redis-dev-data:/data
+    networks:
+      - dev-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  app-dev:
+    image: ${ECR_IMAGE}:${DEV_TAG}
+    container_name: app-dev
+    env_file: .env
+    networks:
+      - dev-proxy-net
+      - dev-net
+    depends_on:
+      redis-dev:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-northeast-2
+        awslogs-group: /chapchap/app-server
+        awslogs-create-group: "true"
+        awslogs-stream: app-dev
+    restart: unless-stopped
+
+networks:
+  dev-proxy-net:
+    external: true
+    name: chapchap_dev-proxy-net
+  dev-net:
+    name: chapchap_dev-net
+    driver: bridge
+
+volumes:
+  redis-dev-data:
+    name: chapchap_dev-redis-data

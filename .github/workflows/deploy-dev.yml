@@ -1,0 +1,209 @@
+name: Deploy Dev
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [develop]
+  workflow_dispatch:
+
+concurrency:
+  group: chapchap-ec2-deploy
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-northeast-2
+  APP_DIR: /app/chapchap-dev
+  DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+  SSM_PARAMETER_KMS_KEY_ID: alias/chapchap-parameter-store
+  DEV_APP_ENV_PARAMETER_NAME: /chapchap/dev/deploy/app-env
+
+jobs:
+  check:
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'develop') ||
+      (github.event_name == 'workflow_dispatch' && github.ref_name == 'develop')
+    runs-on: ubuntu-latest
+    outputs:
+      should-deploy: ${{ steps.freshness.outputs.should-deploy }}
+    steps:
+      - name: Check whether this is the latest develop commit
+        id: freshness
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should-deploy=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          LATEST_SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/develop" --jq '.sha')
+          if [ "$DEPLOY_SHA" = "$LATEST_SHA" ]; then
+            echo "should-deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should-deploy=false" >> "$GITHUB_OUTPUT"
+            echo "오래된 CI 결과이므로 Dev 배포를 건너뜁니다: $DEPLOY_SHA (현재: $LATEST_SHA)"
+          fi
+
+  deploy:
+    needs: check
+    if: needs.check.outputs.should-deploy == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Build and test manual deployment
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          chmod +x gradlew
+          ./gradlew build
+
+      - name: Build jar from CI-tested commit
+        if: github.event_name == 'workflow_run'
+        run: |
+          chmod +x gradlew
+          ./gradlew :app-server:bootJar -x test
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-skip-session-tagging: true
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Dev image
+        env:
+          ECR_URI: ${{ steps.ecr-login.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: dev-${{ env.DEPLOY_SHA }}
+        run: |
+          docker build --platform linux/arm64 -t "$ECR_URI:$IMAGE_TAG" .
+          docker push "$ECR_URI:$IMAGE_TAG"
+
+      - name: Sync Dev compose and environment to EC2
+        env:
+          ECR_URI: ${{ steps.ecr-login.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DEV_DB_PASSWORD: ${{ secrets.DEV_DB_PASSWORD }}
+          DEV_JWT_SECRET: ${{ secrets.DEV_JWT_SECRET }}
+          CORS_ALLOWED_ORIGIN_PATTERNS: ${{ vars.DEV_CORS_ALLOWED_ORIGIN_PATTERNS }}
+          KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID }}
+          KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+          KAKAO_ADMIN_KEY: ${{ secrets.KAKAO_ADMIN_KEY }}
+          KAKAO_REDIRECT_URI: ${{ vars.DEV_KAKAO_REDIRECT_URI }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REDIRECT_URI: ${{ vars.DEV_GOOGLE_REDIRECT_URI }}
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+          OAUTH_WEB_REDIRECT_URI: ${{ vars.DEV_OAUTH_WEB_REDIRECT_URI }}
+          OAUTH_APP_REDIRECT_URI: ${{ vars.DEV_OAUTH_APP_REDIRECT_URI }}
+          CLOVA_OCR_INVOKE_URL: ${{ secrets.CLOVA_OCR_INVOKE_URL }}
+          CLOVA_OCR_SECRET_KEY: ${{ secrets.CLOVA_OCR_SECRET_KEY }}
+          CLOVA_OCR_API_GATEWAY_KEY: ${{ secrets.CLOVA_OCR_API_GATEWAY_KEY }}
+          SGIS_CONSUMER_KEY: ${{ secrets.SGIS_CONSUMER_KEY }}
+          SGIS_CONSUMER_SECRET: ${{ secrets.SGIS_CONSUMER_SECRET }}
+        run: |
+          COMPOSE_B64=$(base64 -w0 infra/deploy/docker-compose.dev.yml)
+
+          ENV_CONTENT=$(printf '%s\n' \
+            "ECR_IMAGE=$ECR_URI" \
+            "SPRING_PROFILES_ACTIVE=prod" \
+            "CORS_ALLOWED_ORIGIN_PATTERNS=$CORS_ALLOWED_ORIGIN_PATTERNS" \
+            "DB_HOST=$DB_HOST" \
+            "DB_PORT=5432" \
+            "DB_NAME=chapchap_dev" \
+            "DB_USERNAME=chapchap_dev" \
+            "DB_PASSWORD=$DEV_DB_PASSWORD" \
+            "REDIS_HOST=redis-dev" \
+            "REDIS_PORT=6379" \
+            "KAKAO_CLIENT_ID=$KAKAO_CLIENT_ID" \
+            "KAKAO_CLIENT_SECRET=$KAKAO_CLIENT_SECRET" \
+            "KAKAO_ADMIN_KEY=$KAKAO_ADMIN_KEY" \
+            "KAKAO_REDIRECT_URI=$KAKAO_REDIRECT_URI" \
+            "GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID" \
+            "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" \
+            "GOOGLE_REDIRECT_URI=$GOOGLE_REDIRECT_URI" \
+            "GOOGLE_PLACES_API_KEY=$GOOGLE_PLACES_API_KEY" \
+            "OAUTH_WEB_REDIRECT_URI=$OAUTH_WEB_REDIRECT_URI" \
+            "OAUTH_APP_REDIRECT_URI=$OAUTH_APP_REDIRECT_URI" \
+            "JWT_SECRET=$DEV_JWT_SECRET" \
+            "CLOVA_OCR_INVOKE_URL=$CLOVA_OCR_INVOKE_URL" \
+            "CLOVA_OCR_SECRET_KEY=$CLOVA_OCR_SECRET_KEY" \
+            "CLOVA_OCR_API_GATEWAY_KEY=$CLOVA_OCR_API_GATEWAY_KEY" \
+            "SGIS_CONSUMER_KEY=$SGIS_CONSUMER_KEY" \
+            "SGIS_CONSUMER_SECRET=$SGIS_CONSUMER_SECRET" \
+            "CHAPCHAP_ACCOUNT_PROFILE_IMAGE_BUCKET=chapchap-dev-profile-images" \
+            "CHAPCHAP_CONSUMPTION_RECEIPT_IMAGE_BUCKET=chapchap-dev-receipt-images" \
+            "TZ=Asia/Seoul")
+
+          source infra/deploy/ssm-secure-parameter.sh
+          printf '%s' "$ENV_CONTENT" \
+            | put_secure_parameter "$DEV_APP_ENV_PARAMETER_NAME" "$SSM_PARAMETER_KMS_KEY_ID"
+
+          SYNC_SCRIPT="$(cat infra/deploy/ssm-secure-parameter.sh)
+          mkdir -p \"$APP_DIR\"
+          echo \"$COMPOSE_B64\" | base64 -d > \"$APP_DIR/docker-compose.dev.yml\"
+          write_secure_parameter_to_file \"$DEV_APP_ENV_PARAMETER_NAME\" \"$APP_DIR/.env\" \"$AWS_REGION\""
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "$(jq -n --arg s "$SYNC_SCRIPT" '{commands: [$s]}')" \
+            --query "Command.CommandId" --output text)
+
+          SSM_COMMAND_SUCCEEDED=true
+          STATUS="$(bash infra/deploy/wait-for-ssm-command.sh "$COMMAND_ID" "${{ secrets.EC2_INSTANCE_ID }}")" || SSM_COMMAND_SUCCEEDED=false
+
+          if [ "$SSM_COMMAND_SUCCEEDED" != true ]; then
+            aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}" --query StandardErrorContent --output text
+            echo "Dev 설정 동기화 실패: $STATUS"
+            exit 1
+          fi
+
+      - name: Deploy Dev via SSM
+        env:
+          ECR_URI: ${{ steps.ecr-login.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: dev-${{ env.DEPLOY_SHA }}
+        run: |
+          DEPLOY_SCRIPT="export ECR_IMAGE=\"$ECR_URI\"
+          export TAG=\"$IMAGE_TAG\"
+          $(cat infra/deploy/deploy-dev.sh)"
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "$(jq -n --arg s "$DEPLOY_SCRIPT" '{commands: [$s]}')" \
+            --query "Command.CommandId" --output text)
+
+          SSM_COMMAND_SUCCEEDED=true
+          STATUS="$(bash infra/deploy/wait-for-ssm-command.sh "$COMMAND_ID" "${{ secrets.EC2_INSTANCE_ID }}")" || SSM_COMMAND_SUCCEEDED=false
+
+          echo "=== stdout ==="
+          aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}" --query StandardOutputContent --output text
+          echo "=== stderr ==="
+          aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}" --query StandardErrorContent --output text
+
+          if [ "$SSM_COMMAND_SUCCEEDED" != true ]; then
+            echo "Dev 배포 실패: $STATUS"
+            exit 1
+          fi

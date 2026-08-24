@@ -4,6 +4,65 @@ set -euo pipefail
 APP_DIR="/app/chapchap"
 COMPOSE_FILE="$APP_DIR/docker-compose.prod.yml"
 UPSTREAM_FILE="$APP_DIR/upstream.caddy"
+DEV_CONTAINER="app-dev"
+DEV_HEALTH_TIMEOUT_SECONDS=90
+DEV_HEALTH_POLL_INTERVAL_SECONDS=3
+DEV_WAS_RUNNING=false
+ACTIVE=""
+STANDBY=""
+STANDBY_STARTED=false
+TRAFFIC_SWITCHED=false
+
+restore_dev() {
+  local exit_code=$?
+  local dev_health_status=""
+  local dev_health_deadline=0
+  trap - EXIT INT TERM
+
+  if [ "$exit_code" -ne 0 ] && [ "$STANDBY_STARTED" = true ] && [ "$TRAFFIC_SWITCHED" = false ]; then
+    echo "[deploy] 실패한 app-$STANDBY 정리 및 app-$ACTIVE upstream 복구"
+    echo "reverse_proxy app-$ACTIVE:8080" > "$UPSTREAM_FILE" || true
+    docker exec caddy caddy reload --config /etc/caddy/Caddyfile || true
+    docker stop "app-$STANDBY" || true
+  fi
+
+  if [ "$DEV_WAS_RUNNING" = true ]; then
+    if docker start "$DEV_CONTAINER" > /dev/null; then
+      dev_health_deadline=$((SECONDS + DEV_HEALTH_TIMEOUT_SECONDS))
+
+      while (( SECONDS < dev_health_deadline )); do
+        dev_health_status="$(docker inspect --format='{{if .State.Running}}{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}{{else}}{{.State.Status}}{{end}}' "$DEV_CONTAINER" 2>/dev/null || echo "inspect-failed")"
+
+        case "$dev_health_status" in
+          healthy)
+            echo "[deploy] $DEV_CONTAINER 복구 완료"
+            break
+            ;;
+          starting|restarting)
+            sleep "$DEV_HEALTH_POLL_INTERVAL_SECONDS"
+            ;;
+          *)
+            break
+            ;;
+        esac
+      done
+
+      if [ "$dev_health_status" != "healthy" ]; then
+        echo "[deploy] $DEV_CONTAINER 복구 실패 (상태: ${dev_health_status:-timeout})"
+        [ "$exit_code" -ne 0 ] || exit_code=1
+      fi
+    else
+      echo "[deploy] $DEV_CONTAINER 복구 실패"
+      [ "$exit_code" -ne 0 ] || exit_code=1
+    fi
+  fi
+
+  exit "$exit_code"
+}
+
+trap restore_dev EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 cd "$APP_DIR"
 
@@ -32,6 +91,26 @@ declare -x "$TAG_VAR=$TAG"
 docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" up -d --no-deps redis caddy
 
 docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" pull "app-$STANDBY"
+
+if ! DEV_CONTAINER_NAMES="$(docker container ls -a --filter "name=$DEV_CONTAINER" --format '{{.Names}}')"; then
+  echo "[deploy] Docker 컨테이너 목록 확인 실패"
+  exit 1
+fi
+
+if printf '%s\n' "$DEV_CONTAINER_NAMES" | grep -Fxq "$DEV_CONTAINER"; then
+  if ! DEV_RUNNING="$(docker inspect --format='{{.State.Running}}' "$DEV_CONTAINER")"; then
+    echo "[deploy] $DEV_CONTAINER 실행 상태 확인 실패"
+    exit 1
+  fi
+
+  if [ "$DEV_RUNNING" = "true" ]; then
+    DEV_WAS_RUNNING=true
+    echo "[deploy] Prod blue/green 기동을 위해 $DEV_CONTAINER 일시 중지"
+    docker stop "$DEV_CONTAINER"
+  fi
+fi
+
+STANDBY_STARTED=true
 docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" up -d --no-deps "app-$STANDBY"
 
 # 헬스체크
@@ -51,6 +130,7 @@ done
 
 echo "reverse_proxy app-$STANDBY:8080" > "$UPSTREAM_FILE"
 docker exec caddy caddy reload --config /etc/caddy/Caddyfile
+TRAFFIC_SWITCHED=true
 
 echo "[deploy] 트래픽 전환 완료: app-$STANDBY 활성화"
 

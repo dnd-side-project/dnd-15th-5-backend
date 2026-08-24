@@ -14,6 +14,7 @@ services:
       - "443:443"
     networks:
       - app-net
+      - dev-proxy-net
     depends_on:
       - app-blue
     logging:
@@ -90,6 +91,10 @@ services:
 
 networks:
   app-net:
+    name: chapchap_app-net
+    driver: bridge
+  dev-proxy-net:
+    name: chapchap_dev-proxy-net
     driver: bridge
 
 volumes:

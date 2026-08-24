@@ -1,0 +1,80 @@
+name: Bootstrap Dev Database
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: chapchap-ec2-deploy
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-northeast-2
+  SSM_PARAMETER_KMS_KEY_ID: alias/chapchap-parameter-store
+  DEV_DB_BOOTSTRAP_PARAMETER_NAME: /chapchap/dev/bootstrap/config
+
+jobs:
+  bootstrap:
+    if: github.ref_name == 'develop'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-skip-session-tagging: true
+
+      - name: Store Dev database bootstrap secrets in Parameter Store
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_ADMIN_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DEV_DB_PASSWORD: ${{ secrets.DEV_DB_PASSWORD }}
+        run: |
+          source infra/deploy/ssm-secure-parameter.sh
+
+          BOOTSTRAP_CONFIG=$(printf 'DB_HOST=%q\nDB_ADMIN_PASSWORD=%q\nDEV_DB_PASSWORD=%q\n' \
+            "$DB_HOST" \
+            "$DB_ADMIN_PASSWORD" \
+            "$DEV_DB_PASSWORD")
+
+          printf '%s' "$BOOTSTRAP_CONFIG" \
+            | put_secure_parameter "$DEV_DB_BOOTSTRAP_PARAMETER_NAME" "$SSM_PARAMETER_KMS_KEY_ID"
+
+      - name: Bootstrap Dev database via SSM
+        run: |
+          BOOTSTRAP_SCRIPT="$(cat infra/deploy/ssm-secure-parameter.sh)
+          BOOTSTRAP_CONFIG_FILE=/tmp/chapchap-dev-db-bootstrap.env
+          write_secure_parameter_to_file \"$DEV_DB_BOOTSTRAP_PARAMETER_NAME\" \"\$BOOTSTRAP_CONFIG_FILE\" \"$AWS_REGION\"
+          source \"\$BOOTSTRAP_CONFIG_FILE\"
+          rm -f \"\$BOOTSTRAP_CONFIG_FILE\"
+          export DB_PORT=5432
+          export DB_ADMIN_USERNAME=chapchap
+          export DEV_DB_NAME=chapchap_dev
+          export DEV_DB_USERNAME=chapchap_dev
+          $(cat infra/deploy/bootstrap-dev-db.sh)"
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "$(jq -n --arg s "$BOOTSTRAP_SCRIPT" '{commands: [$s]}')" \
+            --query "Command.CommandId" --output text)
+
+          SSM_COMMAND_SUCCEEDED=true
+          STATUS="$(bash infra/deploy/wait-for-ssm-command.sh "$COMMAND_ID" "${{ secrets.EC2_INSTANCE_ID }}")" || SSM_COMMAND_SUCCEEDED=false
+
+          echo "=== stdout ==="
+          aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}" --query StandardOutputContent --output text
+          echo "=== stderr ==="
+          aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "${{ secrets.EC2_INSTANCE_ID }}" --query StandardErrorContent --output text
+
+          if [ "$SSM_COMMAND_SUCCEEDED" != true ]; then
+            echo "Dev DB bootstrap 실패: $STATUS"
+            exit 1
+          fi
