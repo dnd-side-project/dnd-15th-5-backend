@@ -20,7 +20,7 @@ services:
     container_name: app-dev
     env_file: .env
     networks:
-      - app-net
+      - dev-proxy-net
       - dev-net
     depends_on:
       redis-dev:
@@ -41,9 +41,9 @@ services:
     restart: unless-stopped
 
 networks:
-  app-net:
+  dev-proxy-net:
     external: true
-    name: chapchap_app-net
+    name: chapchap_dev-proxy-net
   dev-net:
     name: chapchap_dev-net
     driver: bridge

@@ -3,12 +3,12 @@ set -euo pipefail
 
 APP_DIR="/app/chapchap-dev"
 COMPOSE_FILE="$APP_DIR/docker-compose.dev.yml"
-PROD_NETWORK="chapchap_app-net"
+CADDY_NETWORK="chapchap_dev-proxy-net"
 
 cd "$APP_DIR"
 
-if ! docker network inspect "$PROD_NETWORK" > /dev/null 2>&1; then
-  echo "[deploy-dev] 공유 네트워크 $PROD_NETWORK가 없습니다. Prod compose를 먼저 배포해 주세요."
+if ! docker network inspect "$CADDY_NETWORK" > /dev/null 2>&1; then
+  echo "[deploy-dev] Caddy-Dev 공유 네트워크 $CADDY_NETWORK가 없습니다. Prod compose를 먼저 배포해 주세요."
   exit 1
 fi
 
