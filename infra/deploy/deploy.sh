@@ -92,10 +92,22 @@ docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" up -d --no-deps red
 
 docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" pull "app-$STANDBY"
 
-if [ "$(docker inspect --format='{{.State.Running}}' "$DEV_CONTAINER" 2>/dev/null || true)" = "true" ]; then
-  DEV_WAS_RUNNING=true
-  echo "[deploy] Prod blue/green 기동을 위해 $DEV_CONTAINER 일시 중지"
-  docker stop "$DEV_CONTAINER"
+if ! DEV_CONTAINER_NAMES="$(docker container ls -a --filter "name=$DEV_CONTAINER" --format '{{.Names}}')"; then
+  echo "[deploy] Docker 컨테이너 목록 확인 실패"
+  exit 1
+fi
+
+if printf '%s\n' "$DEV_CONTAINER_NAMES" | grep -Fxq "$DEV_CONTAINER"; then
+  if ! DEV_RUNNING="$(docker inspect --format='{{.State.Running}}' "$DEV_CONTAINER")"; then
+    echo "[deploy] $DEV_CONTAINER 실행 상태 확인 실패"
+    exit 1
+  fi
+
+  if [ "$DEV_RUNNING" = "true" ]; then
+    DEV_WAS_RUNNING=true
+    echo "[deploy] Prod blue/green 기동을 위해 $DEV_CONTAINER 일시 중지"
+    docker stop "$DEV_CONTAINER"
+  fi
 fi
 
 STANDBY_STARTED=true
