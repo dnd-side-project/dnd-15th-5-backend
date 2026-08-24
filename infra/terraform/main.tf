@@ -26,6 +26,20 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+data "aws_caller_identity" "current" {}
+
+locals {
+  secure_parameter_names = [
+    "/${var.project_name}/dev/bootstrap/config",
+    "/${var.project_name}/dev/deploy/app-env",
+    "/${var.project_name}/prod/deploy/app-env"
+  ]
+  secure_parameter_arns = [
+    for parameter_name in local.secure_parameter_names :
+    "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${parameter_name}"
+  ]
+}
+
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
@@ -186,6 +200,54 @@ resource "aws_iam_role" "ec2_ssm" {
 resource "aws_iam_role_policy_attachment" "ec2_ssm" {
   role       = aws_iam_role.ec2_ssm.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_kms_key" "parameter_store" {
+  description             = "${var.project_name} Parameter Store SecureString key"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+}
+
+resource "aws_kms_alias" "parameter_store" {
+  name          = "alias/${var.project_name}-parameter-store"
+  target_key_id = aws_kms_key.parameter_store.key_id
+}
+
+resource "aws_iam_role_policy" "ec2_secure_parameters" {
+  name = "${var.project_name}-ec2-secure-parameters-policy"
+  role = aws_iam_role.ec2_ssm.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "ssm:GetParameter"
+        Resource = local.secure_parameter_arns
+      },
+      {
+        Effect      = "Deny"
+        Action      = "ssm:GetParameter"
+        NotResource = local.secure_parameter_arns
+      },
+      {
+        Effect   = "Deny"
+        Action   = "ssm:GetParameters"
+        Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "kms:Decrypt"
+        Resource = aws_kms_key.parameter_store.arn
+        Condition = {
+          StringEquals = {
+            "kms:ViaService"                      = "ssm.${var.aws_region}.amazonaws.com"
+            "kms:EncryptionContext:PARAMETER_ARN" = local.secure_parameter_arns
+          }
+        }
+      }
+    ]
+  })
 }
 
 resource "aws_iam_instance_profile" "ec2_ssm" {
@@ -591,6 +653,22 @@ resource "aws_iam_role_policy" "github_actions_ssm_deploy" {
         Effect   = "Allow"
         Action   = ["ssm:GetCommandInvocation", "ssm:ListCommandInvocations", "ssm:CancelCommand"]
         Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "ssm:PutParameter"
+        Resource = local.secure_parameter_arns
+      },
+      {
+        Effect   = "Allow"
+        Action   = "kms:Encrypt"
+        Resource = aws_kms_key.parameter_store.arn
+        Condition = {
+          StringEquals = {
+            "kms:ViaService"                      = "ssm.${var.aws_region}.amazonaws.com"
+            "kms:EncryptionContext:PARAMETER_ARN" = local.secure_parameter_arns
+          }
+        }
       }
     ]
   })

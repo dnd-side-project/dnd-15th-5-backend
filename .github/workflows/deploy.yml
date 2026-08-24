@@ -16,6 +16,8 @@ permissions:
 env:
   AWS_REGION: ap-northeast-2
   APP_DIR: /app/chapchap
+  SSM_PARAMETER_KMS_KEY_ID: alias/chapchap-parameter-store
+  PROD_APP_ENV_PARAMETER_NAME: /chapchap/prod/deploy/app-env
 
 jobs:
   deploy:
@@ -92,14 +94,16 @@ jobs:
           SGIS_CONSUMER_KEY=${{ secrets.SGIS_CONSUMER_KEY }}
           SGIS_CONSUMER_SECRET=${{ secrets.SGIS_CONSUMER_SECRET }}
           TZ=Asia/Seoul"
-          ENV_B64=$(echo "$ENV_CONTENT" | base64 -w0)
 
-          SYNC_SCRIPT="set -euo pipefail
+          source infra/deploy/ssm-secure-parameter.sh
+          printf '%s' "$ENV_CONTENT" \
+            | put_secure_parameter "$PROD_APP_ENV_PARAMETER_NAME" "$SSM_PARAMETER_KMS_KEY_ID"
+
+          SYNC_SCRIPT="$(cat infra/deploy/ssm-secure-parameter.sh)
           mkdir -p \"$APP_DIR\"
           echo \"$COMPOSE_B64\" | base64 -d > \"$APP_DIR/docker-compose.prod.yml\"
           echo \"$CADDYFILE_B64\" | base64 -d > \"$APP_DIR/Caddyfile\"
-          echo \"$ENV_B64\" | base64 -d > \"$APP_DIR/.env\"
-          chmod 600 \"$APP_DIR/.env\""
+          write_secure_parameter_to_file \"$PROD_APP_ENV_PARAMETER_NAME\" \"$APP_DIR/.env\" \"$AWS_REGION\""
 
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \

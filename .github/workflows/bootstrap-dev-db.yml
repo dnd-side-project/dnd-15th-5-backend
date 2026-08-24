@@ -13,6 +13,8 @@ permissions:
 
 env:
   AWS_REGION: ap-northeast-2
+  SSM_PARAMETER_KMS_KEY_ID: alias/chapchap-parameter-store
+  DEV_DB_BOOTSTRAP_PARAMETER_NAME: /chapchap/dev/bootstrap/config
 
 jobs:
   bootstrap:
@@ -29,23 +31,33 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
           role-skip-session-tagging: true
 
-      - name: Bootstrap Dev database via SSM
+      - name: Store Dev database bootstrap secrets in Parameter Store
         env:
           DB_HOST: ${{ secrets.DB_HOST }}
           DB_ADMIN_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DEV_DB_PASSWORD: ${{ secrets.DEV_DB_PASSWORD }}
         run: |
-          DB_HOST_B64=$(printf '%s' "$DB_HOST" | base64 -w0)
-          DB_ADMIN_PASSWORD_B64=$(printf '%s' "$DB_ADMIN_PASSWORD" | base64 -w0)
-          DEV_DB_PASSWORD_B64=$(printf '%s' "$DEV_DB_PASSWORD" | base64 -w0)
+          source infra/deploy/ssm-secure-parameter.sh
 
-          BOOTSTRAP_SCRIPT="export DB_HOST=\$(printf '%s' '$DB_HOST_B64' | base64 -d)
+          BOOTSTRAP_CONFIG=$(printf 'DB_HOST=%q\nDB_ADMIN_PASSWORD=%q\nDEV_DB_PASSWORD=%q\n' \
+            "$DB_HOST" \
+            "$DB_ADMIN_PASSWORD" \
+            "$DEV_DB_PASSWORD")
+
+          printf '%s' "$BOOTSTRAP_CONFIG" \
+            | put_secure_parameter "$DEV_DB_BOOTSTRAP_PARAMETER_NAME" "$SSM_PARAMETER_KMS_KEY_ID"
+
+      - name: Bootstrap Dev database via SSM
+        run: |
+          BOOTSTRAP_SCRIPT="$(cat infra/deploy/ssm-secure-parameter.sh)
+          BOOTSTRAP_CONFIG_FILE=/tmp/chapchap-dev-db-bootstrap.env
+          write_secure_parameter_to_file \"$DEV_DB_BOOTSTRAP_PARAMETER_NAME\" \"\$BOOTSTRAP_CONFIG_FILE\" \"$AWS_REGION\"
+          source \"\$BOOTSTRAP_CONFIG_FILE\"
+          rm -f \"\$BOOTSTRAP_CONFIG_FILE\"
           export DB_PORT=5432
           export DB_ADMIN_USERNAME=chapchap
-          export DB_ADMIN_PASSWORD=\$(printf '%s' '$DB_ADMIN_PASSWORD_B64' | base64 -d)
           export DEV_DB_NAME=chapchap_dev
           export DEV_DB_USERNAME=chapchap_dev
-          export DEV_DB_PASSWORD=\$(printf '%s' '$DEV_DB_PASSWORD_B64' | base64 -d)
           $(cat infra/deploy/bootstrap-dev-db.sh)"
 
           COMMAND_ID=$(aws ssm send-command \
