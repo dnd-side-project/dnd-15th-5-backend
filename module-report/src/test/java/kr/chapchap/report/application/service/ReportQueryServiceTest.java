@@ -1,6 +1,7 @@
 package kr.chapchap.report.application.service;
 
 import kr.chapchap.report.application.command.CurrentStatusCommand;
+import kr.chapchap.report.application.info.AcquiredSticker;
 import kr.chapchap.report.application.info.ConsumptionActivity;
 import kr.chapchap.report.application.info.CurrentStatusInfo;
 import kr.chapchap.report.application.port.ConsumptionActivityPort;
@@ -55,7 +56,7 @@ class ReportQueryServiceTest {
                 new RecentDiscoveryMessageGenerator(),
                 fixedClock
         );
-        lenient().when(monthlyStickerLookupPort.findRecentStickerNames(any(), any(), any())).thenReturn(List.of());
+        lenient().when(monthlyStickerLookupPort.findRecentAcquiredStickers(any(), any(), any())).thenReturn(List.of());
     }
 
     @Test
@@ -123,22 +124,27 @@ class ReportQueryServiceTest {
     }
 
     @Test
-    void 이번_달_받은_스티커_이름을_포트가_반환한_순서_그대로_반환한다() {
+    void 이번_달_받은_스티커를_포트가_반환한_순서_그대로_획득일과_함께_반환한다() {
         // given
         Long userId = 1L;
         YearMonth yearMonth = YearMonth.of(2026, 8);
 
         when(consumptionActivityPort.findActivities(eq(userId), any(), any())).thenReturn(List.of());
         when(dongNameLookupPort.findDongNames(any())).thenReturn(Map.of());
-        // fixedClock = 2026-08-09이므로 "이번달"은 1일~오늘(9일)까지, toExclusive는 10일
-        when(monthlyStickerLookupPort.findRecentStickerNames(
+        when(monthlyStickerLookupPort.findRecentAcquiredStickers(
                 eq(userId), eq(LocalDate.of(2026, 8, 1)), eq(LocalDate.of(2026, 8, 10))))
-                .thenReturn(List.of("커피", "도넛"));
+                .thenReturn(List.of(
+                        new AcquiredSticker("커피", LocalDate.of(2026, 8, 9)),
+                        new AcquiredSticker("도넛", LocalDate.of(2026, 8, 3))
+                ));
 
         // when
         CurrentStatusInfo result = sut.getCurrentStatus(new CurrentStatusCommand(userId, yearMonth));
 
         // then
-        assertThat(result.monthlyStickerNames()).containsExactly("커피", "도넛");
+        assertThat(result.monthlyStickers()).containsExactly(
+                new AcquiredSticker("커피", LocalDate.of(2026, 8, 9)),
+                new AcquiredSticker("도넛", LocalDate.of(2026, 8, 3))
+        );
     }
 }

@@ -1,6 +1,7 @@
 package kr.chapchap.report.application.service;
 
 import kr.chapchap.report.application.command.CurrentStatusCommand;
+import kr.chapchap.report.application.info.AcquiredSticker;
 import kr.chapchap.report.application.info.ConsumptionActivity;
 import kr.chapchap.report.application.info.CurrentStatusInfo;
 import kr.chapchap.report.application.port.ConsumptionActivityPort;
@@ -55,11 +56,11 @@ public class ReportQueryService {
         int monthlyCount = calculateMonthlyCount(activities, monthStart, monthEndInclusive);
         Map<String, Integer> monthlyCategoryCounts = calculateMonthlyCategoryCounts(activities, monthStart, monthEndInclusive);
         String recentDiscoveryMessage = buildRecentDiscoveryMessage(activities, today, trendStart);
-        List<String> monthlyStickerNames = monthlyStickerLookupPort.findRecentStickerNames(
+        List<AcquiredSticker> monthlyStickers = monthlyStickerLookupPort.findRecentAcquiredStickers(
                 command.userId(), monthStart, monthEndInclusive.plusDays(1));
 
         return new CurrentStatusInfo(
-                yearMonth, weeklyCounts, monthlyCount, monthlyCategoryCounts, recentDiscoveryMessage, monthlyStickerNames);
+                yearMonth, weeklyCounts, monthlyCount, monthlyCategoryCounts, recentDiscoveryMessage, monthlyStickers);
     }
 
     // 일(0) ~ 토(6) 순서로 반환

@@ -211,6 +211,18 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
     }
 
     @Override
+    public List<Long> findDistinctVisitedPlaceIds(Long userId) {
+        QConsumption consumption = QConsumption.consumption;
+
+        return queryFactory
+                .select(consumption.placeId)
+                .from(consumption)
+                .where(consumption.userId.eq(userId))
+                .distinct()
+                .fetch();
+    }
+
+    @Override
     public List<PlacePopularityRow> aggregatePopularityByPlaceIds(List<Long> placeIds) {
         if (placeIds == null || placeIds.isEmpty()) {
             return List.of();
@@ -392,11 +404,13 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
     }
 
     @Override
-    public List<Long> findRecentStickerItemIdsByUser(Long userId, LocalDate from, LocalDate toExclusive) {
+    public List<PlaceStickerRow> findRecentStickerRowsByUser(Long userId, LocalDate from, LocalDate toExclusive) {
         QConsumption consumption = QConsumption.consumption;
 
         return queryFactory
-                .select(consumption.stickerItemId)
+                .select(Projections.constructor(PlaceStickerRow.class,
+                        consumption.stickerItemId,
+                        consumption.purchaseDate))
                 .from(consumption)
                 .where(
                         consumption.userId.eq(userId),

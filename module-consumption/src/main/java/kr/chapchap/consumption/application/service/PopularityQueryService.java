@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 // module-recommendation이 크로스모듈로 조회하는 공개 API.
 @RequiredArgsConstructor
@@ -29,6 +30,11 @@ public class PopularityQueryService {
         return consumptionQueryRepository.aggregatePopularityByPlaceIds(placeIds).stream()
                 .map(row -> new PlacePopularityInfo(row.placeId(), row.category(), row.visitCount(), row.lastVisitedDate()))
                 .toList();
+    }
+
+    // module-recommendation의 가게 추천에서 이미 방문한 장소 제외용
+    public Set<Long> findVisitedPlaceIds(Long userId) {
+        return Set.copyOf(consumptionQueryRepository.findDistinctVisitedPlaceIds(userId));
     }
 
     public Optional<String> findTopCategory(Long userId) {
