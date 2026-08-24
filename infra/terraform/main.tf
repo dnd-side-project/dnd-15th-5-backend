@@ -202,14 +202,20 @@ resource "aws_iam_role_policy" "ec2_s3_receipts" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
-        Resource = "${aws_s3_bucket.receipts.arn}/*"
+        Effect = "Allow"
+        Action = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
+        Resource = [
+          "${aws_s3_bucket.receipts.arn}/*",
+          "${aws_s3_bucket.receipts_dev.arn}/*"
+        ]
       },
       {
-        Effect   = "Allow"
-        Action   = "s3:ListBucket"
-        Resource = aws_s3_bucket.receipts.arn
+        Effect = "Allow"
+        Action = "s3:ListBucket"
+        Resource = [
+          aws_s3_bucket.receipts.arn,
+          aws_s3_bucket.receipts_dev.arn
+        ]
       }
     ]
   })
@@ -224,14 +230,20 @@ resource "aws_iam_role_policy" "ec2_s3_profiles" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
-        Resource = "${aws_s3_bucket.profiles.arn}/*"
+        Effect = "Allow"
+        Action = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
+        Resource = [
+          "${aws_s3_bucket.profiles.arn}/*",
+          "${aws_s3_bucket.profiles_dev.arn}/*"
+        ]
       },
       {
-        Effect   = "Allow"
-        Action   = "s3:ListBucket"
-        Resource = aws_s3_bucket.profiles.arn
+        Effect = "Allow"
+        Action = "s3:ListBucket"
+        Resource = [
+          aws_s3_bucket.profiles.arn,
+          aws_s3_bucket.profiles_dev.arn
+        ]
       }
     ]
   })
@@ -360,6 +372,42 @@ resource "aws_s3_bucket" "profiles" {
 
 resource "aws_s3_bucket_public_access_block" "profiles" {
   bucket = aws_s3_bucket.profiles.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket" "receipts_dev" {
+  bucket = "${var.project_name}-dev-receipt-images"
+
+  tags = {
+    Name        = "${var.project_name}-dev-receipt-images"
+    Environment = "dev"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "receipts_dev" {
+  bucket = aws_s3_bucket.receipts_dev.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket" "profiles_dev" {
+  bucket = "${var.project_name}-dev-profile-images"
+
+  tags = {
+    Name        = "${var.project_name}-dev-profile-images"
+    Environment = "dev"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "profiles_dev" {
+  bucket = aws_s3_bucket.profiles_dev.id
 
   block_public_acls       = true
   block_public_policy     = true
