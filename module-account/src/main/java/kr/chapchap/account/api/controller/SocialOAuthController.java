@@ -65,9 +65,9 @@ public class SocialOAuthController {
             )
             @PathVariable String provider,
             @Parameter(
-                    description = "로그인을 시작한 클라이언트 유형 (WEB_LOCAL은 localhost 테스트용)",
+                    description = "로그인을 시작한 클라이언트 유형",
                     example = "WEB",
-                    schema = @Schema(allowableValues = {"WEB", "WEB_LOCAL", "APP"})
+                    schema = @Schema(allowableValues = {"WEB", "APP"})
             )
             @RequestParam OAuthClientType client,
             @Parameter(

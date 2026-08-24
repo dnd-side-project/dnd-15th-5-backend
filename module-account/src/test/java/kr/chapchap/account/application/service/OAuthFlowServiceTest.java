@@ -69,12 +69,12 @@ class OAuthFlowServiceTest {
     }
 
     @Test
-    void Google_로컬_WEB_로그인을_시작하면_클라이언트가_묶인_state로_인가_URI를_생성한다() {
+    void Google_로그인을_시작하면_Provider가_묶인_state로_인가_URI를_생성한다() {
         // given
         URI authorizationUri = URI.create("https://accounts.google.com/o/oauth2/v2/auth");
         given(oauthSessionStore.createState(
                 SocialProvider.GOOGLE,
-                OAuthClientType.WEB_LOCAL,
+                OAuthClientType.WEB,
                 CODE_CHALLENGE
         )).willReturn("google-state");
         given(googleAuthenticationPort.createAuthorizationUri("google-state"))
@@ -83,7 +83,7 @@ class OAuthFlowServiceTest {
         // when
         URI result = oauthFlowService.createAuthorizationUri(
                 "google",
-                OAuthClientType.WEB_LOCAL,
+                OAuthClientType.WEB,
                 CODE_CHALLENGE
         );
 
@@ -148,13 +148,11 @@ class OAuthFlowServiceTest {
     @Test
     void 카카오_콜백에서_state를_소비하고_Provider_사용자_ID로_loginCode를_생성한다() {
         // given
-        URI redirectUri = URI.create(
-                "http://localhost:5173/auth/callback?loginCode=login-code"
-        );
+        URI redirectUri = URI.create("chapchap://oauth/callback?loginCode=login-code");
         given(oauthSessionStore.consumeState("kakao-state"))
                 .willReturn(Optional.of(new OAuthAuthorizationSession(
                         SocialProvider.KAKAO,
-                        OAuthClientType.WEB_LOCAL,
+                        OAuthClientType.APP,
                         CODE_CHALLENGE
                 )));
         given(kakaoAuthenticationPort.authenticate("authorization-code"))
@@ -163,11 +161,11 @@ class OAuthFlowServiceTest {
                 .willReturn(1L);
         given(oauthSessionStore.createLoginCode(
                 1L,
-                OAuthClientType.WEB,
+                OAuthClientType.APP,
                 CODE_CHALLENGE
         )).willReturn("login-code");
         given(oauthClientRedirectPort.createLoginRedirect(
-                OAuthClientType.WEB_LOCAL,
+                OAuthClientType.APP,
                 "login-code"
         )).willReturn(redirectUri);
 
@@ -191,11 +189,11 @@ class OAuthFlowServiceTest {
         inOrder.verify(socialLoginService).login(SocialProvider.KAKAO, "123456789");
         inOrder.verify(oauthSessionStore).createLoginCode(
                 1L,
-                OAuthClientType.WEB,
+                OAuthClientType.APP,
                 CODE_CHALLENGE
         );
         inOrder.verify(oauthClientRedirectPort).createLoginRedirect(
-                OAuthClientType.WEB_LOCAL,
+                OAuthClientType.APP,
                 "login-code"
         );
         then(googleAuthenticationPort).shouldHaveNoInteractions();
@@ -256,18 +254,16 @@ class OAuthFlowServiceTest {
         // given
         OAuthAuthorizationSession authorizationSession = new OAuthAuthorizationSession(
                 SocialProvider.KAKAO,
-                OAuthClientType.WEB_LOCAL,
+                OAuthClientType.WEB,
                 CODE_CHALLENGE
         );
-        URI redirectUri = URI.create(
-                "http://localhost:5173/auth/callback?error=oauth_failed"
-        );
+        URI redirectUri = URI.create("https://web.example.com/oauth/callback?error=oauth_failed");
         given(oauthSessionStore.consumeState("kakao-state"))
                 .willReturn(Optional.of(authorizationSession));
         given(kakaoAuthenticationPort.authenticate("authorization-code"))
                 .willThrow(new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE));
         given(oauthClientRedirectPort.createErrorRedirect(
-                OAuthClientType.WEB_LOCAL,
+                OAuthClientType.WEB,
                 "oauth_failed"
         )).willReturn(redirectUri);
 
@@ -282,7 +278,7 @@ class OAuthFlowServiceTest {
         assertThat(result).isEqualTo(redirectUri);
         then(socialLoginService).shouldHaveNoInteractions();
         then(oauthClientRedirectPort).should().createErrorRedirect(
-                OAuthClientType.WEB_LOCAL,
+                OAuthClientType.WEB,
                 "oauth_failed"
         );
     }
@@ -292,11 +288,11 @@ class OAuthFlowServiceTest {
         // given
         OAuthAuthorizationSession authorizationSession = new OAuthAuthorizationSession(
                 SocialProvider.GOOGLE,
-                OAuthClientType.WEB_LOCAL,
+                OAuthClientType.WEB,
                 CODE_CHALLENGE
         );
         URI redirectUri = URI.create(
-                "http://localhost:5173/auth/callback?error=account_withdrawn"
+                "https://web.example.com/oauth/callback?error=account_withdrawn"
         );
         given(oauthSessionStore.consumeState("google-state"))
                 .willReturn(Optional.of(authorizationSession));
@@ -305,7 +301,7 @@ class OAuthFlowServiceTest {
         given(socialLoginService.login(SocialProvider.GOOGLE, "google-sub"))
                 .willThrow(new BusinessException(AccountErrorCode.ACCOUNT_WITHDRAWN));
         given(oauthClientRedirectPort.createErrorRedirect(
-                OAuthClientType.WEB_LOCAL,
+                OAuthClientType.WEB,
                 "account_withdrawn"
         )).willReturn(redirectUri);
 
@@ -319,7 +315,7 @@ class OAuthFlowServiceTest {
         // then
         assertThat(result).isEqualTo(redirectUri);
         then(oauthClientRedirectPort).should().createErrorRedirect(
-                OAuthClientType.WEB_LOCAL,
+                OAuthClientType.WEB,
                 "account_withdrawn"
         );
         then(loginTokenService).shouldHaveNoInteractions();

@@ -64,8 +64,6 @@ chapchap:
     allowed-origin-patterns: []
 
   oauth:
-    client:
-      local-web-redirect-uri: http://localhost:5173/auth/callback
     kakao:
       authorization-uri: https://kauth.kakao.com/oauth/authorize
       token-uri: https://kauth.kakao.com/oauth/token

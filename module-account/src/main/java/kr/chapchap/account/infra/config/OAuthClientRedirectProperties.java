@@ -10,7 +10,6 @@ import java.net.URI;
 @ConfigurationProperties(prefix = "chapchap.oauth.client")
 public record OAuthClientRedirectProperties(
         @NotNull URI webRedirectUri,
-        @NotNull URI localWebRedirectUri,
         @NotNull URI appRedirectUri
 ) {
 }
