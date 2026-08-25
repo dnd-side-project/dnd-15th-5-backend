@@ -16,11 +16,11 @@ public record CurrentStatusResponse(
         List<StickerResponse> monthlyStickers
 ) {
 
-    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM");
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     public static CurrentStatusResponse from(CurrentStatusInfo info) {
         return new CurrentStatusResponse(
-                info.yearMonth().format(DATE_FORMAT),
+                info.date().format(DATE_FORMAT),
                 info.weeklyCounts(),
                 info.monthlyCount(),
                 info.monthlyCategoryCounts(),

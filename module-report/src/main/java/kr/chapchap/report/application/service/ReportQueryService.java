@@ -60,7 +60,7 @@ public class ReportQueryService {
                 command.userId(), monthStart, monthEndInclusive.plusDays(1));
 
         return new CurrentStatusInfo(
-                yearMonth, weeklyCounts, monthlyCount, monthlyCategoryCounts, recentDiscoveryMessage, monthlyStickers);
+                today, weeklyCounts, monthlyCount, monthlyCategoryCounts, recentDiscoveryMessage, monthlyStickers);
     }
 
     // 일(0) ~ 토(6) 순서로 반환

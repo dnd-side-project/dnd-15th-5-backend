@@ -1,11 +1,12 @@
 package kr.chapchap.report.application.info;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 
 public record CurrentStatusInfo(
-        YearMonth yearMonth,
+        LocalDate date,
         List<Integer> weeklyCounts,
         int monthlyCount,
         Map<String, Integer> monthlyCategoryCounts,
