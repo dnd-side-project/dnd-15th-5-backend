@@ -26,6 +26,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.net.URI;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -186,7 +188,7 @@ class AccountWithdrawalServiceTest {
     }
 
     @Test
-    void Google_권한_해제에_실패하면_로컬_회원은_탈퇴시키지_않는다() {
+    void Google_권한_해제에_실패하면_탈퇴와_토큰_정리를_진행하지_않는다() {
         // given
         User user = createActiveUser();
         URI errorRedirectUri = URI.create(
@@ -222,6 +224,49 @@ class AccountWithdrawalServiceTest {
         assertThat(result.redirectUri()).isEqualTo(errorRedirectUri);
         assertThat(user.getStatus()).isEqualTo(UserStatus.ACTIVE);
         then(refreshTokenStore).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 탈퇴_회원_ID를_순서대로_조회한다() {
+        // given
+        given(userRepository.findWithdrawnUserIds())
+                .willReturn(List.of(1L, 3L));
+
+        // when
+        List<Long> result = accountWithdrawalService.findWithdrawnUserIds();
+
+        // then
+        assertThat(result).containsExactly(1L, 3L);
+    }
+
+    @Test
+    void WITHDRAWN_상태의_회원을_물리_삭제한다() {
+        // given
+        User user = createActiveUser();
+        user.withdraw(LocalDateTime.now());
+        given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
+
+        // when
+        boolean result = accountWithdrawalService.deleteWithdrawnUser(USER_ID);
+
+        // then
+        assertThat(result).isTrue();
+        then(userRepository).should().delete(user);
+    }
+
+    @Test
+    void ACTIVE_상태의_회원은_물리_삭제하지_않는다() {
+        // given
+        User user = createActiveUser();
+        given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
+
+        // when
+        boolean result = accountWithdrawalService.deleteWithdrawnUser(USER_ID);
+
+        // then
+        assertThat(result).isFalse();
+        then(userRepository).should().findByIdForUpdate(USER_ID);
+        then(userRepository).shouldHaveNoMoreInteractions();
     }
 
     private void givenWithdrawalSession() {

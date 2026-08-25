@@ -11,7 +11,10 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
@@ -22,6 +25,7 @@ import java.util.UUID;
 public class S3ProfileImageStorage implements ProfileImageStorage {
 
     private static final String PROFILE_IMAGE_KEY_FORMAT = "profiles/%d/%s";
+    private static final String PROFILE_IMAGE_PREFIX_FORMAT = "profiles/%d/";
 
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
@@ -92,6 +96,31 @@ public class S3ProfileImageStorage implements ProfileImageStorage {
 
         try {
             s3Client.deleteObject(deleteObjectRequest);
+        } catch (SdkException exception) {
+            throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
+        }
+    }
+
+    @Override
+    public void deleteAllByUserId(Long userId) {
+        if (userId == null || userId <= 0) {
+            throw new IllegalArgumentException("사용자 식별자는 0보다 커야 합니다.");
+        }
+
+        ListObjectsV2Request request = ListObjectsV2Request.builder()
+                .bucket(properties.bucket())
+                .prefix(PROFILE_IMAGE_PREFIX_FORMAT.formatted(userId))
+                .build();
+        try {
+            while (true) {
+                ListObjectsV2Response response = s3Client.listObjectsV2(request);
+                if (response.contents().isEmpty()) {
+                    return;
+                }
+                for (S3Object object : response.contents()) {
+                    delete(object.key());
+                }
+            }
         } catch (SdkException exception) {
             throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
         }
