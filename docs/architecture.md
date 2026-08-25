@@ -10,38 +10,43 @@
 | Framework | Spring Boot | 3.5.16 |
 | Build Tool | Gradle | 8.14.3 |
 | API | REST API | — |
-| API Documentation | springdoc-openapi + Swagger UI | — |
+| API Documentation | springdoc-openapi + Swagger UI | 2.8.17 |
 | Validation | Jakarta Bean Validation | Spring Boot BOM |
 | Social Authentication | Kakao OAuth 2.0 / Google OpenID Connect | — |
 | API Authentication | Spring Security OAuth 2.0 Resource Server | Spring Boot BOM |
 | Authorization Token | JWT | — |
 | External API Client | Spring RestClient | Spring Boot BOM |
 | Persistence | Spring Data JPA | Spring Boot BOM |
-| Query Builder | QueryDSL | Boot 3.x 호환 버전 |
+| Query Builder | QueryDSL | Spring Boot BOM |
 | Database Migration | Flyway | Spring Boot BOM |
+| Object Storage Client | AWS SDK for Java 2.x (S3) | 2.49.6 |
 | Logging | SLF4J, Logback | Spring Boot BOM |
 | Test | JUnit 5, Mockito | Spring Boot BOM |
 | Integration Test | Testcontainers | Spring Boot BOM |
 | Monitoring | Spring Boot Actuator | Spring Boot BOM |
 
-### 1.2 데이터베이스 및 캐시
+### 1.2 데이터 저장소
 
 | 항목 | 기술 | 버전 |
 | --- | --- | --- |
-| RDBMS | PostgreSQL | — |
-| GIS Extension | PostGIS | — |
-| Cache Abstraction | Spring Cache | Spring Boot BOM |
-| Local Cache | Caffeine | Spring Boot BOM |
-| Distributed Cache | Redis | — |
+| RDBMS | PostgreSQL | 17 |
+| GIS Extension | PostGIS | 3.5 |
+| Key-Value Store | Redis | 7.4 |
+
+- Redis는 Refresh Token의 유효 상태, OAuth 인증 과정의 일회성 상태, CLOVA OCR 요청 간격 및 Google Places Photo Media의 월간 호출 횟수를 저장한다.
+- SGIS Access Token은 만료 시각과 함께 애플리케이션 메모리에 캐시한다.
 
 ### 1.3 외부 솔루션 연동
 
 | 항목 | 기술 | 버전 |
 | --- | --- | --- |
 | OCR | NAVER CLOVA OCR General | — |
-| Receipt OCR | NAVER CLOVA OCR Receipt | — |
-| Map | NAVER Maps | — |
-| Social Login Provider | Kakao OAuth 2.0 / Google OAuth 2.0 | — |
+| Place Details / Photo | Google Places API (New) | v1 |
+| Address Geocoding | SGIS OpenAPI | OpenAPI3 |
+| Social Login Provider | Kakao OAuth 2.0 / Google OpenID Connect | — |
+
+- CLOVA OCR General이 인식한 텍스트를 애플리케이션에서 파싱해 영수증의 상호명, 주소, 일시와 금액을 추출한다.
+- Google Places API는 장소 사진 조회에, SGIS OpenAPI는 도로명주소의 행정동 변환에 사용한다.
 
 ### 1.4 인프라 및 배포
 
@@ -51,82 +56,114 @@
 | Network | Amazon VPC | — |
 | Compute | Amazon EC2 | — |
 | Database Service | AWS RDS for PostgreSQL | — |
+| Container Registry | Amazon ECR | — |
 | Object Storage | AWS S3 | — |
-| Reverse Proxy | Caddy | — |
+| Remote Deployment / Configuration | AWS Systems Manager Run Command / Parameter Store | — |
+| Secrets Encryption | AWS KMS | — |
+| Reverse Proxy / Static File Server | Caddy | 2 |
 | Container | Docker | — |
+| Container Composition | Docker Compose | — |
 | Infrastructure as Code | Terraform | — |
 | CI/CD | GitHub Actions | — |
-| Deployment Strategy | Blue/Green Deployment | — |
-| Monitoring | Amazon CloudWatch | — |
-| TLS Certificate | Let’s Encrypt | — |
+| Deployment Strategy | Production Blue/Green / Development Single Container Replacement | — |
+| Health Check | Spring Boot Actuator | — |
+| Centralized Logging | Amazon CloudWatch Logs | — |
+| TLS / HTTPS | Caddy Automatic HTTPS | — |
 
 ### 🗺️ 2. 시스템 아키텍처
 
 #### 2.1 시스템 구성도
 
-![시스템 아키텍처](images/system-architecture-temp-ky.png)
+##### 서비스 구성
 
 ```mermaid
 flowchart TB
-    Web["Web Client"]
-    AppClient["Mobile App"]
-    GitHubActions["GitHub Actions"]
+    subgraph Clients["클라이언트"]
+        Web["Web Client<br/>(SPA)"]
+        Mobile["Mobile App"]
+    end
 
     subgraph AWS["AWS"]
-        direction TB
-
-        subgraph PublicSubnet["Public Subnet"]
-            Caddy["Caddy<br/>Reverse Proxy + HTTPS<br/>(Application EC2)"]
+        subgraph EC2["Public Subnet<br/>단일 EC2 · Docker Compose"]
+            Caddy["Caddy<br/>HTTPS · Reverse Proxy<br/>SPA 정적 파일"]
+            Apps["Application Containers<br/>Production Blue/Green<br/>Development"]
+            Redis["Redis Containers<br/>Production / Development<br/>환경 분리"]
         end
 
-        subgraph App["Application 영역<br/>(동일 EC2 + Docker)"]
-            Active["현재 활성 Container<br/>Blue 또는 Green"]
-            Standby["배포 대상 Container<br/>Green 또는 Blue"]
-        end
-
-        subgraph PrivateSubnet["Private Subnet"]
-            RDS["Amazon RDS<br/>PostgreSQL + PostGIS"]
-        end
-
-        Redis["Redis Container<br/>(Application EC2)"]
-        S3["Amazon S3<br/>영수증 이미지"]
-        CloudWatch["Amazon CloudWatch"]
+        RDS["Amazon RDS<br/>PostgreSQL + PostGIS<br/>Private Subnets<br/>Single-AZ"]
+        S3["Amazon S3<br/>프로필·영수증 이미지"]
+        CloudWatch["Amazon CloudWatch<br/>Logs"]
     end
 
-    subgraph External["외부 솔루션"]
-        Clova["NAVER CLOVA OCR"]
-        OAuth["Kakao / Google OAuth"]
-        Map["NAVER Maps"]
-    end
+    External["외부 솔루션<br/>CLOVA OCR · OAuth<br/>Google Places · SGIS"]
 
-    Web -->|"HTTPS 요청"| Caddy
-    AppClient -->|"HTTPS 요청"| Caddy
+    Web -->|"HTTPS"| Caddy
+    Mobile -->|"HTTPS"| Caddy
 
-    Caddy -->|"현재 트래픽"| Active
-    Caddy -.->|"배포 전환 대상"| Standby
+    Caddy -->|"/api · /dev/api"| Apps
 
-    GitHubActions -->|"새 버전 배포"| Standby
-    Standby -.->|"Health Check 통과 후 전환"| Caddy
+    Apps -->|"영속 데이터"| RDS
+    Apps -->|"인증 상태·요청 제한"| Redis
+    Apps -->|"이미지 저장"| S3
+    Apps -.->|"외부 API 호출"| External
 
-    Active --> RDS
-    Active -->|"Refresh Token"| Redis
-    Active --> S3
-    Active --> Clova
-    Active --> OAuth
-    Active --> Map
-    Active -->|"로그·상태"| CloudWatch
-
+    Apps -->|"애플리케이션 로그"| CloudWatch
+    Caddy -->|"접근 로그"| CloudWatch
 ```
 
-#### 2.2 인프라 구성 및 배포 방식
+##### 배포 흐름
 
-- 초기에는 Public Subnet의 단일 EC2에서 Caddy와 Blue/Green Docker Container를 운영한다.
-- RDS는 Private Subnet에 배치하고, Security Group으로 애플리케이션 EC2의 접근만 허용한다.
-- 영수증 이미지는 S3에 저장하고, 로그와 서버 상태는 CloudWatch를 통해 확인한다.
-- GitHub Actions가 대기 Container에 신버전을 배포해 HealthCheck 후 Caddy가 트래픽을 전환한다.
-- 초기에는 비용을 고려해 ALB와 NAT Gateway를 제외하고, 운영 규모에 따라 도입 여부를 재검토한다.
-- Redis는 초기에는 EC2 내부 Container로 운영하고 필요 시 ElastiCache로 분리하는 방향을 검토한다.
-- AWS 리소스의 생성과 변경 관리를 위해 Terraform 도입을 고려한다.
+```mermaid
+flowchart TB
+    GitHubActions["GitHub Actions<br/>CI/CD"]
+
+    ECR["Amazon ECR<br/>Backend Image"]
+    SSM["AWS Systems Manager<br/>Run Command<br/>Parameter Store"]
+    KMS["AWS KMS<br/>SecureString"]
+    FrontendS3["Amazon S3<br/>Frontend Artifact"]
+
+    subgraph EC2["단일 EC2<br/>Docker Compose"]
+        AppContainers["Application Containers<br/>Production Blue/Green<br/>Development"]
+        Caddy["Caddy<br/>Frontend 정적 파일"]
+    end
+
+    GitHubActions -->|"Image Push"| ECR
+    GitHubActions -->|"배포·설정 전달"| SSM
+    GitHubActions -->|"Artifact Upload"| FrontendS3
+
+    SSM -->|"암호화·복호화"| KMS
+    ECR -->|"Image Pull"| AppContainers
+    SSM -->|"배포 실행"| AppContainers
+    FrontendS3 -->|"Artifact Sync"| Caddy
+```
+
+
+#### 2.2 인프라 및 배포
+
+**인프라**
+
+- Terraform으로 서울 리전의 VPC, EC2, RDS, ECR, S3, CloudWatch Logs, IAM/OIDC와 KMS를 관리한다. Terraform 상태는 암호화된 S3 Backend에 저장한다.
+- 단일 EC2에서 Caddy, Production Blue/Green 애플리케이션, Development 애플리케이션과 환경별 Redis를 Docker Compose로 운영한다.
+- RDS는 2개 AZ의 Private Subnet으로 구성한 DB Subnet Group에 배치하되 Single-AZ로 운영한다. ALB와 NAT Gateway는 사용하지 않는다.
+- 프로필·영수증 이미지는 환경별 S3 버킷에 저장하며, Frontend 배포 산출물도 비공개 S3 버킷을 거쳐 EC2로 동기화한다.
+
+**CI/CD 및 배포**
+
+- develop 브랜치의 Pull Request와 Push는 GitHub Actions에서 전체 빌드와 테스트를 수행한다.
+- 배포 시 GitHub Actions는 OIDC로 AWS 임시 자격증명을 발급받아 ARM64 이미지를 ECR에 Push하고, Systems Manager Run Command로 EC2의 배포 스크립트를 실행한다.
+- 환경 설정은 KMS로 암호화한 Parameter Store SecureString으로 전달한다.
+
+| 환경 | 배포 조건                 | 배포 방식 |
+| --- |-----------------------| --- |
+| Development | `develop` Push의 CI 성공 | 단일 Container 교체 |
+| Production | `main` Push           | Blue/Green 전환 |
+
+- Production은 새 Container의 Actuator Health Check가 통과하면 Caddy Upstream을 전환하고 기존 Container를 중지한다.
+
+**트래픽 및 로그**
+
+- Caddy는 SPA 정적 파일을 제공하고 `/api`와 `/dev/api`를 각 환경의 애플리케이션으로 전달하며 HTTPS를 처리한다.
+- Caddy와 애플리케이션 로그는 Docker `awslogs` 드라이버를 통해 CloudWatch Logs로 전송한다.
 
 ### 🧱 3. 애플리케이션 아키텍처 및 설계 원칙
 
@@ -141,16 +178,17 @@ flowchart TB
 
 #### 3.2 멀티모듈 구성 및 의존관계
 
-**3.2.1 모듈구성**
+**3.2.1 모듈 구성**
 
-| 모듈 | 주요 책임 |
-| --- | --- |
+| 모듈 | 주요 책임                                       |
+| --- |---------------------------------------------|
 | app-server | Spring Boot 실행, 모듈 조립, Security 및 공통 Web 설정 |
-| module-account | 계정, 회원가입, 소셜 로그인, 토큰 발급 및 사용자 상태 관리 |
-| module-consumption | 소비기록 관리와 수기·영수증 OCR 기반 등록 |
-| module-report | 주간·월간 소비 리포트 생성 및 조회 |
-| module-place | 장소 정보와 위치 기반 조회 |
-| module-core | 공통 응답과 공통 예외 등 기술적 공통 요소 |
+| module-account | 계정, 회원가입, 소셜 로그인, 토큰 발급 및 사용자 상태 관리         |
+| module-consumption | 소비기록 관리와 수기·영수증 OCR 기반 등록                   |
+| module-report | 현재 월 누적·주별 현황과 월간 소비 리포트 생성 및 조회            |
+| module-place | 장소·좋아요 관리, 위치 기반 조회, 장소 사진 및 행정동 연동         |
+| module-recommendation | 위치·방문 이력·최근 30일 주요 소비 카테고리를 조합한 주변 장소 추천             |
+| module-core | 공통 응답·예외 처리, `@ChapChapUserId`, JPA 공통 엔티티, Flyway 및 Testcontainers 설정 |
 
 **3.2.2 모듈 의존 관계**
 
@@ -162,8 +200,9 @@ flowchart TB
         direction LR
         Account["module-account<br/>계정 및 인증"]
         Consumption["module-consumption<br/>소비기록 관리 및 등록"]
-        Report["module-report<br/>소비 리포트"]
+        Report["module-report<br/>현재 현황 및 월간 리포트"]
         Place["module-place<br/>장소 및 위치 조회"]
+        Recommendation["module-recommendation<br/>주변 장소 추천"]
     end
 
     Core["module-core<br/>기술적 공통 요소"]
@@ -172,23 +211,31 @@ flowchart TB
     App --> Consumption
     App --> Report
     App --> Place
+    App --> Recommendation
     App --> Core
 
+    Account --> Consumption
     Account --> Core
+    Consumption --> Place
     Consumption --> Core
+    Report --> Consumption
+    Report --> Place
     Report --> Core
     Place --> Core
+    Recommendation --> Consumption
+    Recommendation --> Place
+    Recommendation --> Core
 ```
 
 **3.2.3 모듈 의존성 원칙**
 
-- 화살표는 Gradle 모듈 의존성을 의미하며, 화살표는 모듈의 참조 방향을 의미한다.
-- app-server는 전체 도메인 모듈을 조립하며 비즈니스 로직을 직접 구현하지 않는다.
+- 화살표는 Gradle 모듈 의존성과 코드의 참조 방향을 나타낸다.
+- app-server는 도메인 모듈을 조립하고 전역 Web·Security 설정을 담당한다. 비즈니스 로직은 각 도메인 모듈에 둔다.
 - 도메인 모듈은 app-server를 참조하지 않는다.
-- 도메인 모듈 간 의존성이 필요한 경우 최소한의 단방향 의존성만 허용한다.
-- 다른 모듈의 Entity와 Repository를 직접 참조하지 않고, 공개된 Application API와 DTO를 통해 통신한다.
-- module-core에는 특정 도메인에 종속된 Port나 DTO를 배치하지 않는다.
-- 양방향 의존이 발생하면 공통 모듈을 통해 우회하지 않고, 도메인 책임을 재조정하거나 별도의 모듈로 분리한다.
+- 도메인 모듈 간 의존성은 필요한 경우에만 단방향으로 추가한다.
+- 다른 모듈의 Entity와 Repository를 직접 참조하지 않고, 공개된 Application API를 사용한다.
+- module-core에는 특정 도메인의 Port, DTO 또는 비즈니스 규칙을 두지 않는다.
+- 양방향 의존성이 생기면 module-core로 우회하지 않고 도메인 책임과 의존 방향을 다시 조정한다.
 
 #### 3.3 모듈 내부 Clean Architecture
 
@@ -198,17 +245,18 @@ flowchart TB
 | --- | --- |
 | api | Controller, HTTP 요청 검증, Request 및 Response 변환 |
 | application | 유스케이스 실행, 트랜잭션 관리, 도메인 로직 조합 및 외부 연동 Port 정의 |
-| domain | Domain Entity, Domain Service 및 핵심 비즈니스 규칙 |
-| infra | JPA 저장소 구현, QueryDSL, Redis, S3, OCR 및 외부 API 연동 구현 |
+| domain | Entity, Domain Service 및 핵심 비즈니스 규칙 |
+| infra | JPA·QueryDSL·Redis 기반 저장소 구현, S3·외부 API 연동 및 다른 모듈 Application API 연결 |
 
 > Clean Architecture에서는 도메인 모델이 영속성 기술에 의존하지 않도록 설계하는 것을 지향한다.
 다만 도메인 엔티티와 영속성 엔티티를 분리하면 영속성 컨텍스트 관리와 상태 동기화가 복잡해질 수 있으므로,
 현재는 실용적인 관점에서 도메인 엔티티를 JPA 엔티티로도 사용한다.
 >
 
+
 **3.3.2 패키지 구조**
 
-```
+```text
 module-{domain}
 └── src/main/java
     └── kr.chapchap.{domain}
@@ -221,7 +269,8 @@ module-{domain}
         │   ├── service
         │   ├── command
         │   ├── info
-        │   └── port
+        │   ├── port
+        │   └── event
         │
         ├── domain
         │   ├── entity
@@ -231,21 +280,24 @@ module-{domain}
         ├── infra
         │   ├── persistence
         │   ├── external
-        │   └── config
+        │   ├── config
+        │   ├── event
+        │   ├── scheduler
+        │   └── security
         │
         └── exception
 ```
 
+- 각 모듈별로 필요한 패키지만 사용한다.
 - request와 response는 API 계층에서 사용하는 HTTP 입출력 객체다.
-- command와 info는 Application 계층의 입출력 객체로 command는 유스케이스 입력, info는 실행 결과를 전달한다.
-- port는 외부 기능에 대해 Application 계층이 요구하는 인터페이스다.
-- domain/entity에는 JPA Entity와 핵심 비즈니스 규칙을 배치한다.
-- domain/repository에는 Domain Entity의 저장과 조회를 위한 인터페이스를 배치한다.
-- domain/service에는 특정 Entity에 두기 어려운 비즈니스 규칙을 배치한다.
-- infra/persistence에는 JPA와 QueryDSL 기반 저장소 구현을 배치한다.
-- infra/external에는 외부 API, Object Storage 및 캐시 연동 구현을 배치한다.
-- infra/config에는 해당 도메인 모듈의 인프라 설정을 배치한다.
-- exception에는 해당 모듈의 모든 계층에서 공유하는 도메인별 ErrorCode를 배치한다.
+- command와 info는 Application 계층의 입출력 객체로, command는 유스케이스 입력을, info는 실행 결과를 전달한다.
+- port는 외부 기능이나 다른 모듈을 사용하기 위해 Application 계층에서 정의하는 인터페이스다.
+- domain/entity에는 JPA Entity와 상태 변경을 포함한 핵심 비즈니스 규칙을 둔다.
+- domain/service에는 특정 Entity 하나에 두기 어려운 비즈니스 규칙을 둔다.
+- domain/repository에는 저장소 인터페이스를, infra/persistence에는 JPA·QueryDSL 기반 구현체를 둔다.
+- infra/external에는 외부 서비스 연동과 다른 모듈의 Application API를 연결하는 Adapter를 둔다.
+- infra/config, infra/event, infra/scheduler, infra/security에는 각각 인프라 설정, 이벤트 처리, 배치 실행, 인증 구현을 둔다.
+- exception에는 해당 모듈에서 사용하는 ErrorCode를 둔다.
 
 ```
 각 도메인 모듈은 module- 접두사를 제외한 도메인명을 기본 패키지로 사용한다.
@@ -253,6 +305,7 @@ module-account → kr.chapchap.account
 module-consumption → kr.chapchap.consumption
 module-report → kr.chapchap.report
 module-place → kr.chapchap.place
+module-recommendation → kr.chapchap.recommendation
 ```
 
 **3.3.3 계층 의존 관계**
@@ -277,58 +330,58 @@ flowchart LR
 
 - 화살표는 코드의 의존 방향을 의미한다.
 - API 계층은 Application 계층과 Exception 계층을 참조한다.
-- Application 계층은 Domain 계층과 Exception 계층을 참조한다.
+- Application 계층은 같은 모듈의 Domain·Exception 계층과 다른 모듈의 공개된 Application API를 참조할 수 있다.
 - Infra 계층은 Application 계층의 Port와 Domain 계층의 Repository 인터페이스를 구현하고 Exception 계층을 참조한다.
-- Exception 계층은 모듈 내 모든 계층에서 사용하는 도메인별 ErrorCode를 제공한다.
-- Domain 계층은 Exception 계층만 참조할 수 있으며 API, Application, Infra 계층을 참조하지 않는다.
+- Exception 계층은 모듈 내 여러 계층에서 사용하는 도메인별 ErrorCode를 제공한다.
+- Domain 계층은 API, Application, Infra 계층을 참조하지 않는다.
 - Application 계층은 Infra 계층의 구체적인 구현체를 직접 참조하지 않는다.
 
 ```
 외부 연동이 포함된 유스케이스는 다음과 같이 실행된다.
+
 Controller
     → Application Service
         → Application Port
             → Infra 구현체
                 → 외부 솔루션
+
+- 다른 모듈의 기능은 Application Service에서 직접 사용하거나 Infra Adapter를 통해 연결하며, 대상 모듈의 공개된 Application API만 참조한다.
 ```
 
 **3.3.4 Application Service 구성 원칙**
 
-- Application Service는 상태 변경을 담당하는 CommandService와 조회를 담당하는 QueryService로 구분하는 것을 기본으로 한다.
-- CommandService는 생성·수정·삭제, QueryService는 조회를 담당한다.
-- 각 Service에는 단순 처리와 여러 Domain 객체 및 Port를 조합하는 유스케이스 메서드를 함께 둘 수 있다.
-- Service가 커지거나 유스케이스 흐름이 복잡해지면 해당 유스케이스를 담당하는 전용 Application Service로 분리한다.
-- CommandService도 외부 연동이 필요하면 Application Port를 사용할 수 있다.
-- Port 사용 여부는 Command와 Query의 구분 기준이 아니다.
-- Application Command는 Domain 계층에 직접 전달하지 않는다.
-- Application Service가 필요한 값을 꺼내 Domain Entity, Value Object 또는 Domain Service에 전달한다.
-- Application Service는 단순 저장·조회에 Domain Repository를 직접 사용할 수 있다.
-- Entity의 상태 변경은 Entity 메서드를 통해 수행한다.
-- Domain Service는 Entity나 Value Object에 두기 어려운 도메인 규칙을 담당한다.
+- 단순한 상태 변경과 조회는 각각 CommandService와 QueryService로 구분한다.
+- 소셜 로그인, OCR 처리, 장소 확인, 월간 리포트 집계처럼 흐름이 독립적인 기능은 책임이 드러나는 전용 Service로 분리한다.
+- Command와 Query는 상태 변경 여부를 기준으로 구분하며, Port 사용 여부와는 관계없다.
+- Application Service는 Repository, Domain 객체와 Port를 조합해 유스케이스를 실행하고 트랜잭션을 관리한다.
+- Application Command의 값은 Application Service에서 꺼내 Entity나 Domain Service에 전달한다.
+- Entity의 상태는 Entity 메서드를 통해 변경한다.
+- 단순한 저장과 조회에는 Domain Repository를 직접 사용할 수 있다.
+- Domain Service에는 특정 Entity 하나에 두기 어려운 비즈니스 규칙을 둔다.
 
-#### **3.4 Domain-Driven Design**
+#### 3.4 Domain-Driven Design
 
 **3.4.1 DDD 적용 원칙**
 
-- 비즈니스 책임과 사용하는 언어가 달라지는 지점을 기준으로 Bounded Context를 구분한다.
-- 각 Bounded Context는 하나의 도메인 모듈과 대응하는 것을 기본 원칙으로 한다.
-- 각 모듈은 자신의 도메인 모델과 데이터에 대한 소유권을 가진다.
+- Account, Consumption, Report, Place, Recommendation을 각각 도메인 모듈로 구분한다.
+- 각 모듈은 자신의 도메인 모델을 관리하며, 영속 데이터가 있는 경우 해당 데이터를 직접 소유한다.
 - 다른 모듈의 Entity와 Repository를 직접 참조하지 않는다.
-- 모듈 간에는 식별자와 공개된 Application API 및 DTO만 전달한다.
-- 핵심 비즈니스 규칙은 Controller나 Application Service가 아닌 Domain Entity, Value Object 및 Domain Service에 배치한다.
-- 모든 도메인에 복잡한 전술적 패턴을 일괄 적용하지 않고, 비즈니스 규칙과 상태 변화가 존재하는 영역을 중심으로 Aggregate와 Value Object를 적용한다.
+- 모듈 간 연동에는 식별자와 공개된 Application API를 사용한다.
+- 상태 변경과 핵심 비즈니스 규칙은 Entity와 Domain Service에 둔다.
+- 독자적인 영속 모델이 없는 조회·조합 기능은 Application Service에서 처리할 수 있다.
+- 구조를 맞추기 위해 모든 모듈에 Aggregate나 Value Object를 일괄적으로 만들지 않는다.
 
 **3.4.2 Bounded Context**
 
 | Bounded Context | 담당 모듈 | 주요 책임 | 소유 데이터 |
 | --- | --- | --- | --- |
-| Account Context | module-account | 회원가입, 소셜 로그인, 계정 상태 및 인증 주체 관리 | Account, SocialAccount |
-| Consumption Context | module-consumption | 소비기록 관리와 수기·영수증 OCR 기반 등록 | Consumption, 영수증 이미지 참조 |
-| Report Context | module-report | 주간·월간 소비 리포트 생성 및 조회 | Report, 기간별 집계 결과 |
-| Place Context | module-place | 장소 정보 관리, 위치 정보 및 주변 장소 조회 | Place, Address, Location |
-- Bounded Context 간에 동일한 용어가 존재하더라도 각 Context의 목적에 맞는 별도 모델을 사용한다.
-- Account Context는 사용자의 인증 및 계정 상태를 책임진다.
-- Consumption Context는 인증된 사용자의 식별자인 accountId만 사용하며 Account Entity를 직접 참조하지 않는다.
-- Consumption Context는 장소를 연결할 때 placeId만 보관하며 Place Entity를 직접 참조하지 않는다.
-- 영수증 이미지와 OCR 결과는 소비기록 생성을 위한 중간 자료로 취급하며, 별도의 Bounded Context로 분리하지 않는다.
-- OCR, Object Storage, OAuth, 지도 API는 도메인 모델이 아닌 외부 시스템으로 취급하고 각 Context의 Infra 계층에서 연동한다.
+| Account Context | module-account | 회원가입, 소셜 로그인, 계정 및 약관 동의 관리 | User, SocialAccount, UserTermsAgreement |
+| Consumption Context | module-consumption | 소비기록 관리와 수기·영수증 OCR 기반 등록 | Consumption, ReceiptImage, StickerItem |
+| Report Context | module-report | 현재 월 현황과 월간 소비 리포트 생성 및 조회 | Report와 카테고리·지역·장소·시간대별 집계 데이터 |
+| Place Context | module-place | 장소·좋아요 관리, 위치 기반 조회, 장소 사진 및 행정동 변환 | Place, PlaceLike |
+| Recommendation Context | module-recommendation | 위치·방문 이력·최근 30일 주요 소비 카테고리 기반 주변 장소 추천 | 없음 |
+
+- Consumption Context는 사용자와 장소를 각각 userId와 placeId로 참조하며, User와 Place Entity를 직접 참조하지 않는다.
+- Recommendation Context는 별도의 데이터를 저장하지 않고 Consumption과 Place 모듈에서 조회한 정보를 조합한다.
+- OCR 결과는 소비기록 생성을 위한 자료로 사용하며 별도의 도메인으로 분리하지 않는다.
+- CLOVA OCR, S3, 소셜 로그인 제공자, Google Places와 SGIS는 각 모듈의 Infra 계층에서 연동한다.
