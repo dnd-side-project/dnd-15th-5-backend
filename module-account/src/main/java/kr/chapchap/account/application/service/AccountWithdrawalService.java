@@ -19,10 +19,12 @@ import kr.chapchap.core.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -119,6 +121,22 @@ public class AccountWithdrawalService {
                 ),
                 false
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<Long> findWithdrawnUserIds() {
+        return userRepository.findWithdrawnUserIds();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean deleteWithdrawnUser(Long userId) {
+        Optional<User> user = userRepository.findByIdForUpdate(userId);
+        if (user.isEmpty() || !user.get().isWithdrawn()) {
+            return false;
+        }
+
+        userRepository.delete(user.get());
+        return true;
     }
 
     private OAuthWithdrawalSession consumeWithdrawalSession(String state) {

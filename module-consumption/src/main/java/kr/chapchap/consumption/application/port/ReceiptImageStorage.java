@@ -9,4 +9,6 @@ public interface ReceiptImageStorage {
     );
 
     void delete(String objectKey);
+
+    void deleteAllByUserId(Long userId);
 }

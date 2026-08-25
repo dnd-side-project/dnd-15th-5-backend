@@ -60,6 +60,10 @@ public class User extends BaseTimeEntity {
         return status == UserStatus.PENDING_TERMS;
     }
 
+    public boolean isWithdrawn() {
+        return status == UserStatus.WITHDRAWN;
+    }
+
     public void completeTermsAgreement() {
         if (!isPendingTerms()) {
             throw new BusinessException(AccountErrorCode.TERMS_AGREEMENT_NOT_ALLOWED);

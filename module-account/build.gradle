@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     implementation project(":module-core")
+    implementation project(":module-consumption")
 
     implementation "org.springframework.boot:spring-boot-starter-data-redis"
     implementation "org.springframework.boot:spring-boot-starter-oauth2-resource-server"

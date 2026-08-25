@@ -21,6 +21,10 @@ public class ReceiptImageCleanupService {
     private final ReceiptImageStorage receiptImageStorage;
     private final Clock clock;
 
+    public void deleteAllByUserId(Long userId) {
+        receiptImageStorage.deleteAllByUserId(userId);
+    }
+
     public int cleanupExpiredImages() {
         LocalDateTime cleanupAt = LocalDateTime.now(clock);
         long afterId = 0L;
