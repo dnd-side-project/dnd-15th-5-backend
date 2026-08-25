@@ -4,11 +4,9 @@ plugins {
 
 dependencies {
     implementation project(":module-core")
-
-    implementation project(":module-consumption")
-    implementation project(":module-place")
     implementation project(":module-account")
 
-    implementation project(":module-notification")
+    implementation "com.google.firebase:firebase-admin:${libs.versions.firebase.admin.get()}"
+
     testImplementation testFixtures(project(":module-core"))
 }

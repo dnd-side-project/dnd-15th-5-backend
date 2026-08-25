@@ -14,5 +14,6 @@ include(
         "module-report",
         "module-place",
         "module-recommendation",
+        "module-notification",
         "module-core"
 )
