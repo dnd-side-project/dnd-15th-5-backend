@@ -11,6 +11,7 @@ public record CurrentStatusInfo(
         int monthlyCount,
         Map<String, Integer> monthlyCategoryCounts,
         String recentDiscoveryMessage,
-        List<AcquiredSticker> monthlyStickers
+        List<AcquiredSticker> monthlyStickers,
+        YearMonth firstAvailableYearMonth
 ) {
 }

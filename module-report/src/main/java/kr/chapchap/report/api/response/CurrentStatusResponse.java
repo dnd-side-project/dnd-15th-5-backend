@@ -13,10 +13,12 @@ public record CurrentStatusResponse(
         int monthlyCount,
         Map<String, Integer> monthlyCategoryCounts,
         String recentDiscoveryMessage,
-        List<StickerResponse> monthlyStickers
+        List<StickerResponse> monthlyStickers,
+        String firstAvailableYearMonth
 ) {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final DateTimeFormatter YEAR_MONTH_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM");
 
     public static CurrentStatusResponse from(CurrentStatusInfo info) {
         return new CurrentStatusResponse(
@@ -25,7 +27,8 @@ public record CurrentStatusResponse(
                 info.monthlyCount(),
                 info.monthlyCategoryCounts(),
                 info.recentDiscoveryMessage(),
-                info.monthlyStickers().stream().map(StickerResponse::from).toList()
+                info.monthlyStickers().stream().map(StickerResponse::from).toList(),
+                info.firstAvailableYearMonth() != null ? info.firstAvailableYearMonth().format(YEAR_MONTH_FORMAT) : null
         );
     }
 

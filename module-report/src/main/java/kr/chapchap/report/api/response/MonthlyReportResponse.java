@@ -17,7 +17,8 @@ public record MonthlyReportResponse(
         List<TownRankResponse> townRanks,
         SummaryResponse summary,
         List<CategoryStatResponse> categoryStats,
-        TimePatternResponse timePattern
+        TimePatternResponse timePattern,
+        String firstAvailableYearMonth
 ) {
 
     private static final DateTimeFormatter YEAR_MONTH_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM");
@@ -32,7 +33,8 @@ public record MonthlyReportResponse(
                 info.townRanks().stream().map(TownRankResponse::from).toList(),
                 SummaryResponse.from(info.summary()),
                 info.categoryStats().stream().map(CategoryStatResponse::from).toList(),
-                TimePatternResponse.from(info.timePattern())
+                TimePatternResponse.from(info.timePattern()),
+                info.firstAvailableYearMonth() != null ? info.firstAvailableYearMonth().format(YEAR_MONTH_FORMAT) : null
         );
     }
 

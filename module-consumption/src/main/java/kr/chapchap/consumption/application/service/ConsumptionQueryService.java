@@ -18,6 +18,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -80,6 +81,11 @@ public class ConsumptionQueryService {
 
     public List<Long> getActiveUserIds(LocalDate from, LocalDate toExclusive) {
         return consumptionQueryRepository.findDistinctUserIdsByDateRange(from, toExclusive);
+    }
+
+    public Optional<YearMonth> getFirstAvailableYearMonth(Long userId) {
+        return consumptionQueryRepository.findEarliestPurchaseDate(userId)
+                .map(YearMonth::from);
     }
 
 

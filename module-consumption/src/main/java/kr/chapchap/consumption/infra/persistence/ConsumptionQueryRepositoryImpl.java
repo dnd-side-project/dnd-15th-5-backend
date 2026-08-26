@@ -137,6 +137,19 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
     }
 
     @Override
+    public Optional<LocalDate> findEarliestPurchaseDate(Long userId) {
+        QConsumption consumption = QConsumption.consumption;
+
+        LocalDate earliestPurchaseDate = queryFactory
+                .select(consumption.purchaseDate.min())
+                .from(consumption)
+                .where(consumption.userId.eq(userId))
+                .fetchOne();
+
+        return Optional.ofNullable(earliestPurchaseDate);
+    }
+
+    @Override
     public List<Consumption> findAllByUserAndDateRange(Long userId, LocalDate from, LocalDate toExclusive) {
         QConsumption consumption = QConsumption.consumption;
 

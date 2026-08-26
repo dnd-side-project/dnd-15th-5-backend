@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +63,8 @@ public class MonthlyReportQueryService {
         List<ReportTownRank> townRanks = reportTownRankRepository.findByReportIdOrderByRankAsc(report.getId());
         List<ReportPlaceRank> placeRanks = reportPlaceRankRepository.findByReportIdOrderByRankAsc(report.getId());
         List<ReportTimePattern> timePatterns = reportTimePatternRepository.findByReportId(report.getId());
+        YearMonth firstAvailableYearMonth = consumptionActivityPort.findFirstAvailableYearMonth(command.userId())
+                .orElse(null);
 
         return new MonthlyReportInfo(
                 report.getId(),
@@ -71,7 +74,8 @@ public class MonthlyReportQueryService {
                 toTownRankInfos(townRanks),
                 toSummaryInfo(report),
                 toCategoryStatInfos(categoryStats),
-                toTimePatternInfo(timePatterns)
+                toTimePatternInfo(timePatterns),
+                firstAvailableYearMonth
         );
     }
 
