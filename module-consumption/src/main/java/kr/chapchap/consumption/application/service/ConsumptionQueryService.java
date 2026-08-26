@@ -10,12 +10,14 @@ import kr.chapchap.consumption.application.port.PlaceSummaryLookupPort;
 import kr.chapchap.consumption.domain.entity.Consumption;
 import kr.chapchap.consumption.domain.entity.PlaceStickerRow;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
+import kr.chapchap.place.application.info.PlacePhotoInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -31,6 +33,7 @@ public class ConsumptionQueryService {
 
     private final ConsumptionQueryRepository consumptionQueryRepository;
     private final PlaceSummaryLookupPort placeSummaryLookupPort;
+    private final PlaceThumbnailBatchLookup placeThumbnailBatchLookup;
     private final StickerQueryService stickerQueryService;
 
     public ConsumptionScrollInfo search(ConsumptionSearchCommand command) {
@@ -54,12 +57,18 @@ public class ConsumptionQueryService {
 
         List<Long> placeIds = content.stream().map(Consumption::getPlaceId).distinct().toList();
         Map<Long, PlaceSummaryInfo> summaries = placeSummaryLookupPort.findSummaries(placeIds);
+        Map<Long, PlacePhotoInfo> thumbnails = findThumbnails(content, summaries);
 
         List<ConsumptionInfo> consumptions = content.stream()
-                .map(consumption -> ConsumptionInfo.of(
-                        consumption,
-                        summaries.getOrDefault(consumption.getPlaceId(), UNKNOWN_PLACE_SUMMARY).name()
-                ))
+                .map(consumption -> {
+                    PlaceSummaryInfo summary = summaries.getOrDefault(consumption.getPlaceId(), UNKNOWN_PLACE_SUMMARY);
+                    PlacePhotoInfo photo = thumbnails.get(consumption.getPlaceId());
+                    return ConsumptionInfo.of(
+                            consumption,
+                            summary.name(),
+                            photo != null ? photo.thumbnailUrl() : null
+                    );
+                })
                 .toList();
 
         Consumption last = content.isEmpty() ? null : content.get(content.size() - 1);
@@ -71,6 +80,18 @@ public class ConsumptionQueryService {
                 last != null ? last.getPurchaseTime() : null,
                 last != null ? last.getId() : null
         );
+    }
+
+    private Map<Long, PlacePhotoInfo> findThumbnails(List<Consumption> content, Map<Long, PlaceSummaryInfo> summaries) {
+        Map<Long, String> googlePlaceIdsByPlaceId = new LinkedHashMap<>();
+        for (Consumption consumption : content) {
+            PlaceSummaryInfo summary = summaries.get(consumption.getPlaceId());
+            String googlePlaceId = summary != null ? summary.googlePlaceId() : null;
+            if (googlePlaceId != null && !googlePlaceId.isBlank()) {
+                googlePlaceIdsByPlaceId.putIfAbsent(consumption.getPlaceId(), googlePlaceId);
+            }
+        }
+        return placeThumbnailBatchLookup.findThumbnails(googlePlaceIdsByPlaceId);
     }
 
     public List<ConsumptionActivityInfo> getActivities(Long userId, LocalDate from, LocalDate toExclusive) {

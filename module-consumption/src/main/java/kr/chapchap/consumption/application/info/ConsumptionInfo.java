@@ -12,10 +12,15 @@ public record ConsumptionInfo(
         String category,
         Long amount,
         LocalDate purchaseDate,
-        LocalTime purchaseTime
+        LocalTime purchaseTime,
+        String thumbnailUrl
 ) {
 
     public static ConsumptionInfo of(Consumption consumption, String placeName) {
+        return of(consumption, placeName, null);
+    }
+
+    public static ConsumptionInfo of(Consumption consumption, String placeName, String thumbnailUrl) {
         return new ConsumptionInfo(
                 consumption.getId(),
                 consumption.getPlaceId(),
@@ -23,7 +28,13 @@ public record ConsumptionInfo(
                 consumption.getCategory(),
                 consumption.getAmount(),
                 consumption.getPurchaseDate(),
-                consumption.getPurchaseTime()
+                consumption.getPurchaseTime(),
+                thumbnailUrl
         );
+    }
+
+    public ConsumptionInfo withThumbnailUrl(String thumbnailUrl) {
+        return new ConsumptionInfo(
+                id, placeId, placeName, category, amount, purchaseDate, purchaseTime, thumbnailUrl);
     }
 }

@@ -16,7 +16,8 @@ public record FrequentPlaceRankInfo(
             String placeName,
             String category,
             String dongName,
-            long visitCount
+            long visitCount,
+            String thumbnailUrl
     ) {
     }
 }

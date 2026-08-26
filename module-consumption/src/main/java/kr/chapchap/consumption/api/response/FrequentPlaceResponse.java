@@ -25,11 +25,13 @@ public record FrequentPlaceResponse(
             String placeName,
             String category,
             String dongname,
-            long visitCount
+            long visitCount,
+            String thumbnailUrl
     ) {
         public static FrequentPlaceItem from(PlaceRankInfo info) {
             return new FrequentPlaceItem(
-                    info.rank(), info.placeId(), info.placeName(), info.category(), info.dongName(), info.visitCount()
+                    info.rank(), info.placeId(), info.placeName(), info.category(), info.dongName(), info.visitCount(),
+                    info.thumbnailUrl()
             );
         }
     }

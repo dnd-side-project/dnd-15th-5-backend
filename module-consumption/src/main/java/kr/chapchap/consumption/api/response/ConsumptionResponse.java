@@ -12,7 +12,8 @@ public record ConsumptionResponse(
         String category,
         Long amount,
         LocalDate purchaseDate,
-        LocalTime purchaseTime
+        LocalTime purchaseTime,
+        String thumbnailUrl
 ) {
 
     public static ConsumptionResponse from(ConsumptionInfo info) {
@@ -23,7 +24,8 @@ public record ConsumptionResponse(
                 info.category(),
                 info.amount(),
                 info.purchaseDate(),
-                info.purchaseTime()
+                info.purchaseTime(),
+                info.thumbnailUrl()
         );
     }
 }

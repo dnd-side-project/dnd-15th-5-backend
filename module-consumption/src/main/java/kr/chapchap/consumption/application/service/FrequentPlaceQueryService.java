@@ -8,6 +8,7 @@ import kr.chapchap.consumption.application.info.PlaceSummaryInfo;
 import kr.chapchap.consumption.application.port.PlaceSummaryLookupPort;
 import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
+import kr.chapchap.place.application.info.PlacePhotoInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
@@ -29,6 +31,7 @@ public class FrequentPlaceQueryService {
 
     private final ConsumptionQueryRepository consumptionQueryRepository;
     private final PlaceSummaryLookupPort placeSummaryLookupPort;
+    private final PlaceThumbnailBatchLookup placeThumbnailBatchLookup;
     private final Clock clock;
 
     public FrequentPlaceRankInfo getFrequentPlaces(FrequentPlaceRankCommand command) {
@@ -53,18 +56,21 @@ public class FrequentPlaceQueryService {
 
         List<Long> placeIds = content.stream().map(PlaceCategoryVisitRow::placeId).toList();
         Map<Long, PlaceSummaryInfo> summaries = placeSummaryLookupPort.findSummaries(placeIds);
+        Map<Long, PlacePhotoInfo> thumbnails = findThumbnails(placeIds, summaries);
 
         List<PlaceRankInfo> places = IntStream.range(0, content.size())
                 .mapToObj(i -> {
                     PlaceCategoryVisitRow row = content.get(i);
                     PlaceSummaryInfo summary = summaries.getOrDefault(row.placeId(), UNKNOWN_PLACE_SUMMARY);
+                    PlacePhotoInfo photo = thumbnails.get(row.placeId());
                     return new PlaceRankInfo(
                             command.cursorRank() + i + 1,
                             row.placeId(),
                             summary.name(),
                             row.category(),
                             summary.dongName(),
-                            row.visitCount()
+                            row.visitCount(),
+                            photo != null ? photo.thumbnailUrl() : null
                     );
                 })
                 .toList();
@@ -78,5 +84,17 @@ public class FrequentPlaceQueryService {
                 last != null ? last.placeId() : null,
                 places.isEmpty() ? command.cursorRank() : places.get(places.size() - 1).rank()
         );
+    }
+
+    private Map<Long, PlacePhotoInfo> findThumbnails(List<Long> placeIds, Map<Long, PlaceSummaryInfo> summaries) {
+        Map<Long, String> googlePlaceIdsByPlaceId = new LinkedHashMap<>();
+        for (Long placeId : placeIds) {
+            PlaceSummaryInfo summary = summaries.get(placeId);
+            String googlePlaceId = summary != null ? summary.googlePlaceId() : null;
+            if (googlePlaceId != null && !googlePlaceId.isBlank()) {
+                googlePlaceIdsByPlaceId.put(placeId, googlePlaceId);
+            }
+        }
+        return placeThumbnailBatchLookup.findThumbnails(googlePlaceIdsByPlaceId);
     }
 }
