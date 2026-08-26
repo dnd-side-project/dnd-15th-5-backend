@@ -35,15 +35,15 @@ public record PlaceDetailResponse(
         }
     }
 
-    public record RecentStickerResponse(String itemName, LocalDate receivedAt) {
+    public record RecentStickerResponse(String itemCategory, String itemName, LocalDate receivedAt) {
         public static RecentStickerResponse from(StickerInfo info) {
-            return new RecentStickerResponse(info.itemName(), info.receivedAt());
+            return new RecentStickerResponse(info.itemCategory(), info.itemName(), info.receivedAt());
         }
     }
 
-    public record StickerSummaryResponse(String itemName, long count) {
+    public record StickerSummaryResponse(String itemCategory, String itemName, long count) {
         public static StickerSummaryResponse from(StickerCountInfo info) {
-            return new StickerSummaryResponse(info.itemName(), info.count());
+            return new StickerSummaryResponse(info.itemCategory(), info.itemName(), info.count());
         }
     }
 }
