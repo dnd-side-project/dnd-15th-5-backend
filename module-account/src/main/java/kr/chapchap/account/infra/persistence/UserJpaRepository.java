@@ -3,6 +3,8 @@ package kr.chapchap.account.infra.persistence;
 import jakarta.persistence.LockModeType;
 import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.entity.UserStatus;
+import kr.chapchap.account.domain.entity.UserStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -24,4 +26,7 @@ interface UserJpaRepository extends JpaRepository<User, Long> {
             ORDER BY u.id
             """)
     List<Long> findIdsByStatus(@Param("status") UserStatus status);
+
+    List<User> findByStatusAndFcmTokenIsNotNullAndPushEnabledTrueAndIdGreaterThanOrderByIdAsc(
+            UserStatus status, Long cursorId, Pageable pageable);
 }

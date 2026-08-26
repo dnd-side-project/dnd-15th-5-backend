@@ -45,6 +45,32 @@ public class User extends BaseTimeEntity {
     @Column(name = "withdrawn_at")
     private LocalDateTime withdrawnAt;
 
+    @Column(name = "fcm_token", length = 512)
+    private String fcmToken;
+
+    @Column(name = "push_enabled", nullable = false)
+    private boolean pushEnabled = true;
+
+    @Column(name = "fcm_token_updated_at")
+    private LocalDateTime fcmTokenUpdatedAt;
+
+    public void registerFcmToken(String fcmToken, LocalDateTime now) {
+        if (fcmToken == null || fcmToken.isBlank()) {
+            throw new IllegalArgumentException("FCM 토큰은 비어 있을 수 없습니다.");
+        }
+        this.fcmToken = fcmToken;
+        this.fcmTokenUpdatedAt = now;
+    }
+
+    public void clearFcmToken() {
+        this.fcmToken = null;
+        this.fcmTokenUpdatedAt = null;
+    }
+
+    public void updatePushEnabled(boolean pushEnabled) {
+        this.pushEnabled = pushEnabled;
+    }
+
     public static User create(String nickname) {
         User user = new User();
         user.nickname = validateNickname(nickname);

@@ -9,13 +9,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import kr.chapchap.account.api.request.AccountUpdateRequest;
+import kr.chapchap.account.api.request.DeviceTokenRegisterRequest;
 import kr.chapchap.account.api.response.AccountResponse;
 import kr.chapchap.account.api.response.AuthenticationResponseHandler;
+import kr.chapchap.account.application.command.RegisterDeviceTokenCommand;
 import kr.chapchap.account.application.info.AccountInfo;
 import kr.chapchap.account.application.info.OAuthClientType;
 import kr.chapchap.account.application.service.AccountCommandService;
 import kr.chapchap.account.application.service.AccountQueryService;
 import kr.chapchap.account.application.service.AccountWithdrawalService;
+import kr.chapchap.account.application.service.DeviceTokenCommandService;
 import kr.chapchap.core.web.auth.ChapChapUserId;
 import kr.chapchap.core.web.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -23,12 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.util.Optional;
@@ -44,6 +42,7 @@ public class AccountController {
     private final AccountCommandService accountCommandService;
     private final AccountWithdrawalService accountWithdrawalService;
     private final AuthenticationResponseHandler authenticationResponseHandler;
+    private final DeviceTokenCommandService deviceTokenCommandService;
 
     @Operation(
             summary = "내 정보 조회",
@@ -189,5 +188,22 @@ public class AccountController {
 
         authenticationResponseHandler.clearRefreshTokenCookie(response);
         return ResponseEntity.ok(ApiResponse.ok());
+    }
+
+    @PatchMapping("/me/device-token")
+    public ApiResponse<Void> registerDeviceToken(
+            @ChapChapUserId Long userId,
+            @Valid @RequestBody DeviceTokenRegisterRequest request
+            ){
+        deviceTokenCommandService.registerToken(new RegisterDeviceTokenCommand(userId, request.fcmToken()));
+        return ApiResponse.ok();
+    }
+
+    @DeleteMapping("/me/device-token")
+    public ApiResponse<Void> unregisterDeviceToken(
+            @ChapChapUserId Long userId
+    ) {
+        deviceTokenCommandService.unregisterToken(userId);
+        return ApiResponse.ok();
     }
 }

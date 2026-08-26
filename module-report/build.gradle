@@ -9,5 +9,6 @@ dependencies {
     implementation project(":module-place")
     implementation project(":module-account")
 
+    implementation project(":module-notification")
     testImplementation testFixtures(project(":module-core"))
 }

@@ -8,6 +8,7 @@ import kr.chapchap.account.application.info.OAuthClientType;
 import kr.chapchap.account.application.service.AccountCommandService;
 import kr.chapchap.account.application.service.AccountQueryService;
 import kr.chapchap.account.application.service.AccountWithdrawalService;
+import kr.chapchap.account.application.service.DeviceTokenCommandService;
 import kr.chapchap.account.exception.AccountErrorCode;
 import kr.chapchap.config.CorsConfig;
 import kr.chapchap.config.SecurityConfig;
@@ -70,6 +71,9 @@ class AccountApiTest {
 
     @MockitoBean
     private AccountWithdrawalService accountWithdrawalService;
+
+    @MockitoBean
+    private DeviceTokenCommandService deviceTokenCommandService;
 
     @MockitoBean
     private JwtDecoder jwtDecoder;

@@ -4,6 +4,7 @@ import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.entity.UserStatus;
 import kr.chapchap.account.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -38,5 +39,11 @@ public class UserRepositoryAdapter implements UserRepository {
     @Override
     public void delete(User user) {
         userJpaRepository.delete(user);
+    }
+
+    @Override
+    public List<User> findActivePushTargets(Long cursorId, int limit) {
+        return userJpaRepository.findByStatusAndFcmTokenIsNotNullAndPushEnabledTrueAndIdGreaterThanOrderByIdAsc(
+                UserStatus.ACTIVE, cursorId, PageRequest.of(0, limit));
     }
 }
