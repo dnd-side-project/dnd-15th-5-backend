@@ -131,7 +131,7 @@ class MonthlyReportQueryServiceIntegrationTest {
         // then
         assertThat(info.reportId()).isEqualTo(1L);
         assertThat(info.persona().type()).isEqualTo("RHMP");
-        assertThat(info.persona().typeName()).isEqualTo("단골 반복형 · 동네 집중형 · 밤소비형 · 규칙형");
+        assertThat(info.persona().typeName()).isEqualTo("골목 야간반장");
         assertThat(info.persona().scores().scoreExploration()).isEqualByComparingTo("0.30");
 
         assertThat(info.placeRanks()).hasSize(1);
