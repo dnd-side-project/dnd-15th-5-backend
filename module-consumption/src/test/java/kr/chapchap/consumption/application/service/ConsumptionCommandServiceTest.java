@@ -134,11 +134,11 @@ class ConsumptionCommandServiceTest {
     }
 
     @Test
-    void 같은_장소의_세_번째_방문이면_왕관_스티커를_저장한다() {
+    void 같은_장소의_여섯_번째_방문이면_왕관_스티커를_저장한다() {
         // given
         ConsumptionCreateCommand command = createCommand(null);
         StickerItem crown = stickerItem(12L, "스페셜", "왕관");
-        given(consumptionRepository.countByUserIdAndPlaceId(USER_ID, PLACE_ID)).willReturn(2L);
+        given(consumptionRepository.countByUserIdAndPlaceId(USER_ID, PLACE_ID)).willReturn(5L);
         given(stickerItemRepository.findByCategoryAndName("스페셜", "왕관"))
                 .willReturn(Optional.of(crown));
         given(consumptionRepository.save(any(Consumption.class))).willAnswer(invocation -> {

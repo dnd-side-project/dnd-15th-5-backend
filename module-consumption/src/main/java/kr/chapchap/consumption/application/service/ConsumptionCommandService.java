@@ -59,7 +59,7 @@ public class ConsumptionCommandService {
 
     private StickerItem selectStickerItem(ConsumptionCreateCommand command, Long placeId) {
         long visitCount = consumptionRepository.countByUserIdAndPlaceId(command.userId(), placeId) + 1;
-        if (visitCount == SPECIAL_STICKER_VISIT_COUNT) {
+        if (visitCount % SPECIAL_STICKER_VISIT_COUNT == 0) {
             return stickerItemRepository.findByCategoryAndName(SPECIAL_STICKER_CATEGORY, CROWN_STICKER_NAME)
                     .orElseThrow(() -> new IllegalStateException("스페셜 왕관 스티커가 등록되어 있지 않습니다."));
         }
