@@ -14,7 +14,8 @@ public record MonthlyReportInfo(
         List<TownRankInfo> townRanks,
         SummaryInfo summary,
         List<CategoryStatInfo> categoryStats,
-        TimePatternInfo timePattern
+        TimePatternInfo timePattern,
+        YearMonth firstAvailableYearMonth
 ) {
 
     public record PersonaInfo(String type, String typeName, List<String> keywords, ScoresInfo scores) {

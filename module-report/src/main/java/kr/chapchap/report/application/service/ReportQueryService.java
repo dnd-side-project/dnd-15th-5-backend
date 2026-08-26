@@ -58,9 +58,12 @@ public class ReportQueryService {
         String recentDiscoveryMessage = buildRecentDiscoveryMessage(activities, today, trendStart);
         List<AcquiredSticker> monthlyStickers = monthlyStickerLookupPort.findRecentAcquiredStickers(
                 command.userId(), monthStart, monthEndInclusive.plusDays(1));
+        YearMonth firstAvailableYearMonth = consumptionActivityPort.findFirstAvailableYearMonth(command.userId())
+                .orElse(null);
 
         return new CurrentStatusInfo(
-                today, weeklyCounts, monthlyCount, monthlyCategoryCounts, recentDiscoveryMessage, monthlyStickers);
+                today, weeklyCounts, monthlyCount, monthlyCategoryCounts, recentDiscoveryMessage, monthlyStickers,
+                firstAvailableYearMonth);
     }
 
     // 일(0) ~ 토(6) 순서로 반환

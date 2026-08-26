@@ -6,6 +6,7 @@ import kr.chapchap.report.application.info.ConsumptionActivity;
 import kr.chapchap.report.application.info.MonthlyReportInfo;
 import kr.chapchap.report.application.port.ConsumptionActivityPort;
 import kr.chapchap.report.application.port.PlaceStickerLookupPort;
+import kr.chapchap.report.application.port.UserNicknameLookupPort;
 import kr.chapchap.report.domain.entity.PersonaType;
 import kr.chapchap.report.domain.entity.Report;
 import kr.chapchap.report.domain.entity.ReportCategoryStat;
@@ -66,6 +67,9 @@ class MonthlyReportQueryServiceTest {
     @Mock
     private PlaceStickerLookupPort placeStickerLookupPort;
 
+    @Mock
+    private UserNicknameLookupPort userNicknameLookupPort;
+
     private MonthlyReportQueryService sut;
 
     @BeforeEach
@@ -77,7 +81,8 @@ class MonthlyReportQueryServiceTest {
                 reportPlaceRankRepository,
                 reportTimePatternRepository,
                 consumptionActivityPort,
-                placeStickerLookupPort
+                placeStickerLookupPort,
+                userNicknameLookupPort
         );
     }
 
@@ -123,7 +128,7 @@ class MonthlyReportQueryServiceTest {
         // then
         assertThat(info.reportId()).isEqualTo(REPORT_ID);
         assertThat(info.persona().type()).isEqualTo("RHMP");
-        assertThat(info.persona().typeName()).isEqualTo("단골 반복형 · 동네 집중형 · 밤소비형 · 규칙형");
+        assertThat(info.persona().typeName()).isEqualTo("골목 야간반장");
         assertThat(info.persona().keywords()).containsExactly("단골 반복형", "동네 집중형", "밤소비형", "규칙형");
         assertThat(info.placeRanks()).hasSize(1);
         assertThat(info.placeRanks().get(0).placeName()).isEqualTo("투썸 플레이스 뚝섬지점");

@@ -83,6 +83,8 @@ public class SecurityConfig {
                                 "/swagger-ui",
                                 "/swagger-ui/**"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/reports/share/*")
+                        .permitAll()
                         .anyRequest().hasAuthority("SCOPE_user")
                 );
 

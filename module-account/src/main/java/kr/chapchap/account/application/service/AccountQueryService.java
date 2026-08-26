@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 @Service
@@ -31,5 +33,11 @@ public class AccountQueryService {
                 : profileImageStorage.createReadUrl(user.getProfileImageKey());
 
         return AccountInfo.from(user, profileImageUrl);
+    }
+
+    public Optional<String> getNickname(Long userId) {
+        return userRepository.findById(userId)
+                .filter(User::isActive)
+                .map(User::getNickname);
     }
 }

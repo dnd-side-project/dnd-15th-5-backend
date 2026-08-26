@@ -51,12 +51,24 @@ public enum PersonaType {
     }
 
     public String getTypeName() {
-        return visitStyle.label + " · " + activityRange.label + " · " + consumptionTime.label + " · " + consumptionRhythm.label;
+        return switch (this) {
+            case RHDP -> "동네 터줏대감";
+            case RHMP -> "골목 야간반장";
+            case NWDF -> "골목 발굴러";
+            case NWMF -> "미식 유목민";
+            default -> visitStyle.label + " · " + activityRange.label + " · " + consumptionTime.label + " · " + consumptionRhythm.label;
+        };
     }
 
     public String getDescription() {
-        return visitStyle.description + " " + activityRange.description + " "
-                + consumptionTime.description + " " + consumptionRhythm.description;
+        return switch (this) {
+            case RHDP -> "익숙한 동네와 단골 가게를 자주 찾아요. 마음에 들면 꾸준히 찾는 편이에요. 사장님이 알아볼지도 모르는 편 단골 타입이에요.";
+            case RHMP -> "정해진 동네, 익숙한 가게를 밤에 즐겨 찾는 편이에요. 새로운 곳보다 아는 곳에서 확실한 만족을 얻는 타입이에요.";
+            case NWDF -> "익숙한 동네에서도 새로운 가게를 찾아다녀요. 골목 속 숨은 맛집을 발견하는 재미를 즐겨요. 남들보다 먼저 찜해두는 타입이에요.";
+            case NWMF -> "맛있는 곳이라면 어디든 찾아가요. 한곳에 머물기엔 궁금한 맛집이 너무 많아요. 오늘도 새로운 맛을 찾아 떠나는 타입이에요.";
+            default -> visitStyle.description + " " + activityRange.description + " "
+                    + consumptionTime.description + " " + consumptionRhythm.description;
+        };
     }
 
 

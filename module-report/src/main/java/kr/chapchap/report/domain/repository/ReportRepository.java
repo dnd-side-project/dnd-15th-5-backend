@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface ReportRepository extends JpaRepository<Report, Long> {
 
     Optional<Report> findByUserIdAndReportMonth(Long userId, LocalDate reportMonth);
+
+    Optional<Report> findByShareToken(String shareToken);
 }

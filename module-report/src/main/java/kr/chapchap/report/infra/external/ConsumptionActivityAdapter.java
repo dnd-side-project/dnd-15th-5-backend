@@ -8,7 +8,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 @Component
@@ -26,6 +28,11 @@ public class ConsumptionActivityAdapter implements ConsumptionActivityPort {
     @Override
     public List<Long> findActiveUserIds(LocalDate from, LocalDate toExclusive) {
         return consumptionQueryService.getActiveUserIds(from, toExclusive);
+    }
+
+    @Override
+    public Optional<YearMonth> findFirstAvailableYearMonth(Long userId) {
+        return consumptionQueryService.getFirstAvailableYearMonth(userId);
     }
 
     private ConsumptionActivity toConsumptionActivity(ConsumptionActivityInfo info) {

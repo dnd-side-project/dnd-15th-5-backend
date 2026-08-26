@@ -7,6 +7,7 @@ import kr.chapchap.report.application.command.GetMonthlyReportCommand;
 import kr.chapchap.report.application.info.MonthlyReportInfo;
 import kr.chapchap.report.application.port.ConsumptionActivityPort;
 import kr.chapchap.report.application.port.PlaceStickerLookupPort;
+import kr.chapchap.report.application.port.UserNicknameLookupPort;
 import kr.chapchap.report.domain.entity.Report;
 import kr.chapchap.report.domain.repository.ReportCategoryStatRepository;
 import kr.chapchap.report.domain.repository.ReportPlaceRankRepository;
@@ -63,6 +64,7 @@ class MonthlyReportQueryServiceIntegrationTest {
     // module-consumption의 실제 구현이 아니라 순수 Port라, DataJpaTest 컨텍스트에는 빈이 없어 직접 mock한다.
     private final ConsumptionActivityPort consumptionActivityPort = org.mockito.Mockito.mock(ConsumptionActivityPort.class);
     private final PlaceStickerLookupPort placeStickerLookupPort = org.mockito.Mockito.mock(PlaceStickerLookupPort.class);
+    private final UserNicknameLookupPort userNicknameLookupPort = org.mockito.Mockito.mock(UserNicknameLookupPort.class);
 
     private MonthlyReportQueryService sut;
 
@@ -75,7 +77,8 @@ class MonthlyReportQueryServiceIntegrationTest {
                 reportPlaceRankRepository,
                 reportTimePatternRepository,
                 consumptionActivityPort,
-                placeStickerLookupPort
+                placeStickerLookupPort,
+                userNicknameLookupPort
         );
 
         entityManager.createNativeQuery(
@@ -128,7 +131,7 @@ class MonthlyReportQueryServiceIntegrationTest {
         // then
         assertThat(info.reportId()).isEqualTo(1L);
         assertThat(info.persona().type()).isEqualTo("RHMP");
-        assertThat(info.persona().typeName()).isEqualTo("단골 반복형 · 동네 집중형 · 밤소비형 · 규칙형");
+        assertThat(info.persona().typeName()).isEqualTo("골목 야간반장");
         assertThat(info.persona().scores().scoreExploration()).isEqualByComparingTo("0.30");
 
         assertThat(info.placeRanks()).hasSize(1);
