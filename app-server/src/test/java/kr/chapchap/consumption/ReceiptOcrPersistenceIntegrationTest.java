@@ -8,6 +8,7 @@ import kr.chapchap.consumption.application.port.ReceiptImageStorage;
 import kr.chapchap.consumption.application.port.ReceiptOcrPort;
 import kr.chapchap.consumption.application.service.ReceiptOcrService;
 import kr.chapchap.core.test.TestcontainersConfiguration;
+import kr.chapchap.place.application.port.GooglePlaceTextSearchPort;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,10 +22,12 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -48,6 +51,9 @@ class ReceiptOcrPersistenceIntegrationTest {
 
     @MockitoBean
     private ReceiptImageStorage receiptImageStorage;
+
+    @MockitoBean
+    private GooglePlaceTextSearchPort googlePlaceTextSearchPort;
 
     @Autowired
     ReceiptOcrPersistenceIntegrationTest(
@@ -86,6 +92,8 @@ class ReceiptOcrPersistenceIntegrationTest {
                             .isFalse();
                     return OBJECT_KEY;
                 });
+        given(googlePlaceTextSearchPort.searchFirst(anyString()))
+                .willReturn(Optional.empty());
 
         // when
         ReceiptOcrInfo result = receiptOcrService.recognize(
@@ -105,6 +113,9 @@ class ReceiptOcrPersistenceIntegrationTest {
         assertThat(receiptImage.get("status")).isEqualTo("TEMPORARY");
         assertThat(receiptImage.get("expires_at")).isNotNull();
         assertThat(receiptImage.get("consumption_id")).isNull();
+        assertThat(result.googlePlaceSearchResult()).isNull();
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM places", Long.class))
+                .isZero();
     }
 
     @Test

@@ -5,6 +5,8 @@ import kr.chapchap.consumption.application.info.ReceiptOcrInfo;
 import kr.chapchap.consumption.application.port.ReceiptImageStorage;
 import kr.chapchap.consumption.application.port.ReceiptOcrPort;
 import kr.chapchap.consumption.domain.entity.ReceiptImage;
+import kr.chapchap.place.application.info.GooglePlaceSearchResultInfo;
+import kr.chapchap.place.application.service.GooglePlaceSearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +26,7 @@ public class ReceiptOcrService {
     private final ReceiptOcrParser receiptOcrParser;
     private final ReceiptImageStorage receiptImageStorage;
     private final ReceiptImageCommandService receiptImageCommandService;
+    private final GooglePlaceSearchService googlePlaceSearchService;
     private final Clock clock;
 
     public ReceiptOcrInfo recognize(ReceiptOcrCommand command) {
@@ -49,6 +52,10 @@ public class ReceiptOcrService {
                 command.receiptImageContent().length,
                 LocalDateTime.now(clock).plus(TEMPORARY_IMAGE_TTL)
         );
+        GooglePlaceSearchResultInfo googlePlaceSearchResult = googlePlaceSearchService.search(
+                parsedReceipt.storeName(),
+                parsedReceipt.address()
+        ).orElse(null);
 
         return new ReceiptOcrInfo(
                 receiptImage.getId(),
@@ -56,7 +63,8 @@ public class ReceiptOcrService {
                 parsedReceipt.address(),
                 parsedReceipt.purchaseDate(),
                 parsedReceipt.purchaseTime(),
-                parsedReceipt.amount()
+                parsedReceipt.amount(),
+                googlePlaceSearchResult
         );
     }
 }

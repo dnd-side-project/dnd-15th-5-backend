@@ -10,6 +10,7 @@ import kr.chapchap.consumption.application.service.ReceiptOcrService;
 import kr.chapchap.consumption.exception.ConsumptionErrorCode;
 import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.core.web.exception.GlobalExceptionHandler;
+import kr.chapchap.place.application.info.GooglePlaceSearchResultInfo;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,7 +71,15 @@ class ReceiptOcrApiTest {
                         "서울특별시 강남구 봉은사로 125 1층",
                         LocalDate.of(2026, 7, 25),
                         LocalTime.of(11, 20),
-                        33_000L
+                        33_000L,
+                        new GooglePlaceSearchResultInfo(
+                                "ChIJ123",
+                                "투썸플레이스 신논현점",
+                                "서울특별시 강남구 봉은사로 125 1층",
+                                37.5065,
+                                127.0241,
+                                "https://lh3.googleusercontent.com/photo"
+                        )
                 ));
 
         // when & then
@@ -87,7 +96,18 @@ class ReceiptOcrApiTest {
                         .value("서울특별시 강남구 봉은사로 125 1층"))
                 .andExpect(jsonPath("$.data.purchaseDate").value("2026-07-25"))
                 .andExpect(jsonPath("$.data.purchaseTime").value("11:20:00"))
-                .andExpect(jsonPath("$.data.amount").value(33_000L));
+                .andExpect(jsonPath("$.data.amount").value(33_000L))
+                .andExpect(jsonPath("$.data.googlePlaceSearchResult.googlePlaceId")
+                        .value("ChIJ123"))
+                .andExpect(jsonPath("$.data.googlePlaceSearchResult.placeName")
+                        .value("투썸플레이스 신논현점"))
+                .andExpect(jsonPath("$.data.googlePlaceSearchResult.roadAddress")
+                        .value("서울특별시 강남구 봉은사로 125 1층"))
+                .andExpect(jsonPath("$.data.googlePlaceSearchResult.latitude").value(37.5065))
+                .andExpect(jsonPath("$.data.googlePlaceSearchResult.longitude").value(127.0241))
+                .andExpect(jsonPath("$.data.googlePlaceSearchResult.thumbnailUrl")
+                        .value("https://lh3.googleusercontent.com/photo"))
+                .andExpect(jsonPath("$.data.googlePlaceSearchResult.photoName").doesNotExist());
 
         ArgumentCaptor<ReceiptOcrCommand> commandCaptor =
                 ArgumentCaptor.forClass(ReceiptOcrCommand.class);
@@ -100,7 +120,7 @@ class ReceiptOcrApiTest {
     void 인식하지_못한_항목은_null로_반환한다() throws Exception {
         // given
         given(receiptOcrService.recognize(any(ReceiptOcrCommand.class)))
-                .willReturn(new ReceiptOcrInfo(15L, null, null, null, null, null));
+                .willReturn(new ReceiptOcrInfo(15L, null, null, null, null, null, null));
 
         // when & then
         mockMvc.perform(multipart("/consumptions/receipt-ocr")
@@ -114,7 +134,8 @@ class ReceiptOcrApiTest {
                 .andExpect(jsonPath("$.data.address").value((Object) null))
                 .andExpect(jsonPath("$.data.purchaseDate").value((Object) null))
                 .andExpect(jsonPath("$.data.purchaseTime").value((Object) null))
-                .andExpect(jsonPath("$.data.amount").value((Object) null));
+                .andExpect(jsonPath("$.data.amount").value((Object) null))
+                .andExpect(jsonPath("$.data.googlePlaceSearchResult").value((Object) null));
     }
 
     @Test
