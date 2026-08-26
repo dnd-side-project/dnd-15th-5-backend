@@ -16,7 +16,6 @@ public class ReportGeneratedNotificationListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onReportGenerated(ReportGeneratedEvent event) {
         try {
-            log.info("리스너 진입! userId={}", event.userId());
             pushNotificationService.recordReportCompleted(event.userId());
         } catch (RuntimeException exception) {
             log.error("리포트 완성 알림 발송 실패. userId={}", event.userId(), exception);

@@ -46,15 +46,13 @@ public class PushNotificationService {
     // AFTER_COMMIT 리스너 안에서 호출되므로, 이전 트랜잭션 정리가 덜 끝난 상태에 편승하지 않도록 무조건 새 트랜잭션으로 강제
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordReportCompleted(Long userId) {
-        log.info("recordReportCompleted 진입. userId={}", userId);
         Notification notification = Notification.builder()
                 .userId(userId)
                 .type(NotificationType.REPORT_COMPLETED)
                 .title(REPORT_COMPLETED_TITLE)
                 .body(REPORT_COMPLETED_BODY)
                 .build();
-        Notification saved = notificationRepository.save(notification);
-        log.info("recordReportCompleted 저장 완료. id={}, userId={}", saved.getId(), userId);
+        notificationRepository.save(notification);
     }
 
     public void sendPendingReportCompletedPush() {
@@ -126,15 +124,20 @@ public class PushNotificationService {
 
         PushSendResult result = pushSenderPort.sendMulticast(tokens, message);
         Set<String> invalidTokens = new HashSet<>(result.invalidTokens());
+        Set<String> failedTokens = new HashSet<>(result.failedTokens());
 
         for (int i = 0; i < notifications.size(); i++) {
             Notification notification = notifications.get(i);
             UserPushTarget target = targets.get(i);
 
             if (invalidTokens.contains(target.fcmToken())) {
+                // 토큰 자체가 죽은 경우: 재발송해도 소용없으므로 FAILED로 확정하고 토큰을 무효화
                 notification.markPushFailed();
                 userPushTargetPort.invalidateToken(target.userId());
                 log.info("무효 토큰 정리. userId={}", target.userId());
+            } else if (failedTokens.contains(target.fcmToken())) {
+                // 토큰은 유효하지만 일시적 사유로 발송 실패: PENDING을 유지해 다음 배치에서 재시도
+                log.warn("일시적 발송 실패, 다음 배치에서 재시도. userId={}", target.userId());
             } else {
                 notification.markPushSent(null);
             }
