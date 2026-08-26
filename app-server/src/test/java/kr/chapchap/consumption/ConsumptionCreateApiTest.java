@@ -162,6 +162,24 @@ class ConsumptionCreateApiTest {
     }
 
     @Test
+    void 허용되지_않은_소비_카테고리면_등록하지_않는다() throws Exception {
+        // given
+        Map<String, Object> request = validRequest();
+        request.put("category", "스페셜");
+
+        // when & then
+        mockMvc.perform(post("/consumptions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(request))
+                        .with(userJwt()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("C001"))
+                .andExpect(jsonPath("$.data.category").exists());
+
+        then(consumptionCreateService).shouldHaveNoInteractions();
+    }
+
+    @Test
     void Access_Token이_없으면_소비_기록을_등록할_수_없다() throws Exception {
         // when & then
         mockMvc.perform(post("/consumptions")

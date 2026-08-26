@@ -5,6 +5,7 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import kr.chapchap.consumption.application.command.ConsumptionCreateCommand;
@@ -62,6 +63,10 @@ public record ConsumptionCreateRequest(
         @Schema(description = "소비 카테고리", example = "카페")
         @NotBlank(message = "카테고리는 필수입니다.")
         @Size(max = 40, message = "카테고리는 40자 이하여야 합니다.")
+        @Pattern(
+                regexp = "^(카페|운동|편의점/마트|취미/놀거리|음식점|미용/뷰티|기타)$",
+                message = "지원하지 않는 카테고리입니다."
+        )
         String category
 ) {
 
