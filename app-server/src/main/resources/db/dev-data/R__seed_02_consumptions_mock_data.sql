@@ -3,7 +3,30 @@
 TRUNCATE TABLE receipt_images RESTART IDENTITY CASCADE;
 TRUNCATE TABLE consumptions RESTART IDENTITY CASCADE;
 
-INSERT INTO consumptions (purchase_date, purchase_time, amount, category, user_id, place_id) VALUES
+WITH common_sticker AS (
+    SELECT id
+    FROM sticker_item
+    WHERE category = '공통' AND name = '눈'
+)
+INSERT INTO consumptions (
+    purchase_date,
+    purchase_time,
+    amount,
+    category,
+    user_id,
+    place_id,
+    sticker_item_id
+)
+SELECT
+    seed.purchase_date::date,
+    seed.purchase_time::time,
+    seed.amount,
+    seed.category,
+    seed.user_id,
+    seed.place_id,
+    common_sticker.id
+FROM (
+    VALUES
     -- ===== 수민(user_id=1) =====
     ('2026-06-03', '20:15:00', 5500,  '카페',        1, 101),
     ('2026-06-10', '20:45:00', 5500,  '카페',        1, 101),
@@ -55,7 +78,9 @@ INSERT INTO consumptions (purchase_date, purchase_time, amount, category, user_i
     ('2026-07-17', '10:05:00', 4700,  '카페',        3, 401),
     ('2026-07-21', '11:50:00', 9000,  '음식점',      3, 403),
     ('2026-07-24', '08:30:00', 4300,  '카페',        3, 106),
-    ('2026-07-28', '14:15:00', 16000, '음식점',      3, 402);
+    ('2026-07-28', '14:15:00', 16000, '음식점',      3, 402)
+) AS seed(purchase_date, purchase_time, amount, category, user_id, place_id)
+CROSS JOIN common_sticker;
 
 
 WITH numbered AS (

@@ -164,8 +164,8 @@ class AccountWithdrawalIntegrationTest {
                 """, Long.class, GOOGLE_PLACE_ID);
         Long consumptionId = jdbcTemplate.queryForObject("""
                 INSERT INTO consumptions (
-                    purchase_date, purchase_time, amount, category, user_id, place_id
-                ) VALUES (CURRENT_DATE, TIME '12:00:00', 10000, '카페', ?, ?)
+                    purchase_date, purchase_time, amount, category, user_id, place_id, sticker_item_id
+                ) VALUES (CURRENT_DATE, TIME '12:00:00', 10000, '카페', ?, ?, 1)
                 RETURNING id
                 """, Long.class, user.getId(), placeId);
         Long reportId = jdbcTemplate.queryForObject("""

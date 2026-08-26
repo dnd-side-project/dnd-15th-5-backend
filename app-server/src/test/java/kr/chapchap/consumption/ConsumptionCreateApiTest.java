@@ -6,7 +6,7 @@ import kr.chapchap.config.SecurityConfig;
 import kr.chapchap.config.WebMvcConfig;
 import kr.chapchap.consumption.api.controller.ConsumptionCreateController;
 import kr.chapchap.consumption.application.command.ConsumptionCreateCommand;
-import kr.chapchap.consumption.application.info.ConsumptionInfo;
+import kr.chapchap.consumption.application.info.ConsumptionCreateInfo;
 import kr.chapchap.consumption.application.service.ConsumptionCreateService;
 import kr.chapchap.consumption.exception.ConsumptionErrorCode;
 import kr.chapchap.core.exception.BusinessException;
@@ -23,8 +23,6 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -64,17 +62,13 @@ class ConsumptionCreateApiTest {
     }
 
     @Test
-    void 소비_기록을_등록하면_생성된_ID를_반환한다() throws Exception {
+    void 소비_기록을_등록하면_생성된_ID와_획득한_스티커를_반환한다() throws Exception {
         // given
         given(consumptionCreateService.create(any(ConsumptionCreateCommand.class)))
-                .willReturn(new ConsumptionInfo(
+                .willReturn(new ConsumptionCreateInfo(
                         31L,
-                        15L,
-                        "투썸플레이스 신논현점",
-                        "카페",
-                        33_000L,
-                        LocalDate.of(2026, 7, 25),
-                        LocalTime.of(11, 20)
+                        "공통",
+                        "눈"
                 ));
 
         // when & then
@@ -84,7 +78,9 @@ class ConsumptionCreateApiTest {
                         .with(userJwt()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.code").value("S002"))
-                .andExpect(jsonPath("$.data.consumptionId").value(31L));
+                .andExpect(jsonPath("$.data.consumptionId").value(31L))
+                .andExpect(jsonPath("$.data.stickerCategory").value("공통"))
+                .andExpect(jsonPath("$.data.stickerName").value("눈"));
 
         ArgumentCaptor<ConsumptionCreateCommand> commandCaptor =
                 ArgumentCaptor.forClass(ConsumptionCreateCommand.class);
@@ -107,14 +103,10 @@ class ConsumptionCreateApiTest {
         Map<String, Object> request = validRequest();
         request.remove("receiptImageId");
         given(consumptionCreateService.create(any(ConsumptionCreateCommand.class)))
-                .willReturn(new ConsumptionInfo(
+                .willReturn(new ConsumptionCreateInfo(
                         31L,
-                        15L,
-                        "투썸플레이스 신논현점",
-                        "카페",
-                        33_000L,
-                        LocalDate.of(2026, 7, 25),
-                        LocalTime.of(11, 20)
+                        "공통",
+                        "눈"
                 ));
 
         // when & then
@@ -123,7 +115,9 @@ class ConsumptionCreateApiTest {
                         .content(objectMapper.writeValueAsBytes(request))
                         .with(userJwt()))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.consumptionId").value(31L));
+                .andExpect(jsonPath("$.data.consumptionId").value(31L))
+                .andExpect(jsonPath("$.data.stickerCategory").value("공통"))
+                .andExpect(jsonPath("$.data.stickerName").value("눈"));
 
         ArgumentCaptor<ConsumptionCreateCommand> commandCaptor =
                 ArgumentCaptor.forClass(ConsumptionCreateCommand.class);
@@ -162,6 +156,24 @@ class ConsumptionCreateApiTest {
                 .andExpect(jsonPath("$.data.purchaseDate").exists())
                 .andExpect(jsonPath("$.data.purchaseTime").exists())
                 .andExpect(jsonPath("$.data.amount").exists())
+                .andExpect(jsonPath("$.data.category").exists());
+
+        then(consumptionCreateService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 허용되지_않은_소비_카테고리면_등록하지_않는다() throws Exception {
+        // given
+        Map<String, Object> request = validRequest();
+        request.put("category", "스페셜");
+
+        // when & then
+        mockMvc.perform(post("/consumptions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(request))
+                        .with(userJwt()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("C001"))
                 .andExpect(jsonPath("$.data.category").exists());
 
         then(consumptionCreateService).shouldHaveNoInteractions();

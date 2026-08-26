@@ -18,9 +18,9 @@ public record PlaceDetailInfo(
                              String totalVisitComment) {
     }
 
-    public record StickerInfo(String itemName, LocalDate receivedAt) {
+    public record StickerInfo(String itemCategory, String itemName, LocalDate receivedAt) {
     }
 
-    public record StickerCountInfo(String itemName, long count) {
+    public record StickerCountInfo(String itemCategory, String itemName, long count) {
     }
 }

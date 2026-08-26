@@ -7,6 +7,7 @@ import kr.chapchap.consumption.application.port.PlaceLikeLookupPort;
 import kr.chapchap.consumption.application.port.PlaceSummaryLookupPort;
 import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
 import kr.chapchap.consumption.domain.entity.PlaceFirstStickerRow;
+import kr.chapchap.consumption.domain.entity.StickerItem;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
 import kr.chapchap.consumption.exception.ConsumptionErrorCode;
 import kr.chapchap.core.exception.BusinessException;
@@ -50,6 +51,9 @@ class VisitedPlaceQueryServiceTest {
     @Mock
     private StickerQueryService stickerQueryService;
 
+    @Mock
+    private StickerItem stickerItem;
+
     private VisitedPlaceQueryService sut;
 
     @BeforeEach
@@ -88,7 +92,11 @@ class VisitedPlaceQueryServiceTest {
                 102L, new PlaceSummaryInfo("국밥집", "역삼동", "주소2", 37.4999, 127.0364)
         ));
         when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of());
-        when(consumptionQueryRepository.findFirstStickerItemIdsByPlace(eq(1L), any())).thenReturn(List.of());
+        when(consumptionQueryRepository.findFirstStickerItemIdsByPlace(eq(1L), any())).thenReturn(List.of(
+                new PlaceFirstStickerRow(101L, 3L),
+                new PlaceFirstStickerRow(102L, 3L)
+        ));
+        when(stickerQueryService.findItems(any())).thenReturn(Map.of(3L, stickerItem));
         when(consumptionQueryRepository.countDistinctPlacesByUserAndDateRange(eq(1L), any(), any())).thenReturn(0L);
 
         // when
@@ -138,7 +146,7 @@ class VisitedPlaceQueryServiceTest {
     }
 
     @Test
-    void 좋아요한_장소는_liked가_true고_처음_받은_스티커_이름이_채워진다() {
+    void 좋아요한_장소는_liked가_true고_처음_받은_스티커_카테고리와_이름이_채워진다() {
         // given
         when(consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, null)).thenReturn(List.of(
                 new PlaceCategoryVisitRow(101L, "카페", 3L)
@@ -149,7 +157,9 @@ class VisitedPlaceQueryServiceTest {
         when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of(101L));
         when(consumptionQueryRepository.findFirstStickerItemIdsByPlace(eq(1L), any()))
                 .thenReturn(List.of(new PlaceFirstStickerRow(101L, 3L)));
-        when(stickerQueryService.findNames(any())).thenReturn(Map.of(3L, "도넛"));
+        when(stickerQueryService.findItems(any())).thenReturn(Map.of(3L, stickerItem));
+        when(stickerItem.getCategory()).thenReturn("카페");
+        when(stickerItem.getName()).thenReturn("도넛");
         when(consumptionQueryRepository.countDistinctPlacesByUserAndDateRange(eq(1L), any(), any())).thenReturn(0L);
 
         // when
@@ -158,6 +168,7 @@ class VisitedPlaceQueryServiceTest {
         // then
         VisitedPlaceMarkerInfo marker = result.markers().get(0);
         assertThat(marker.liked()).isTrue();
+        assertThat(marker.stickerCategory()).isEqualTo("카페");
         assertThat(marker.stickerName()).isEqualTo("도넛");
     }
 
@@ -172,7 +183,9 @@ class VisitedPlaceQueryServiceTest {
                 101L, new PlaceSummaryInfo("투썸플레이스", "역삼동", "주소1", 37.5447, 127.0557),
                 102L, new PlaceSummaryInfo("국밥집", "역삼동", "주소2", 37.4999, 127.0364)
         ));
-        when(consumptionQueryRepository.findFirstStickerItemIdsByPlace(eq(1L), any())).thenReturn(List.of());
+        when(consumptionQueryRepository.findFirstStickerItemIdsByPlace(eq(1L), any()))
+                .thenReturn(List.of(new PlaceFirstStickerRow(101L, 3L)));
+        when(stickerQueryService.findItems(any())).thenReturn(Map.of(3L, stickerItem));
         when(consumptionQueryRepository.countDistinctPlacesByUserAndDateRange(eq(1L), any(), any())).thenReturn(0L);
 
         // when
@@ -186,6 +199,7 @@ class VisitedPlaceQueryServiceTest {
         assertThat(likedOnly.liked()).isTrue();
         assertThat(likedOnly.category()).isNull();
         assertThat(likedOnly.visitCount()).isZero();
+        assertThat(likedOnly.stickerCategory()).isNull();
         assertThat(likedOnly.stickerName()).isNull();
     }
 

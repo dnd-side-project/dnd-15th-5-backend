@@ -18,13 +18,18 @@ public class StickerQueryService {
 
     private final StickerItemRepository stickerItemRepository;
 
-    public Map<Long, String> findNames(List<Long> stickerItemIds) {
+    public Map<Long, StickerItem> findItems(List<Long> stickerItemIds) {
         List<Long> distinctIds = stickerItemIds.stream().distinct().toList();
         if (distinctIds.isEmpty()) {
             return Map.of();
         }
 
         return stickerItemRepository.findAllById(distinctIds).stream()
+                .collect(Collectors.toMap(StickerItem::getId, stickerItem -> stickerItem));
+    }
+
+    public Map<Long, String> findNames(List<Long> stickerItemIds) {
+        return findItems(stickerItemIds).values().stream()
                 .collect(Collectors.toMap(StickerItem::getId, StickerItem::getName));
     }
 }

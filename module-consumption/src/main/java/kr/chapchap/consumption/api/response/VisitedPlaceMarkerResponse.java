@@ -20,13 +20,14 @@ public record VisitedPlaceMarkerResponse(List<VisitedPlaceMarkerItem> places, in
             Double longitude,
             long visitCount,
             boolean liked,
+            String stickerCategory,
             String stickerName
     ) {
         public static VisitedPlaceMarkerItem from(VisitedPlaceMarkerInfo info) {
             return new VisitedPlaceMarkerItem(
                     info.placeId(), info.placeName(), info.category(),
                     info.latitude(), info.longitude(), info.visitCount(),
-                    info.liked(), info.stickerName()
+                    info.liked(), info.stickerCategory(), info.stickerName()
             );
         }
     }

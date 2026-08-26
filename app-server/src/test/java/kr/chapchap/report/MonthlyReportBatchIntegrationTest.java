@@ -61,10 +61,10 @@ class MonthlyReportBatchIntegrationTest {
 
         // 2026년 7월: place 101(성수동, CAFE) 2회, place 102(연남동, RESTAURANT) 1회
         jdbcTemplate.update(
-                "INSERT INTO consumptions (purchase_date, purchase_time, amount, category, user_id, place_id, created_at, updated_at) VALUES "
-                        + "('2026-07-06', '20:00:00', 8000, 'CAFE', 1, 101, now(), now()), "
-                        + "('2026-07-13', '10:00:00', 6000, 'CAFE', 1, 101, now(), now()), "
-                        + "('2026-07-20', '12:30:00', 15000, 'RESTAURANT', 1, 102, now(), now())");
+                "INSERT INTO consumptions (purchase_date, purchase_time, amount, category, user_id, place_id, sticker_item_id, created_at, updated_at) VALUES "
+                        + "('2026-07-06', '20:00:00', 8000, 'CAFE', 1, 101, 1, now(), now()), "
+                        + "('2026-07-13', '10:00:00', 6000, 'CAFE', 1, 101, 1, now(), now()), "
+                        + "('2026-07-20', '12:30:00', 15000, 'RESTAURANT', 1, 102, 1, now(), now())");
     }
 
     @Test

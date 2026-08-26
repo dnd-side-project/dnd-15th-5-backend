@@ -9,7 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import kr.chapchap.consumption.api.request.ConsumptionCreateRequest;
 import kr.chapchap.consumption.api.response.ConsumptionCreateResponse;
-import kr.chapchap.consumption.application.info.ConsumptionInfo;
+import kr.chapchap.consumption.application.info.ConsumptionCreateInfo;
 import kr.chapchap.consumption.application.service.ConsumptionCreateService;
 import kr.chapchap.core.web.auth.ChapChapUserId;
 import kr.chapchap.core.web.response.ApiResponse;
@@ -91,7 +91,7 @@ public class ConsumptionCreateController {
             @ChapChapUserId Long userId,
             @Valid @RequestBody ConsumptionCreateRequest request
     ) {
-        ConsumptionInfo info = consumptionCreateService.create(request.toCommand(userId));
+        ConsumptionCreateInfo info = consumptionCreateService.create(request.toCommand(userId));
         return ApiResponse.success(SuccessCode.CREATED, ConsumptionCreateResponse.from(info));
     }
 }

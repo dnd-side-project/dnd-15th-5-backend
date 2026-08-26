@@ -14,6 +14,7 @@ import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
 import kr.chapchap.consumption.domain.entity.PlaceStickerRow;
 import kr.chapchap.consumption.domain.entity.PlaceVisitStatsRow;
 import kr.chapchap.consumption.domain.entity.StickerCountRow;
+import kr.chapchap.consumption.domain.entity.StickerItem;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
 import kr.chapchap.consumption.domain.service.PlaceVisitCommentGenerator;
 import kr.chapchap.consumption.exception.ConsumptionErrorCode;
@@ -115,19 +116,27 @@ public class PlaceDetailQueryService {
     private List<StickerInfo> resolveRecentStickers(Long userId, Long placeId) {
         List<PlaceStickerRow> rows = consumptionQueryRepository.findRecentStickersByPlace(
                 userId, placeId, null, null, RECENT_STICKER_LIMIT);
-        Map<Long, String> stickerNames = stickerQueryService.findNames(rows.stream().map(PlaceStickerRow::stickerItemId).toList());
+        Map<Long, StickerItem> stickerItems = stickerQueryService.findItems(
+                rows.stream().map(PlaceStickerRow::stickerItemId).toList());
 
         return rows.stream()
-                .map(row -> new StickerInfo(stickerNames.get(row.stickerItemId()), row.receivedAt()))
+                .map(row -> {
+                    StickerItem stickerItem = stickerItems.get(row.stickerItemId());
+                    return new StickerInfo(stickerItem.getCategory(), stickerItem.getName(), row.receivedAt());
+                })
                 .toList();
     }
 
     private List<StickerCountInfo> resolveStickerSummary(Long userId, Long placeId) {
         List<StickerCountRow> rows = consumptionQueryRepository.aggregateStickerCountsByPlace(userId, placeId);
-        Map<Long, String> stickerNames = stickerQueryService.findNames(rows.stream().map(StickerCountRow::stickerItemId).toList());
+        Map<Long, StickerItem> stickerItems = stickerQueryService.findItems(
+                rows.stream().map(StickerCountRow::stickerItemId).toList());
 
         return rows.stream()
-                .map(row -> new StickerCountInfo(stickerNames.get(row.stickerItemId()), row.count()))
+                .map(row -> {
+                    StickerItem stickerItem = stickerItems.get(row.stickerItemId());
+                    return new StickerCountInfo(stickerItem.getCategory(), stickerItem.getName(), row.count());
+                })
                 .toList();
     }
 }
