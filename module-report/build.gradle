@@ -7,6 +7,7 @@ dependencies {
 
     implementation project(":module-consumption")
     implementation project(":module-place")
+    implementation project(":module-account")
 
     testImplementation testFixtures(project(":module-core"))
 }

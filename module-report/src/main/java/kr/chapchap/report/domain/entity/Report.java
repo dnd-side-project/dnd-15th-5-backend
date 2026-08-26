@@ -19,6 +19,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -65,6 +66,9 @@ public class Report {
     @Column(name = "new_sticker_count", nullable = false)
     private int newStickerCount;
 
+    @Column(name = "share_token", unique = true, length = 36)
+    private String shareToken;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -85,5 +89,12 @@ public class Report {
         this.newTownCount = newTownCount;
         this.newPlaceCount = newPlaceCount;
         this.newStickerCount = newStickerCount;
+    }
+
+    public String issueShareTokenIfAbsent() {
+        if (shareToken == null) {
+            shareToken = UUID.randomUUID().toString();
+        }
+        return shareToken;
     }
 }

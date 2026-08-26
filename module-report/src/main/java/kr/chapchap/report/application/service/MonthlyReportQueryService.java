@@ -12,8 +12,10 @@ import kr.chapchap.report.application.info.MonthlyReportInfo.ScoresInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.SummaryInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.TimePatternInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.TownRankInfo;
+import kr.chapchap.report.application.info.PersonaCardInfo;
 import kr.chapchap.report.application.port.ConsumptionActivityPort;
 import kr.chapchap.report.application.port.PlaceStickerLookupPort;
+import kr.chapchap.report.application.port.UserNicknameLookupPort;
 import kr.chapchap.report.domain.entity.Report;
 import kr.chapchap.report.domain.entity.ReportCategoryStat;
 import kr.chapchap.report.domain.entity.ReportPlaceRank;
@@ -54,6 +56,7 @@ public class MonthlyReportQueryService {
     private final ReportTimePatternRepository reportTimePatternRepository;
     private final ConsumptionActivityPort consumptionActivityPort;
     private final PlaceStickerLookupPort placeStickerLookupPort;
+    private final UserNicknameLookupPort userNicknameLookupPort;
 
     public MonthlyReportInfo getMonthlyReport(GetMonthlyReportCommand command) {
         Report report = reportRepository.findByUserIdAndReportMonth(command.userId(), command.yearMonth().atDay(1))
@@ -76,6 +79,37 @@ public class MonthlyReportQueryService {
                 toCategoryStatInfos(categoryStats),
                 toTimePatternInfo(timePatterns),
                 firstAvailableYearMonth
+        );
+    }
+
+    // 취향카드 공유 링크 발급 (이미 발급돼 있으면 기존 토큰 재사용)
+    @Transactional
+    public String issueShareToken(GetMonthlyReportCommand command) {
+        Report report = reportRepository.findByUserIdAndReportMonth(command.userId(), command.yearMonth().atDay(1))
+                .orElseThrow(() -> new BusinessException(ReportErrorCode.REPORT_NOT_FOUND));
+
+        return report.issueShareTokenIfAbsent();
+    }
+
+
+    public PersonaCardInfo getPersonaCard(String shareToken) {
+        Report report = reportRepository.findByShareToken(shareToken)
+                .orElseThrow(() -> new BusinessException(ReportErrorCode.SHARED_PERSONA_CARD_NOT_FOUND));
+
+        String nickname = userNicknameLookupPort.findNickname(report.getUserId()).orElse(null);
+
+        return new PersonaCardInfo(
+                nickname,
+                report.getPersonaType().name(),
+                report.getPersonaType().getTypeName(),
+                report.getPersonaType().getDescription(),
+                report.getPersonaType().getKeywords(),
+                new PersonaCardInfo.ScoresInfo(
+                        report.getScoreExploration(),
+                        report.getScoreTownExpansion(),
+                        report.getScoreDaytime(),
+                        report.getScoreImpulsive()
+                )
         );
     }
 
