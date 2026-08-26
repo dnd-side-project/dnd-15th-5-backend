@@ -8,6 +8,14 @@ public record RecommendedPlaceInfo(
         Double latitude,
         Double longitude,
         Long visitCount,
-        boolean liked
+        boolean liked,
+        String thumbnailUrl,
+        String googleMapsUri
 ) {
+
+    public RecommendedPlaceInfo withPhoto(String thumbnailUrl, String googleMapsUri) {
+        return new RecommendedPlaceInfo(
+                placeId, name, dongName, category, latitude, longitude, visitCount, liked,
+                thumbnailUrl, googleMapsUri);
+    }
 }

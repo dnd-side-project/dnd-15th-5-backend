@@ -18,7 +18,8 @@ public class RecommendationPlaceRadiusLookupAdapter implements PlaceRadiusLookup
     public List<NearbyPlaceInfo> findWithinRadius(double latitude, double longitude, double radiusMeters) {
         return placeQueryService.findWithinRadius(latitude, longitude, radiusMeters).stream()
                 .map(info -> new NearbyPlaceInfo(
-                        info.placeId(), info.name(), info.dongName(), info.latitude(), info.longitude()))
+                        info.placeId(), info.name(), info.dongName(), info.latitude(), info.longitude(),
+                        info.googlePlaceId()))
                 .toList();
     }
 }

@@ -190,6 +190,9 @@ public class AccountController {
         return ResponseEntity.ok(ApiResponse.ok());
     }
 
+    @Operation(
+            summary = "디바이스 토큰 등록"
+    )
     @PatchMapping("/me/device-token")
     public ApiResponse<Void> registerDeviceToken(
             @ChapChapUserId Long userId,
