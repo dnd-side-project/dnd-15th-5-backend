@@ -10,6 +10,8 @@ import kr.chapchap.recommendation.application.port.PopularityLookupPort;
 import kr.chapchap.recommendation.application.port.UserTopCategoryLookupPort;
 import kr.chapchap.recommendation.application.port.VisitedPlaceLookupPort;
 import kr.chapchap.core.exception.BusinessException;
+import kr.chapchap.place.application.info.PlacePhotoInfo;
+import kr.chapchap.place.application.service.PlacePhotoService;
 import kr.chapchap.recommendation.exception.RecommendationErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -40,6 +43,7 @@ public class RecommendationQueryService {
     private final UserTopCategoryLookupPort userTopCategoryLookupPort;
     private final PlaceLikeLookupPort placeLikeLookupPort;
     private final VisitedPlaceLookupPort visitedPlaceLookupPort;
+    private final PlacePhotoService placePhotoService;
     private final Clock clock;
 
     public RecommendationInfo getNearbyRecommendations(Long userId, double latitude, double longitude, double radiusMeters) {
@@ -83,7 +87,10 @@ public class RecommendationQueryService {
                         .toList())
                 .orElse(List.of());
 
-        return new RecommendationInfo(myTownPlaces, sameCategoryPlaces);
+        return new RecommendationInfo(
+                withPhotos(myTownPlaces, placesById),
+                withPhotos(sameCategoryPlaces, placesById)
+        );
     }
 
     private RecommendedPlaceInfo toRecommendedPlaceInfo(PlacePopularityInfo row, NearbyPlaceInfo place, Set<Long> likedPlaceIds) {
@@ -95,8 +102,40 @@ public class RecommendationQueryService {
                 place.latitude(),
                 place.longitude(),
                 row.visitCount(),
-                likedPlaceIds.contains(row.placeId())
+                likedPlaceIds.contains(row.placeId()),
+                null,
+                null
         );
+    }
+
+    private List<RecommendedPlaceInfo> withPhotos(
+            List<RecommendedPlaceInfo> places,
+            Map<Long, NearbyPlaceInfo> placesById
+    ) {
+        if (places.isEmpty()) {
+            return places;
+        }
+
+        Map<Long, String> googlePlaceIdsByPlaceId = new LinkedHashMap<>();
+        for (RecommendedPlaceInfo place : places) {
+            String googlePlaceId = placesById.get(place.placeId()).googlePlaceId();
+            if (googlePlaceId != null && !googlePlaceId.isBlank()) {
+                googlePlaceIdsByPlaceId.put(place.placeId(), googlePlaceId);
+            }
+        }
+        if (googlePlaceIdsByPlaceId.isEmpty()) {
+            return places;
+        }
+
+        Map<Long, PlacePhotoInfo> thumbnails = placePhotoService.findThumbnails(googlePlaceIdsByPlaceId);
+        return places.stream()
+                .map(place -> {
+                    PlacePhotoInfo photo = thumbnails.get(place.placeId());
+                    return photo == null
+                            ? place
+                            : place.withPhoto(photo.thumbnailUrl(), photo.googleMapsUri());
+                })
+                .toList();
     }
 
     private double decayScoreOf(PlacePopularityInfo row) {

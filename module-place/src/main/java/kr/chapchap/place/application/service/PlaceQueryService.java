@@ -68,7 +68,7 @@ public class PlaceQueryService {
     public List<NearbyPlaceInfo> findWithinRadius(double latitude, double longitude, double radiusMeters) {
         Query query = entityManager.createNativeQuery(
                 "SELECT id, name, administrative_dong_name, "
-                        + "ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng "
+                        + "ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng, google_place_id "
                         + "FROM places "
                         + "WHERE ST_DWithin(location, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, :radiusMeters)"
         );
@@ -83,7 +83,8 @@ public class PlaceQueryService {
                         (String) row[1],
                         (String) row[2],
                         ((Number) row[3]).doubleValue(),
-                        ((Number) row[4]).doubleValue()))
+                        ((Number) row[4]).doubleValue(),
+                        (String) row[5]))
                 .toList();
     }
 }

@@ -25,12 +25,15 @@ public record NearbyPlacesResponse(
             Double latitude,
             Double longitude,
             Long visitCount,
-            boolean liked
+            boolean liked,
+            String thumbnailUrl,
+            String googleMapsUri
     ) {
         public static RecommendedPlaceItem from(RecommendedPlaceInfo info) {
             return new RecommendedPlaceItem(
                     info.placeId(), info.name(), info.dongName(), info.category(),
-                    info.latitude(), info.longitude(), info.visitCount(), info.liked());
+                    info.latitude(), info.longitude(), info.visitCount(), info.liked(),
+                    info.thumbnailUrl(), info.googleMapsUri());
         }
     }
 }
