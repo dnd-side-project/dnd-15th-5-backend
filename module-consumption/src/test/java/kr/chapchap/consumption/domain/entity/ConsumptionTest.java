@@ -47,7 +47,7 @@ class ConsumptionTest {
                 LocalTime.of(12, 30),
                 0L,
                 "카페",
-                null
+                7L
         )).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -59,6 +59,20 @@ class ConsumptionTest {
                 101L,
                 LocalDate.of(2026, 8, 16),
                 null,
+                12_000L,
+                "카페",
+                7L
+        )).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void 스티커가_없으면_생성할_수_없다() {
+        // when & then
+        assertThatThrownBy(() -> Consumption.create(
+                1L,
+                101L,
+                LocalDate.of(2026, 8, 16),
+                LocalTime.of(12, 30),
                 12_000L,
                 "카페",
                 null

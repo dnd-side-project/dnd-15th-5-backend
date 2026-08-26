@@ -1,7 +1,7 @@
 package kr.chapchap.consumption.application.service;
 
 import kr.chapchap.consumption.application.command.ConsumptionCreateCommand;
-import kr.chapchap.consumption.application.info.ConsumptionInfo;
+import kr.chapchap.consumption.application.info.ConsumptionCreateInfo;
 import kr.chapchap.consumption.domain.entity.Consumption;
 import kr.chapchap.consumption.domain.entity.ReceiptImage;
 import kr.chapchap.consumption.domain.entity.ReceiptImageStatus;
@@ -24,18 +24,23 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 public class ConsumptionCommandService {
 
+    private static final long SPECIAL_STICKER_VISIT_COUNT = 3L;
+    private static final String COMMON_STICKER_CATEGORY = "공통";
+    private static final String SPECIAL_STICKER_CATEGORY = "스페셜";
+    private static final String CROWN_STICKER_NAME = "왕관";
+
     private final ConsumptionRepository consumptionRepository;
     private final StickerItemRepository stickerItemRepository;
     private final ReceiptImageRepository receiptImageRepository;
     private final Clock clock;
 
     @Transactional
-    public ConsumptionInfo create(ConsumptionCreateCommand command, Long placeId) {
+    public ConsumptionCreateInfo create(ConsumptionCreateCommand command, Long placeId) {
         if (placeId == null || placeId <= 0) {
             throw new BusinessException(ConsumptionErrorCode.INVALID_CONSUMPTION_INPUT);
         }
 
-        Long stickerItemId = selectRandomStickerItemId(command.category());
+        StickerItem stickerItem = selectStickerItem(command, placeId);
 
         Consumption consumption = consumptionRepository.save(Consumption.create(
                 command.userId(),
@@ -44,21 +49,29 @@ public class ConsumptionCommandService {
                 command.purchaseTime(),
                 command.amount(),
                 command.category(),
-                stickerItemId
+                stickerItem.getId()
         ));
 
         attachReceiptImageIfPresent(command, consumption.getId());
 
-        return ConsumptionInfo.of(consumption, command.place().placeName());
+        return ConsumptionCreateInfo.of(consumption, stickerItem);
     }
 
-    private Long selectRandomStickerItemId(String category) {
-        List<StickerItem> stickerItems = stickerItemRepository.findAllByCategory(category);
-        if (stickerItems.isEmpty()) {
-            return null;
+    private StickerItem selectStickerItem(ConsumptionCreateCommand command, Long placeId) {
+        long visitCount = consumptionRepository.countByUserIdAndPlaceId(command.userId(), placeId) + 1;
+        if (visitCount == SPECIAL_STICKER_VISIT_COUNT) {
+            return stickerItemRepository.findByCategoryAndName(SPECIAL_STICKER_CATEGORY, CROWN_STICKER_NAME)
+                    .orElseThrow(() -> new IllegalStateException("스페셜 왕관 스티커가 등록되어 있지 않습니다."));
         }
 
-        return stickerItems.get(ThreadLocalRandom.current().nextInt(stickerItems.size())).getId();
+        List<StickerItem> stickerItems = stickerItemRepository.findAllByCategoryIn(
+                List.of(command.category(), COMMON_STICKER_CATEGORY)
+        );
+        if (stickerItems.isEmpty()) {
+            throw new IllegalStateException("선택 가능한 스티커가 등록되어 있지 않습니다.");
+        }
+
+        return stickerItems.get(ThreadLocalRandom.current().nextInt(stickerItems.size()));
     }
 
     private void attachReceiptImageIfPresent(ConsumptionCreateCommand command, Long consumptionId) {

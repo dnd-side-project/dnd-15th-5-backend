@@ -277,6 +277,7 @@ class ConsumptionQueryRepositoryImplTest {
                 .amount(5000L)
                 .purchaseDate(purchaseDate)
                 .purchaseTime(purchaseTime)
+                .stickerItemId(1L)
                 .build();
     }
 }

@@ -223,6 +223,7 @@ class VisitedPlaceSearchServiceTest {
                 .purchaseTime(VISIT_TIME)
                 .amount(10_000L)
                 .category("카페")
+                .stickerItemId(1L)
                 .build();
         ReflectionTestUtils.setField(consumption, "id", consumptionId);
         return consumption;

@@ -4,7 +4,7 @@ import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.repository.UserRepository;
 import kr.chapchap.consumption.application.command.ConsumptionCreateCommand;
 import kr.chapchap.consumption.application.command.PlaceResolveCommand;
-import kr.chapchap.consumption.application.info.ConsumptionInfo;
+import kr.chapchap.consumption.application.info.ConsumptionCreateInfo;
 import kr.chapchap.consumption.application.port.PlaceResolvePort;
 import kr.chapchap.consumption.application.service.ConsumptionCreateService;
 import kr.chapchap.consumption.domain.entity.ReceiptImage;
@@ -85,7 +85,7 @@ class ConsumptionCreatePersistenceIntegrationTest {
                 });
 
         // when
-        ConsumptionInfo result = consumptionCreateService.create(command(
+        ConsumptionCreateInfo result = consumptionCreateService.create(command(
                 user.getId(),
                 receiptImage.getId(),
                 "카페"
@@ -94,7 +94,7 @@ class ConsumptionCreatePersistenceIntegrationTest {
         // then
         Map<String, Object> consumption = jdbcTemplate.queryForMap(
                 "SELECT * FROM consumptions WHERE id = ?",
-                result.id()
+                result.consumptionId()
         );
         assertThat(consumption.get("user_id")).isEqualTo(user.getId());
         assertThat(consumption.get("place_id")).isEqualTo(placeId);
@@ -104,32 +104,87 @@ class ConsumptionCreatePersistenceIntegrationTest {
         assertThat(consumption.get("purchase_time")).hasToString("11:20:00");
         assertThat(consumption.get("sticker_item_id")).isNotNull();
 
-        String stickerCategory = jdbcTemplate.queryForObject(
-                "SELECT category FROM sticker_item WHERE id = ?",
-                String.class,
+        Map<String, Object> sticker = jdbcTemplate.queryForMap(
+                "SELECT category, name FROM sticker_item WHERE id = ?",
                 consumption.get("sticker_item_id")
         );
-        assertThat(stickerCategory).isEqualTo("카페");
+        assertThat(sticker.get("category")).isIn("카페", "공통");
+        assertThat(result.stickerCategory()).isEqualTo(sticker.get("category"));
+        assertThat(result.stickerName()).isEqualTo(sticker.get("name"));
 
         Map<String, Object> attachedReceipt = jdbcTemplate.queryForMap(
                 "SELECT * FROM receipt_images WHERE id = ?",
                 receiptImage.getId()
         );
         assertThat(attachedReceipt.get("status")).isEqualTo("ATTACHED");
-        assertThat(attachedReceipt.get("consumption_id")).isEqualTo(result.id());
+        assertThat(attachedReceipt.get("consumption_id")).isEqualTo(result.consumptionId());
         assertThat(attachedReceipt.get("attached_at")).isNotNull();
         assertThat(attachedReceipt.get("expires_at")).isNull();
     }
 
     @Test
-    void 영수증과_스티커가_없는_카테고리도_소비_기록을_저장한다() {
+    void 같은_장소의_세_번째_방문이면_왕관_스티커를_저장하고_반환한다() {
+        // given
+        User user = saveActiveUser("단골손님");
+        Long placeId = insertPlace("ChIJ-third-visit-place");
+        Long commonStickerId = jdbcTemplate.queryForObject(
+                "SELECT id FROM sticker_item WHERE category = '공통' AND name = '눈'",
+                Long.class
+        );
+        given(placeResolvePort.resolve(any(PlaceResolveCommand.class))).willReturn(placeId);
+        jdbcTemplate.update(
+                """
+                        INSERT INTO consumptions (
+                            purchase_date,
+                            purchase_time,
+                            amount,
+                            category,
+                            user_id,
+                            place_id,
+                            sticker_item_id
+                        ) VALUES
+                            ('2026-07-01', '10:00:00', 5000, '카페', ?, ?, ?),
+                            ('2026-07-10', '11:00:00', 6000, '카페', ?, ?, ?)
+                        """,
+                user.getId(),
+                placeId,
+                commonStickerId,
+                user.getId(),
+                placeId,
+                commonStickerId
+        );
+
+        // when
+        ConsumptionCreateInfo result = consumptionCreateService.create(command(
+                user.getId(),
+                null,
+                "카페"
+        ));
+
+        // then
+        assertThat(result.stickerCategory()).isEqualTo("스페셜");
+        assertThat(result.stickerName()).isEqualTo("왕관");
+        assertThat(jdbcTemplate.queryForObject(
+                """
+                        SELECT COUNT(*)
+                        FROM consumptions c
+                        JOIN sticker_item s ON s.id = c.sticker_item_id
+                        WHERE c.id = ? AND s.category = '스페셜' AND s.name = '왕관'
+                        """,
+                Long.class,
+                result.consumptionId()
+        )).isOne();
+    }
+
+    @Test
+    void 전용_스티커가_없는_카테고리도_공통_스티커와_함께_소비_기록을_저장한다() {
         // given
         User user = saveActiveUser("냠냠이");
         Long placeId = insertPlace("ChIJ-manual-place");
         given(placeResolvePort.resolve(any(PlaceResolveCommand.class))).willReturn(placeId);
 
         // when
-        ConsumptionInfo result = consumptionCreateService.create(command(
+        ConsumptionCreateInfo result = consumptionCreateService.create(command(
                 user.getId(),
                 null,
                 "테스트-스티커-미등록"
@@ -138,9 +193,11 @@ class ConsumptionCreatePersistenceIntegrationTest {
         // then
         Map<String, Object> consumption = jdbcTemplate.queryForMap(
                 "SELECT * FROM consumptions WHERE id = ?",
-                result.id()
+                result.consumptionId()
         );
-        assertThat(consumption.get("sticker_item_id")).isNull();
+        assertThat(consumption.get("sticker_item_id")).isNotNull();
+        assertThat(result.stickerCategory()).isEqualTo("공통");
+        assertThat(result.stickerName()).isIn("눈", "따봉");
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM receipt_images",
                 Long.class

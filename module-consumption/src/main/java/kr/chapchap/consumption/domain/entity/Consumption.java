@@ -44,7 +44,7 @@ public class Consumption extends BaseTimeEntity {
     private Long placeId;
 
 
-    @Column(name = "sticker_item_id")
+    @Column(name = "sticker_item_id", nullable = false)
     private Long stickerItemId;
 
     @Builder
@@ -86,8 +86,8 @@ public class Consumption extends BaseTimeEntity {
         if (category == null || category.isBlank() || category.length() > 40) {
             throw new IllegalArgumentException("카테고리는 1자 이상 40자 이하여야 합니다.");
         }
-        if (stickerItemId != null && stickerItemId <= 0) {
-            throw new IllegalArgumentException("스티커 식별자는 0보다 커야 합니다.");
+        if (stickerItemId == null || stickerItemId <= 0) {
+            throw new IllegalArgumentException("스티커 식별자는 필수이며 0보다 커야 합니다.");
         }
 
         return new Consumption(

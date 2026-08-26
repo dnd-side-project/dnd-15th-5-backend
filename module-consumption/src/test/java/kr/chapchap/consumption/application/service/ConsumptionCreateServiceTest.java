@@ -2,7 +2,7 @@ package kr.chapchap.consumption.application.service;
 
 import kr.chapchap.consumption.application.command.ConsumptionCreateCommand;
 import kr.chapchap.consumption.application.command.PlaceResolveCommand;
-import kr.chapchap.consumption.application.info.ConsumptionInfo;
+import kr.chapchap.consumption.application.info.ConsumptionCreateInfo;
 import kr.chapchap.consumption.application.port.PlaceResolvePort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,14 +45,10 @@ class ConsumptionCreateServiceTest {
                 12_000L,
                 "카페"
         );
-        ConsumptionInfo expected = new ConsumptionInfo(
+        ConsumptionCreateInfo expected = new ConsumptionCreateInfo(
                 10L,
-                101L,
-                "찹찹카페",
-                "카페",
-                12_000L,
-                LocalDate.of(2026, 8, 16),
-                LocalTime.of(11, 30)
+                "공통",
+                "눈"
         );
         given(placeResolvePort.resolve(place)).willReturn(101L);
         given(consumptionCommandService.create(command, 101L)).willReturn(expected);
@@ -62,7 +58,7 @@ class ConsumptionCreateServiceTest {
         );
 
         // when
-        ConsumptionInfo result = service.create(command);
+        ConsumptionCreateInfo result = service.create(command);
 
         // then
         assertThat(result).isEqualTo(expected);
