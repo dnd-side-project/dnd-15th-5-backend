@@ -35,6 +35,8 @@ public class ReceiptOcrController {
                     영수증 이미지를 OCR 처리하고 사용자가 확인·수정할 인식 결과를 반환합니다.
 
                     인식하지 못한 항목은 null로 반환됩니다.
+                    상호명이 인식되면 Google Places 검색 결과를 함께 반환하며,
+                    장소 검색 또는 사진 조회에 실패해도 OCR 결과는 정상 반환됩니다.
                     """
     )
     @ApiResponses({

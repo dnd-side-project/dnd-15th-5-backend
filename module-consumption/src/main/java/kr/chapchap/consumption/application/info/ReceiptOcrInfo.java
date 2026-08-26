@@ -1,5 +1,7 @@
 package kr.chapchap.consumption.application.info;
 
+import kr.chapchap.place.application.info.GooglePlaceSearchResultInfo;
+
 import java.time.LocalDate;
 import java.time.LocalTime;
 
@@ -9,6 +11,7 @@ public record ReceiptOcrInfo(
         String address,
         LocalDate purchaseDate,
         LocalTime purchaseTime,
-        Long amount
+        Long amount,
+        GooglePlaceSearchResultInfo googlePlaceSearchResult
 ) {
 }
