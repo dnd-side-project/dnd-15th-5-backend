@@ -1,4 +1,4 @@
-package kr.chapchap.notification.application.port;
+package kr.chapchap.notification.application.info;
 
 import java.util.List;
 

@@ -1,6 +1,7 @@
 package kr.chapchap.report.application.service;
 
 import kr.chapchap.core.exception.BusinessException;
+import kr.chapchap.notification.application.event.ReportGeneratedEvent;
 import kr.chapchap.report.application.command.AggregateMonthlyReportCommand;
 import kr.chapchap.report.application.info.ConsumptionActivity;
 import kr.chapchap.report.application.info.MonthlyReportAggregationResultInfo;
@@ -26,6 +27,7 @@ import kr.chapchap.report.domain.service.MonthlyAggregationCalculator;
 import kr.chapchap.report.domain.service.PersonaScoringService;
 import kr.chapchap.report.exception.ReportErrorCode;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -61,6 +63,7 @@ public class MonthlyReportAggregationService {
     private final ReportTimePatternRepository reportTimePatternRepository;
     private final AdvisoryLockPort advisoryLockPort;
     private final TransactionTemplate perUserTransactionTemplate;
+    private final ApplicationEventPublisher eventPublisher;
 
     public MonthlyReportAggregationService(
             ConsumptionActivityPort consumptionActivityPort,
@@ -74,7 +77,8 @@ public class MonthlyReportAggregationService {
             ReportPlaceRankRepository reportPlaceRankRepository,
             ReportTimePatternRepository reportTimePatternRepository,
             AdvisoryLockPort advisoryLockPort,
-            PlatformTransactionManager transactionManager
+            PlatformTransactionManager transactionManager,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.consumptionActivityPort = consumptionActivityPort;
         this.dongNameLookupPort = dongNameLookupPort;
@@ -87,6 +91,7 @@ public class MonthlyReportAggregationService {
         this.reportPlaceRankRepository = reportPlaceRankRepository;
         this.reportTimePatternRepository = reportTimePatternRepository;
         this.advisoryLockPort = advisoryLockPort;
+        this.eventPublisher =eventPublisher;
 
 
         TransactionTemplate perUserTemplate = new TransactionTemplate(transactionManager);
@@ -111,7 +116,13 @@ public class MonthlyReportAggregationService {
 
             for (Long userId : targetUserIds) {
                 try {
-                    perUserTransactionTemplate.executeWithoutResult(status -> aggregateForUser(userId, yearMonth));
+                    perUserTransactionTemplate.executeWithoutResult(status -> {
+                        aggregateForUser(userId, yearMonth);
+                        log.info("이벤트 발행 직전. 트랜잭션 동기화 활성?={}",
+                                org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive());
+                        eventPublisher.publishEvent(new ReportGeneratedEvent(userId, yearMonth));
+                        log.info("이벤트 발행 완료. userId={}", userId);
+                    });
                     succeeded++;
                 } catch (Exception exception) {
                     BusinessException businessException = new BusinessException(ReportErrorCode.MONTHLY_REPORT_AGGREGATION_FAILED, exception);

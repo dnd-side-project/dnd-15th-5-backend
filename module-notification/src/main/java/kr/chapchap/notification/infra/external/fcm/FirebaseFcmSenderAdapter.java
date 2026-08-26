@@ -1,8 +1,8 @@
 package kr.chapchap.notification.infra.external.fcm;
 
 import com.google.firebase.messaging.*;
-import kr.chapchap.notification.application.port.PushMessage;
-import kr.chapchap.notification.application.port.PushSendResult;
+import kr.chapchap.notification.application.info.PushMessage;
+import kr.chapchap.notification.application.info.PushSendResult;
 import kr.chapchap.notification.application.port.PushSenderPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
