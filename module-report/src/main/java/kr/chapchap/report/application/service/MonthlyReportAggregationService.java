@@ -117,7 +117,10 @@ public class MonthlyReportAggregationService {
             for (Long userId : targetUserIds) {
                 try {
                     perUserTransactionTemplate.executeWithoutResult(status -> {
-                        aggregateForUser(userId, yearMonth);
+                        boolean reportSaved = aggregateForUser(userId, yearMonth);
+                        if (!reportSaved) {
+                            return;
+                        }
                         log.info("이벤트 발행 직전. 트랜잭션 동기화 활성?={}",
                                 org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive());
                         eventPublisher.publishEvent(new ReportGeneratedEvent(userId, yearMonth));
@@ -141,7 +144,8 @@ public class MonthlyReportAggregationService {
     }
 
 
-    private void aggregateForUser(Long userId, YearMonth yearMonth) {
+    // 리포트를 실제로 저장했으면 true, 소비 활동이 없어 건너뛰었으면 false를 반환한다.
+    private boolean aggregateForUser(Long userId, YearMonth yearMonth) {
         LocalDate monthStart = yearMonth.atDay(1);
         LocalDate monthEndExclusive = yearMonth.plusMonths(1).atDay(1);
 
@@ -149,7 +153,7 @@ public class MonthlyReportAggregationService {
 
         if (monthActivities.isEmpty()) {
             log.info("이번 달 소비 활동이 없어 리포트를 생성하지 않습니다. userId={}, yearMonth={}", userId, yearMonth);
-            return;
+            return false;
         }
 
         List<ConsumptionActivity> priorActivities = consumptionActivityPort.findActivities(userId, ACTIVITY_HISTORY_START, monthStart);
@@ -196,6 +200,7 @@ public class MonthlyReportAggregationService {
         PersonaScoreResult personaScore = personaScoringService.score(monthVisitActivities, priorVisitedPlaceIds, aggregation);
 
         replaceReport(userId, monthStart, aggregation, personaScore);
+        return true;
     }
 
     private void replaceReport(Long userId, LocalDate monthStart, MonthlyAggregationResult aggregation, PersonaScoreResult personaScore) {

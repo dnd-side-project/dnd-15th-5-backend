@@ -167,6 +167,7 @@ class MonthlyReportAggregationServiceTest {
         // then
         assertThat(result.succeededCount()).isEqualTo(1);
         verify(reportRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test

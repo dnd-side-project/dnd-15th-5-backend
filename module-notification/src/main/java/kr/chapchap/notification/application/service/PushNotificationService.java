@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -64,10 +65,12 @@ public class PushNotificationService {
             return;
         }
 
+        List<Notification> latestPerUser = keepLatestPerUserAndSkipStale(pending);
+
         List<Notification> sendable = new ArrayList<>();
         List<UserPushTarget> targets = new ArrayList<>();
 
-        for (Notification notification : pending) {
+        for (Notification notification : latestPerUser) {
             Optional<UserPushTarget> target = userPushTargetPort.findPushTarget(notification.getUserId());
             if (target.isPresent()) {
                 sendable.add(notification);
@@ -82,6 +85,32 @@ public class PushNotificationService {
             String screen = "/report/monthly-report?yearMonth=" + reportMonth;
             sendAndRecord(sendable, targets, screen);
         }
+    }
+
+
+    private List<Notification> keepLatestPerUserAndSkipStale(List<Notification> pending) {
+        Map<Long, Notification> latestByUserId = new LinkedHashMap<>();
+        for (Notification notification : pending) {
+            Notification current = latestByUserId.get(notification.getUserId());
+            if (current == null || notification.getId() > current.getId()) {
+                latestByUserId.put(notification.getUserId(), notification);
+            }
+        }
+
+        Set<Long> latestNotificationIds = new HashSet<>();
+        for (Notification notification : latestByUserId.values()) {
+            latestNotificationIds.add(notification.getId());
+        }
+
+        for (Notification notification : pending) {
+            if (!latestNotificationIds.contains(notification.getId())) {
+                notification.markPushSkipped();
+                log.info("동일 유저의 최신 알림만 발송하고 오래된 대기 알림은 건너뜁니다. userId={}, notificationId={}",
+                        notification.getUserId(), notification.getId());
+            }
+        }
+
+        return new ArrayList<>(latestByUserId.values());
     }
 
     public void notifyFridayReminderToAll() {
@@ -136,7 +165,6 @@ public class PushNotificationService {
                 userPushTargetPort.invalidateToken(target.userId());
                 log.info("무효 토큰 정리. userId={}", target.userId());
             } else if (failedTokens.contains(target.fcmToken())) {
-                // 토큰은 유효하지만 일시적 사유로 발송 실패: PENDING을 유지해 다음 배치에서 재시도
                 log.warn("일시적 발송 실패, 다음 배치에서 재시도. userId={}", target.userId());
             } else {
                 notification.markPushSent(null);

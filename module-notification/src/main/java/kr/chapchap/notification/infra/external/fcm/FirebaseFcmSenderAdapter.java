@@ -24,6 +24,7 @@ public class FirebaseFcmSenderAdapter implements PushSenderPort {
         int successCount = 0;
         int failureCount = 0;
         List<String> invalidTokens = new ArrayList<>();
+        List<String> failedTokens = new ArrayList<>();
 
         for (int i = 0; i < tokens.size(); i += MAX_TOKENS_PER_REQUEST) {
             List<String> chunk = tokens.subList(i, Math.min(i + MAX_TOKENS_PER_REQUEST, tokens.size()));
@@ -50,15 +51,18 @@ public class FirebaseFcmSenderAdapter implements PushSenderPort {
                             : null;
                     if (errorCode == MessagingErrorCode.UNREGISTERED || errorCode == MessagingErrorCode.INVALID_ARGUMENT) {
                         invalidTokens.add(chunk.get(j));
+                    } else {
+                        failedTokens.add(chunk.get(j));
                     }
                 }
             } catch (FirebaseMessagingException exception) {
                 log.error("FCM 멀티캐스트 발송 실패. size={}", chunk.size(), exception);
                 failureCount += chunk.size();
+                failedTokens.addAll(chunk);
             }
         }
 
-        return new PushSendResult(successCount, failureCount, invalidTokens);
+        return new PushSendResult(successCount, failureCount, invalidTokens, failedTokens);
     }
 
     @Override

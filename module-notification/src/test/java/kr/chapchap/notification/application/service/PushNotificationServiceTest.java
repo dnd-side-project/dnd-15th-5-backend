@@ -128,6 +128,51 @@ class PushNotificationServiceTest {
     }
 
     @Test
+    void 일시적_사유로_발송_실패하면_토큰은_무효화하지_않고_PENDING을_유지한다() {
+        // given
+        Notification pending = reportCompletedNotification();
+        when(notificationRepository.findByTypeAndPushStatus(NotificationType.REPORT_COMPLETED, PushStatus.PENDING))
+                .thenReturn(List.of(pending));
+        when(userPushTargetPort.findPushTarget(USER_ID))
+                .thenReturn(Optional.of(new UserPushTarget(USER_ID, "flaky-token")));
+        when(pushSenderPort.sendMulticast(eq(List.of("flaky-token")), any()))
+                .thenReturn(new PushSendResult(0, 1, List.of(), List.of("flaky-token")));
+
+        // when
+        sut.sendPendingReportCompletedPush();
+
+        // then
+        assertThat(pending.getPushStatus()).isEqualTo(PushStatus.PENDING);
+        verify(userPushTargetPort, never()).invalidateToken(any());
+    }
+
+    @Test
+    void 같은_유저의_PENDING_알림이_여러_건이면_최신_것만_보내고_나머지는_SKIPPED_처리한다() {
+        // given: staleNotification이 먼저 생성돼(id가 더 작음) 과거 발송 실패로 아직 PENDING인 상태,
+        // latestNotification은 이번 달에 새로 생성된 알림
+        Notification staleNotification = reportCompletedNotification();
+        Notification latestNotification = reportCompletedNotification();
+        setId(staleNotification, 1L);
+        setId(latestNotification, 2L);
+
+        when(notificationRepository.findByTypeAndPushStatus(NotificationType.REPORT_COMPLETED, PushStatus.PENDING))
+                .thenReturn(List.of(staleNotification, latestNotification));
+        when(userPushTargetPort.findPushTarget(USER_ID))
+                .thenReturn(Optional.of(new UserPushTarget(USER_ID, "token-1")));
+        when(pushSenderPort.sendMulticast(eq(List.of("token-1")), any()))
+                .thenReturn(new PushSendResult(1, 0, List.of()));
+
+        // when
+        sut.sendPendingReportCompletedPush();
+
+        // then
+        assertThat(staleNotification.getPushStatus()).isEqualTo(PushStatus.SKIPPED);
+        assertThat(latestNotification.getPushStatus()).isEqualTo(PushStatus.SENT);
+        verify(pushSenderPort, times(1)).sendMulticast(any(), any());
+        verify(userPushTargetPort, times(1)).findPushTarget(any());
+    }
+
+    @Test
     void 대기중인_알림이_없으면_아무것도_하지_않는다() {
         // given
         when(notificationRepository.findByTypeAndPushStatus(NotificationType.REPORT_COMPLETED, PushStatus.PENDING))
@@ -163,6 +208,17 @@ class PushNotificationServiceTest {
         ArgumentCaptor<PushMessage> messageCaptor = ArgumentCaptor.forClass(PushMessage.class);
         verify(pushSenderPort).sendMulticast(eq(List.of("t1", "t2")), messageCaptor.capture());
         assertThat(messageCaptor.getValue().data().get("screen")).isEqualTo("/record/manual");
+    }
+
+    // id는 @GeneratedValue라 세터가 없어, 저장된 것처럼 흉내내려고 리플렉션으로 직접 채운다.
+    private void setId(Notification notification, Long id) {
+        try {
+            java.lang.reflect.Field field = Notification.class.getDeclaredField("id");
+            field.setAccessible(true);
+            field.set(notification, id);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private Notification reportCompletedNotification() {
