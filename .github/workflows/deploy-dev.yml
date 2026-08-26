@@ -156,7 +156,6 @@ jobs:
             "FIREBASE_SERVICE_ACCOUNT_JSON=$FIREBASE_SERVICE_ACCOUNT_JSON" \
             "CHAPCHAP_ACCOUNT_PROFILE_IMAGE_BUCKET=chapchap-dev-profile-images" \
             "CHAPCHAP_CONSUMPTION_RECEIPT_IMAGE_BUCKET=chapchap-dev-receipt-images" \
-          
             "TZ=Asia/Seoul")
 
           source infra/deploy/ssm-secure-parameter.sh
