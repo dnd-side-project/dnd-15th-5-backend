@@ -3,6 +3,7 @@ package kr.chapchap.consumption;
 import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.repository.UserRepository;
 import kr.chapchap.consumption.application.command.ReceiptOcrCommand;
+import kr.chapchap.consumption.application.info.ReceiptOcrDocument;
 import kr.chapchap.consumption.application.info.ReceiptOcrInfo;
 import kr.chapchap.consumption.application.port.ReceiptImageStorage;
 import kr.chapchap.consumption.application.port.ReceiptOcrPort;
@@ -80,11 +81,11 @@ class ReceiptOcrPersistenceIntegrationTest {
                 .willAnswer(invocation -> {
                     assertThat(TransactionSynchronizationManager.isActualTransactionActive())
                             .isFalse();
-                    return List.of(
+                    return ReceiptOcrDocument.fromLines(List.of(
                             "찹찹카페",
                             "주소 서울특별시 강남구 테헤란로 123",
                             "결제금액 33,000원"
-                    );
+                    ));
                 });
         given(receiptImageStorage.store(user.getId(), PNG_IMAGE, "image/png"))
                 .willAnswer(invocation -> {
@@ -123,7 +124,7 @@ class ReceiptOcrPersistenceIntegrationTest {
         // given
         long missingUserId = 999_999L;
         given(receiptOcrPort.recognize(any(byte[].class), eq("image/png")))
-                .willReturn(List.of());
+                .willReturn(ReceiptOcrDocument.fromLines(List.of()));
         given(receiptImageStorage.store(missingUserId, PNG_IMAGE, "image/png"))
                 .willReturn(OBJECT_KEY);
 

@@ -1,6 +1,7 @@
 package kr.chapchap.consumption.application.service;
 
 import kr.chapchap.consumption.application.command.ReceiptOcrCommand;
+import kr.chapchap.consumption.application.info.ReceiptOcrDocument;
 import kr.chapchap.consumption.application.info.ReceiptOcrInfo;
 import kr.chapchap.consumption.application.port.ReceiptImageStorage;
 import kr.chapchap.consumption.application.port.ReceiptOcrPort;
@@ -13,7 +14,6 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @RequiredArgsConstructor
 @Service
@@ -33,11 +33,11 @@ public class ReceiptOcrService {
         String contentType = receiptImageValidator.validateAndGetContentType(
                 command.receiptImageContent()
         );
-        List<String> lines = receiptOcrPort.recognize(
+        ReceiptOcrDocument document = receiptOcrPort.recognize(
                 command.receiptImageContent(),
                 contentType
         );
-        ReceiptOcrParser.ParsedReceipt parsedReceipt = receiptOcrParser.parse(lines);
+        ReceiptOcrParser.ParsedReceipt parsedReceipt = receiptOcrParser.parse(document);
 
         String objectKey = receiptImageStorage.store(
                 command.userId(),
