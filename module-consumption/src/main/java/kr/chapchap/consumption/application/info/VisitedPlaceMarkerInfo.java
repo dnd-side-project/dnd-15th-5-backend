@@ -9,6 +9,7 @@ public record VisitedPlaceMarkerInfo(
         long visitCount,
         boolean liked,
         String stickerCategory,
-        String stickerName
+        String stickerName,
+        String googlePlaceId
 ) {
 }

@@ -152,7 +152,7 @@ class VisitedPlaceQueryServiceTest {
                 new PlaceCategoryVisitRow(101L, "카페", 3L)
         ));
         when(placeSummaryLookupPort.findSummaries(any())).thenReturn(Map.of(
-                101L, new PlaceSummaryInfo("투썸플레이스", "역삼동", "주소1", 37.5447, 127.0557)
+                101L, new PlaceSummaryInfo("투썸플레이스", "역삼동", "주소1", 37.5447, 127.0557, "ChIJtest101")
         ));
         when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of(101L));
         when(consumptionQueryRepository.findFirstStickerItemIdsByPlace(eq(1L), any()))
@@ -170,6 +170,7 @@ class VisitedPlaceQueryServiceTest {
         assertThat(marker.liked()).isTrue();
         assertThat(marker.stickerCategory()).isEqualTo("카페");
         assertThat(marker.stickerName()).isEqualTo("도넛");
+        assertThat(marker.googlePlaceId()).isEqualTo("ChIJtest101");
     }
 
     @Test

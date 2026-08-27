@@ -21,13 +21,15 @@ public record VisitedPlaceMarkerResponse(List<VisitedPlaceMarkerItem> places, in
             long visitCount,
             boolean liked,
             String stickerCategory,
-            String stickerName
+            String stickerName,
+            String googlePlaceId
     ) {
         public static VisitedPlaceMarkerItem from(VisitedPlaceMarkerInfo info) {
             return new VisitedPlaceMarkerItem(
                     info.placeId(), info.placeName(), info.category(),
                     info.latitude(), info.longitude(), info.visitCount(),
-                    info.liked(), info.stickerCategory(), info.stickerName()
+                    info.liked(), info.stickerCategory(), info.stickerName(),
+                    info.googlePlaceId()
             );
         }
     }
