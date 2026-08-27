@@ -22,7 +22,7 @@ public class ReportBatchSchedulerConfig {
     private static final ZoneId REPORT_ZONE = ZoneId.of("Asia/Seoul");
     private final Clock clock;
 
-    @Scheduled(cron = "0 25 15 27 * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 2 1 * *", zone = "Asia/Seoul")
     public void aggregatePreviousMonth() {
         LocalDate today = LocalDate.now(clock.withZone(REPORT_ZONE));
         YearMonth targetMonth = YearMonth.from(today).minusMonths(1);

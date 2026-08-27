@@ -11,10 +11,13 @@ import kr.chapchap.report.api.response.CurrentStatusResponse;
 import kr.chapchap.report.api.response.MonthlyReportResponse;
 import kr.chapchap.report.api.response.PersonaCardResponse;
 import kr.chapchap.report.api.response.ShareLinkResponse;
+import kr.chapchap.report.application.command.AggregateMonthlyReportCommand;
 import kr.chapchap.report.application.command.CurrentStatusCommand;
 import kr.chapchap.report.application.command.GetMonthlyReportCommand;
 import kr.chapchap.report.application.info.CurrentStatusInfo;
+import kr.chapchap.report.application.info.MonthlyReportAggregationResultInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo;
+import kr.chapchap.report.application.service.MonthlyReportAggregationService;
 import kr.chapchap.report.application.service.MonthlyReportQueryService;
 import kr.chapchap.report.application.service.ReportQueryService;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +40,7 @@ public class ReportController {
 
     private final ReportQueryService reportQueryService;
     private final MonthlyReportQueryService monthlyReportQueryService;
+    private final MonthlyReportAggregationService monthlyReportAggregationService;
 
     @Operation(
             summary = "현재 리포트 현황 조회",
@@ -62,6 +66,21 @@ public class ReportController {
     ) {
         MonthlyReportInfo info = monthlyReportQueryService.getMonthlyReport(new GetMonthlyReportCommand(userId, yearMonth));
         return ApiResponse.success(MonthlyReportResponse.from(info));
+    }
+
+    // TODO: 테스트 임시 엔드포인트. 프론트 연동 후 삭제 예정
+    @Operation(
+            summary = "월간 리포트 강제 집계 (테스트/백필용)",
+            description = "연월(yyyy-MM)을 지정해 전체 활성 유저의 리포트를 즉시 집계한다. 스케줄러 대기 없이 임의의 달을 바로 만들 때 사용."
+    )
+    @PostMapping("/batch")
+    public ApiResponse<MonthlyReportAggregationResultInfo> aggregateMonthlyReport(
+            @Parameter(description = "집계할 연월, 예: 2026-06") @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth
+    ) {
+        MonthlyReportAggregationResultInfo result = monthlyReportAggregationService.aggregate(
+                AggregateMonthlyReportCommand.forAllActiveUsers(yearMonth)
+        );
+        return ApiResponse.success(result);
     }
 
     @Operation(
