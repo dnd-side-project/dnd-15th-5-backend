@@ -27,7 +27,6 @@ import java.time.YearMonth;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 
 // 엔티티 <-> 실제 스키마 매핑과 인덱스 마이그레이션이 깨지지 않았는지 확인하는 통합 테스트.
@@ -153,8 +152,11 @@ class MonthlyReportQueryServiceIntegrationTest {
     }
 
     @Test
-    void 없는_연월로_조회하면_예외가_발생한다() {
-        assertThatThrownBy(() -> sut.getMonthlyReport(new GetMonthlyReportCommand(1L, YearMonth.of(2099, 1))))
-                .isInstanceOf(kr.chapchap.core.exception.BusinessException.class);
+    void 없는_연월로_조회하면_리포트_본문은_null인_채로_예외없이_응답한다() {
+        MonthlyReportInfo info = sut.getMonthlyReport(new GetMonthlyReportCommand(1L, YearMonth.of(2099, 1)));
+
+        assertThat(info.reportId()).isNull();
+        assertThat(info.yearMonth()).isEqualTo(YearMonth.of(2099, 1));
+        assertThat(info.placeRanks()).isEmpty();
     }
 }

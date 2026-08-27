@@ -60,15 +60,24 @@ public class MonthlyReportQueryService {
     private final UserNicknameLookupPort userNicknameLookupPort;
 
     public MonthlyReportInfo getMonthlyReport(GetMonthlyReportCommand command) {
-        Report report = reportRepository.findByUserIdAndReportMonth(command.userId(), command.yearMonth().atDay(1))
-                .orElseThrow(() -> new BusinessException(ReportErrorCode.REPORT_NOT_FOUND));
+        Optional<Report> reportOpt = reportRepository.findByUserIdAndReportMonth(command.userId(), command.yearMonth().atDay(1));
 
+        YearMonth firstAvailableYearMonth = consumptionActivityPort.findFirstAvailableYearMonth(command.userId())
+                .orElse(null);
+        AdjacentPersonaInfo previous = findAdjacentPersonaInfo(command.userId(), command.yearMonth().minusMonths(1));
+        AdjacentPersonaInfo next = findAdjacentPersonaInfo(command.userId(), command.yearMonth().plusMonths(1));
+
+        return reportOpt
+                .map(report -> buildReportInfo(report, command, firstAvailableYearMonth, previous, next))
+                .orElseGet(() -> emptyReportInfo(command.yearMonth(), firstAvailableYearMonth, previous, next));
+    }
+
+    private MonthlyReportInfo buildReportInfo(Report report, GetMonthlyReportCommand command,
+                                               YearMonth firstAvailableYearMonth, AdjacentPersonaInfo previous, AdjacentPersonaInfo next) {
         List<ReportCategoryStat> categoryStats = reportCategoryStatRepository.findByReportId(report.getId());
         List<ReportTownRank> townRanks = reportTownRankRepository.findByReportIdOrderByRankAsc(report.getId());
         List<ReportPlaceRank> placeRanks = reportPlaceRankRepository.findByReportIdOrderByRankAsc(report.getId());
         List<ReportTimePattern> timePatterns = reportTimePatternRepository.findByReportId(report.getId());
-        YearMonth firstAvailableYearMonth = consumptionActivityPort.findFirstAvailableYearMonth(command.userId())
-                .orElse(null);
 
         return new MonthlyReportInfo(
                 report.getId(),
@@ -80,15 +89,25 @@ public class MonthlyReportQueryService {
                 toCategoryStatInfos(categoryStats),
                 toTimePatternInfo(timePatterns),
                 firstAvailableYearMonth,
-                findAdjacentPersonaInfo(command.userId(), command.yearMonth().minusMonths(1)),
-                findAdjacentPersonaInfo(command.userId(), command.yearMonth().plusMonths(1))
+                previous,
+                next
         );
     }
 
+    private MonthlyReportInfo emptyReportInfo(YearMonth yearMonth, YearMonth firstAvailableYearMonth,
+                                               AdjacentPersonaInfo previous, AdjacentPersonaInfo next) {
+        return new MonthlyReportInfo(
+                null, yearMonth, null, List.of(), List.of(), null, List.of(), null,
+                firstAvailableYearMonth, previous, next
+        );
+    }
+
+
     private AdjacentPersonaInfo findAdjacentPersonaInfo(Long userId, YearMonth yearMonth) {
-        return reportRepository.findByUserIdAndReportMonth(userId, yearMonth.atDay(1))
-                .map(report -> new AdjacentPersonaInfo(yearMonth, report.getPersonaType().name()))
+        String type = reportRepository.findByUserIdAndReportMonth(userId, yearMonth.atDay(1))
+                .map(report -> report.getPersonaType().name())
                 .orElse(null);
+        return new AdjacentPersonaInfo(yearMonth, type);
     }
 
     // 취향카드 공유 링크 발급 (이미 발급돼 있으면 기존 토큰 재사용)

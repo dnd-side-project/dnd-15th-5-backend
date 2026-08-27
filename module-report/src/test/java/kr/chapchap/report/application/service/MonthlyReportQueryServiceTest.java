@@ -1,6 +1,5 @@
 package kr.chapchap.report.application.service;
 
-import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.report.application.command.GetMonthlyReportCommand;
 import kr.chapchap.report.application.info.ConsumptionActivity;
 import kr.chapchap.report.application.info.MonthlyReportInfo;
@@ -18,7 +17,6 @@ import kr.chapchap.report.domain.repository.ReportPlaceRankRepository;
 import kr.chapchap.report.domain.repository.ReportRepository;
 import kr.chapchap.report.domain.repository.ReportTimePatternRepository;
 import kr.chapchap.report.domain.repository.ReportTownRankRepository;
-import kr.chapchap.report.exception.ReportErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,7 +31,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
@@ -87,16 +84,30 @@ class MonthlyReportQueryServiceTest {
     }
 
     @Test
-    void 존재하지_않는_연월로_조회하면_REPORT_NOT_FOUND_예외가_발생한다() {
-        // given
+    void 존재하지_않는_연월로_조회하면_리포트_본문은_null이고_previous_next는_그대로_내려온다() {
+        // given: 요청한 달(YEAR_MONTH)엔 리포트 없음, 이전 달(6월)엔 있음
         when(reportRepository.findByUserIdAndReportMonth(USER_ID, YEAR_MONTH.atDay(1)))
                 .thenReturn(Optional.empty());
+        when(reportRepository.findByUserIdAndReportMonth(USER_ID, YEAR_MONTH.minusMonths(1).atDay(1)))
+                .thenReturn(Optional.of(createReportWithId()));
 
-        // when & then
-        assertThatThrownBy(() -> sut.getMonthlyReport(new GetMonthlyReportCommand(USER_ID, YEAR_MONTH)))
-                .isInstanceOf(BusinessException.class)
-                .extracting(exception -> ((BusinessException) exception).getErrorCode())
-                .isEqualTo(ReportErrorCode.REPORT_NOT_FOUND);
+        // when
+        MonthlyReportInfo info = sut.getMonthlyReport(new GetMonthlyReportCommand(USER_ID, YEAR_MONTH));
+
+        // then
+        assertThat(info.yearMonth()).isEqualTo(YEAR_MONTH);
+        assertThat(info.reportId()).isNull();
+        assertThat(info.persona()).isNull();
+        assertThat(info.summary()).isNull();
+        assertThat(info.timePattern()).isNull();
+        assertThat(info.placeRanks()).isEmpty();
+        assertThat(info.townRanks()).isEmpty();
+        assertThat(info.categoryStats()).isEmpty();
+        assertThat(info.previous().yearMonth()).isEqualTo(YEAR_MONTH.minusMonths(1));
+        assertThat(info.previous().type()).isEqualTo("RHMP");
+        // 다음 달엔 리포트가 없어도 yearMonth는 채워지고 type만 null이어야 한다
+        assertThat(info.next().yearMonth()).isEqualTo(YEAR_MONTH.plusMonths(1));
+        assertThat(info.next().type()).isNull();
     }
 
     @Test

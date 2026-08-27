@@ -30,12 +30,12 @@ public record MonthlyReportResponse(
         return new MonthlyReportResponse(
                 info.reportId(),
                 info.yearMonth().format(YEAR_MONTH_FORMAT),
-                PersonaResponse.from(info.persona()),
+                info.persona() != null ? PersonaResponse.from(info.persona()) : null,
                 info.placeRanks().stream().map(PlaceRankResponse::from).toList(),
                 info.townRanks().stream().map(TownRankResponse::from).toList(),
-                SummaryResponse.from(info.summary()),
+                info.summary() != null ? SummaryResponse.from(info.summary()) : null,
                 info.categoryStats().stream().map(CategoryStatResponse::from).toList(),
-                TimePatternResponse.from(info.timePattern()),
+                info.timePattern() != null ? TimePatternResponse.from(info.timePattern()) : null,
                 info.firstAvailableYearMonth() != null ? info.firstAvailableYearMonth().format(YEAR_MONTH_FORMAT) : null,
                 AdjacentPersonaResponse.from(info.previous()),
                 AdjacentPersonaResponse.from(info.next())

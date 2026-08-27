@@ -28,14 +28,13 @@ public class MonthlyAggregationCalculator {
     public MonthlyAggregationResult calculate(
             List<MonthlyVisitActivity> monthActivities,
             Set<Long> priorVisitedPlaceIds,
-            Set<String> priorVisitedTownNames,
             Map<Long, LocalDate> earliestVisitDateByPlaceId
     ) {
         int totalVisitCount = monthActivities.size();
 
         return new MonthlyAggregationResult(
                 totalVisitCount,
-                calculateNewTownCount(monthActivities, priorVisitedTownNames),
+                calculateTownCount(monthActivities),
                 calculateNewPlaceCount(monthActivities, priorVisitedPlaceIds),
                 calculateCategoryStats(monthActivities, totalVisitCount),
                 calculateTownRanks(monthActivities),
@@ -134,12 +133,11 @@ public class MonthlyAggregationCalculator {
                 .toList();
     }
 
-    private int calculateNewTownCount(List<MonthlyVisitActivity> activities, Set<String> priorVisitedTownNames) {
+    private int calculateTownCount(List<MonthlyVisitActivity> activities) {
         return (int) activities.stream()
                 .map(MonthlyVisitActivity::dongName)
                 .filter(dongName -> dongName != null && !dongName.isBlank())
                 .distinct()
-                .filter(dongName -> !priorVisitedTownNames.contains(dongName))
                 .count();
     }
 

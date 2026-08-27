@@ -27,7 +27,7 @@ class MonthlyAggregationCalculatorTest {
         );
 
         // when
-        MonthlyAggregationResult result = sut.calculate(activities, Set.of(), Set.of(), Map.of());
+        MonthlyAggregationResult result = sut.calculate(activities, Set.of(), Map.of());
 
         // then
         assertThat(result.categoryStats())
@@ -51,7 +51,7 @@ class MonthlyAggregationCalculatorTest {
         );
 
         // when
-        MonthlyAggregationResult result = sut.calculate(activities, Set.of(), Set.of(), Map.of());
+        MonthlyAggregationResult result = sut.calculate(activities, Set.of(), Map.of());
 
         // then
         assertThat(result.townRanks()).hasSize(3);
@@ -61,20 +61,19 @@ class MonthlyAggregationCalculatorTest {
     }
 
     @Test
-    void 이전에_방문한_적_없는_동네와_가게만_신규로_집계한다() {
+    void 동네는_이번달_방문한_전체_개수를_가게는_이전에_없던_곳만_신규로_집계한다() {
         // given
         List<MonthlyVisitActivity> activities = List.of(
                 activity(1L, "기존동", "기존가게", "CAFE", LocalDate.of(2026, 7, 1), null),
                 activity(2L, "신규동", "신규가게", "CAFE", LocalDate.of(2026, 7, 2), null)
         );
         Set<Long> priorPlaceIds = Set.of(1L);
-        Set<String> priorTownNames = Set.of("기존동");
 
         // when
-        MonthlyAggregationResult result = sut.calculate(activities, priorPlaceIds, priorTownNames, Map.of());
+        MonthlyAggregationResult result = sut.calculate(activities, priorPlaceIds, Map.of());
 
-        // then
-        assertThat(result.newTownCount()).isEqualTo(1);
+        // then: 동네는 "새로 방문한 동네"가 아니라 "이번 달 방문한 전체 동네" 개수 (기존동, 신규동 = 2)
+        assertThat(result.newTownCount()).isEqualTo(2);
         assertThat(result.newPlaceCount()).isEqualTo(1);
     }
 
@@ -87,7 +86,7 @@ class MonthlyAggregationCalculatorTest {
         Map<Long, LocalDate> earliestVisitDateByPlaceId = Map.of(1L, LocalDate.of(2026, 5, 1));
 
         // when
-        MonthlyAggregationResult result = sut.calculate(activities, Set.of(), Set.of(), earliestVisitDateByPlaceId);
+        MonthlyAggregationResult result = sut.calculate(activities, Set.of(), earliestVisitDateByPlaceId);
 
         // then
         assertThat(result.placeRanks()).hasSize(1);
@@ -103,7 +102,7 @@ class MonthlyAggregationCalculatorTest {
         );
 
         // when
-        MonthlyAggregationResult result = sut.calculate(activities, Set.of(), Set.of(), Map.of());
+        MonthlyAggregationResult result = sut.calculate(activities, Set.of(), Map.of());
 
         // then
         assertThat(result.timePatterns()).hasSize(1);

@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.chapchap.core.web.auth.ChapChapUserId;
 import kr.chapchap.core.web.response.ApiResponse;
+import kr.chapchap.report.api.response.ReportSuccessCode;
 import kr.chapchap.report.api.response.CurrentStatusResponse;
 import kr.chapchap.report.api.response.MonthlyReportResponse;
 import kr.chapchap.report.api.response.PersonaCardResponse;
@@ -65,7 +66,12 @@ public class ReportController {
             @Parameter(description = "조회할 연월, 예: 2026-07") @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth
     ) {
         MonthlyReportInfo info = monthlyReportQueryService.getMonthlyReport(new GetMonthlyReportCommand(userId, yearMonth));
-        return ApiResponse.success(MonthlyReportResponse.from(info));
+        MonthlyReportResponse response = MonthlyReportResponse.from(info);
+        if (info.reportId() == null) {
+            ReportSuccessCode noReport = ReportSuccessCode.NO_REPORT_FOR_MONTH;
+            return new ApiResponse<>(noReport.getCode(), noReport.getMessage(), response);
+        }
+        return ApiResponse.success(response);
     }
 
     // TODO: 테스트 임시 엔드포인트. 프론트 연동 후 삭제 예정

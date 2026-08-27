@@ -168,11 +168,6 @@ public class MonthlyReportAggregationService {
         //과거 방문 이력 집합 및 장소별 최초 방문일 계산
         Set<Long> priorVisitedPlaceIds = priorActivities.stream().map(ConsumptionActivity::placeId).collect(Collectors.toSet());
 
-        Set<String> priorVisitedTownNames = priorActivities.stream()
-                .map(activity -> dongNames.get(activity.placeId()))
-                .filter(dongName -> dongName != null && !dongName.isBlank())
-                .collect(Collectors.toSet());
-
         Map<Long, LocalDate> earliestVisitDateByPlaceId = Stream.concat(monthActivities.stream(), priorActivities.stream())
                 .collect(Collectors.groupingBy(
                         ConsumptionActivity::placeId,
@@ -195,7 +190,7 @@ public class MonthlyReportAggregationService {
                 .toList();
 
         // 통계 계산
-        MonthlyAggregationResult aggregation = monthlyAggregationCalculator.calculate(monthVisitActivities, priorVisitedPlaceIds, priorVisitedTownNames, earliestVisitDateByPlaceId);
+        MonthlyAggregationResult aggregation = monthlyAggregationCalculator.calculate(monthVisitActivities, priorVisitedPlaceIds, earliestVisitDateByPlaceId);
         //페르소나 점수 산출
         PersonaScoreResult personaScore = personaScoringService.score(monthVisitActivities, priorVisitedPlaceIds, aggregation);
 
