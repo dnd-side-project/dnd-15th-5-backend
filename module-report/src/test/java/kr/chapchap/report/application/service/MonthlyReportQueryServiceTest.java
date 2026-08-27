@@ -131,6 +131,7 @@ class MonthlyReportQueryServiceTest {
         assertThat(info.persona().typeName()).isEqualTo("골목 야간반장");
         assertThat(info.persona().keywords()).containsExactly("단골 반복형", "동네 집중형", "밤소비형", "규칙형");
         assertThat(info.placeRanks()).hasSize(1);
+        assertThat(info.placeRanks().get(0).placeId()).isEqualTo(101L);
         assertThat(info.placeRanks().get(0).placeName()).isEqualTo("투썸 플레이스 뚝섬지점");
         assertThat(info.placeRanks().get(0).category()).isEqualTo("카페");
         assertThat(info.placeRanks().get(0).stickerNames()).containsExactly("도넛", "아이스");

@@ -4,9 +4,8 @@ import java.time.LocalTime;
 
 public enum TimeSlot {
 
-    DAWN("새벽"),
-    MORNING("아침"),
-    LUNCH("점심"),
+    MORNING("오전"),
+    LUNCH("오후"),
     EVENING("저녁"),
     NIGHT("밤");
 
@@ -25,16 +24,13 @@ public enum TimeSlot {
     }
 
     public static TimeSlot from(int hour) {
-        if (hour >= 2 && hour < 6) {
-            return DAWN;
-        }
-        if (hour >= 6 && hour < 10) {
+        if (hour >= 5 && hour < 11) {
             return MORNING;
         }
-        if (hour >= 10 && hour < 15) {
+        if (hour >= 11 && hour < 17) {
             return LUNCH;
         }
-        if (hour >= 15 && hour < 20) {
+        if (hour >= 17 && hour < 21) {
             return EVENING;
         }
         return NIGHT;

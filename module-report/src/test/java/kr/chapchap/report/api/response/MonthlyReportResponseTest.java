@@ -26,7 +26,9 @@ class MonthlyReportResponseTest {
                 new MonthlyReportInfo.SummaryInfo(3, 0, 0),
                 List.of(),
                 new MonthlyReportInfo.TimePatternInfo(0, null, List.of()),
-                YearMonth.of(2026, 5)
+                YearMonth.of(2026, 5),
+                null,
+                null
         );
 
         // when & then

@@ -33,7 +33,7 @@ public class RecentDiscoveryMessageGenerator {
 
         lifeZoneChangeMessage(recentActivities, previousActivities).ifPresent(candidates::add);
         newPlaceDiscoveryMessage(recentActivities, previousActivities).ifPresent(candidates::add);
-        mostVisitedTimeSlotMessage(recentActivities).ifPresent(candidates::add);
+//        mostVisitedTimeSlotMessage(recentActivities).ifPresent(candidates::add);
         categoryConcentrationMessage(recentActivities).ifPresent(candidates::add);
         dayNightShiftMessage(recentActivities, previousActivities).ifPresent(candidates::add);
 
@@ -87,30 +87,30 @@ public class RecentDiscoveryMessageGenerator {
         return Optional.of("프로 단골러 등장! 최근 새로운 단골집이 " + newPlaceIds.size() + "곳이나 늘어났어요");
     }
 
-    private Optional<String> mostVisitedTimeSlotMessage(List<VisitActivity> recent) {
-        List<VisitActivity> withTime = recent.stream()
-                .filter(activity -> activity.purchaseTime() != null)
-                .toList();
-
-        if (withTime.size() < MIN_ACTIVITY_COUNT_FOR_TIME_COMPARISON) {
-            return Optional.empty();
-        }
-
-        Optional<TimeSlot> mostVisitedSlot = withTime.stream()
-                .collect(Collectors.groupingBy(
-                        activity -> TimeSlot.from(activity.purchaseTime()),
-                        Collectors.counting()
-                ))
-                .entrySet().stream()
-                .max(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey);
-
-        if (mostVisitedSlot.isEmpty()) {
-            return Optional.empty();
-        }
-
-        return Optional.of("요즘은 " + mostVisitedSlot.get().getLabel() + " 방문이 가장 많아요");
-    }
+//    private Optional<String> mostVisitedTimeSlotMessage(List<VisitActivity> recent) {
+//        List<VisitActivity> withTime = recent.stream()
+//                .filter(activity -> activity.purchaseTime() != null)
+//                .toList();
+//
+//        if (withTime.size() < MIN_ACTIVITY_COUNT_FOR_TIME_COMPARISON) {
+//            return Optional.empty();
+//        }
+//
+//        Optional<TimeSlot> mostVisitedSlot = withTime.stream()
+//                .collect(Collectors.groupingBy(
+//                        activity -> TimeSlot.from(activity.purchaseTime()),
+//                        Collectors.counting()
+//                ))
+//                .entrySet().stream()
+//                .max(Map.Entry.comparingByValue())
+//                .map(Map.Entry::getKey);
+//
+//        if (mostVisitedSlot.isEmpty()) {
+//            return Optional.empty();
+//        }
+//
+//        return Optional.of("요즘은 " + mostVisitedSlot.get().getLabel() + " 방문이 가장 많아요");
+//    }
 
     // 카테고리 쏠림
     private Optional<String> categoryConcentrationMessage(List<VisitActivity> recent) {
@@ -140,7 +140,6 @@ public class RecentDiscoveryMessageGenerator {
         return Optional.of("최근 지출의 " + percentage + "%가 " + dominantCategory.get().getKey() + "에 집중되는중!");
     }
 
-    // 낮/밤 소비 성향 변화 (페르소나 축 산정과 동일한 -2~+2 시간대 가중치를 사용)
     private Optional<String> dayNightShiftMessage(List<VisitActivity> recent, List<VisitActivity> previous) {
         OptionalDouble recentAverage = averageTimeWeight(recent);
         OptionalDouble previousAverage = averageTimeWeight(previous);

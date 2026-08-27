@@ -18,7 +18,9 @@ public record MonthlyReportResponse(
         SummaryResponse summary,
         List<CategoryStatResponse> categoryStats,
         TimePatternResponse timePattern,
-        String firstAvailableYearMonth
+        String firstAvailableYearMonth,
+        AdjacentPersonaResponse previous,
+        AdjacentPersonaResponse next
 ) {
 
     private static final DateTimeFormatter YEAR_MONTH_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM");
@@ -34,8 +36,20 @@ public record MonthlyReportResponse(
                 SummaryResponse.from(info.summary()),
                 info.categoryStats().stream().map(CategoryStatResponse::from).toList(),
                 TimePatternResponse.from(info.timePattern()),
-                info.firstAvailableYearMonth() != null ? info.firstAvailableYearMonth().format(YEAR_MONTH_FORMAT) : null
+                info.firstAvailableYearMonth() != null ? info.firstAvailableYearMonth().format(YEAR_MONTH_FORMAT) : null,
+                AdjacentPersonaResponse.from(info.previous()),
+                AdjacentPersonaResponse.from(info.next())
         );
+    }
+
+    public record AdjacentPersonaResponse(String yearMonth, String type) {
+
+        public static AdjacentPersonaResponse from(MonthlyReportInfo.AdjacentPersonaInfo info) {
+            if (info == null) {
+                return null;
+            }
+            return new AdjacentPersonaResponse(info.yearMonth().format(YEAR_MONTH_FORMAT), info.type());
+        }
     }
 
     public record PersonaResponse(String type, String typeName, List<String> keywords, ScoresResponse scores) {
@@ -62,13 +76,13 @@ public record MonthlyReportResponse(
         }
     }
 
-    public record PlaceRankResponse(int rank, String placeName, int visitCount, String firstVisitedDate, String category,
-                                     List<String> stickerNames) {
+    public record PlaceRankResponse(int rank, Long placeId, String placeName, int visitCount, String firstVisitedDate,
+                                     String category, List<String> stickerNames) {
 
         public static PlaceRankResponse from(MonthlyReportInfo.PlaceRankInfo info) {
             String firstVisitedDate = info.firstVisitedDate() != null ? DATE_FORMAT.format(info.firstVisitedDate()) : null;
-            return new PlaceRankResponse(info.rank(), info.placeName(), info.visitCount(), firstVisitedDate, info.category(),
-                    info.stickerNames());
+            return new PlaceRankResponse(info.rank(), info.placeId(), info.placeName(), info.visitCount(), firstVisitedDate,
+                    info.category(), info.stickerNames());
         }
     }
 

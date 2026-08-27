@@ -135,6 +135,7 @@ class MonthlyReportQueryServiceIntegrationTest {
         assertThat(info.persona().scores().scoreExploration()).isEqualByComparingTo("0.30");
 
         assertThat(info.placeRanks()).hasSize(1);
+        assertThat(info.placeRanks().get(0).placeId()).isEqualTo(101L);
         assertThat(info.placeRanks().get(0).placeName()).isEqualTo("투썸 플레이스 뚝섬지점");
         assertThat(info.placeRanks().get(0).firstVisitedDate()).isEqualTo("2026-05-04");
         assertThat(info.placeRanks().get(0).category()).isEqualTo("카페");

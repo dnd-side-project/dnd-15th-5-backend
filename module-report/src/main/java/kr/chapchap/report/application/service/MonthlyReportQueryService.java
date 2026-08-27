@@ -4,6 +4,7 @@ import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.report.application.command.GetMonthlyReportCommand;
 import kr.chapchap.report.application.info.ConsumptionActivity;
 import kr.chapchap.report.application.info.MonthlyReportInfo;
+import kr.chapchap.report.application.info.MonthlyReportInfo.AdjacentPersonaInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.CategoryStatInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.DayOfWeekCountInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.PersonaInfo;
@@ -78,8 +79,16 @@ public class MonthlyReportQueryService {
                 toSummaryInfo(report),
                 toCategoryStatInfos(categoryStats),
                 toTimePatternInfo(timePatterns),
-                firstAvailableYearMonth
+                firstAvailableYearMonth,
+                findAdjacentPersonaInfo(command.userId(), command.yearMonth().minusMonths(1)),
+                findAdjacentPersonaInfo(command.userId(), command.yearMonth().plusMonths(1))
         );
+    }
+
+    private AdjacentPersonaInfo findAdjacentPersonaInfo(Long userId, YearMonth yearMonth) {
+        return reportRepository.findByUserIdAndReportMonth(userId, yearMonth.atDay(1))
+                .map(report -> new AdjacentPersonaInfo(yearMonth, report.getPersonaType().name()))
+                .orElse(null);
     }
 
     // 취향카드 공유 링크 발급 (이미 발급돼 있으면 기존 토큰 재사용)
@@ -133,6 +142,7 @@ public class MonthlyReportQueryService {
                     boolean isTopPlace = placeRank.getRank() == TOP_PLACE_RANK;
                     return new PlaceRankInfo(
                             placeRank.getRank(),
+                            placeRank.getPlaceId(),
                             placeRank.getPlaceName(),
                             placeRank.getVisitCount(),
                             placeRank.getFirstVisitedDate(),

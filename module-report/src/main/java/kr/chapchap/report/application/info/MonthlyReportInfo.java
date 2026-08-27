@@ -15,10 +15,15 @@ public record MonthlyReportInfo(
         SummaryInfo summary,
         List<CategoryStatInfo> categoryStats,
         TimePatternInfo timePattern,
-        YearMonth firstAvailableYearMonth
+        YearMonth firstAvailableYearMonth,
+        AdjacentPersonaInfo previous,
+        AdjacentPersonaInfo next
 ) {
 
     public record PersonaInfo(String type, String typeName, List<String> keywords, ScoresInfo scores) {
+    }
+
+    public record AdjacentPersonaInfo(YearMonth yearMonth, String type) {
     }
 
     public record ScoresInfo(
@@ -30,8 +35,8 @@ public record MonthlyReportInfo(
     }
 
 
-    public record PlaceRankInfo(int rank, String placeName, int visitCount, LocalDate firstVisitedDate, String category,
-                                 List<String> stickerNames) {
+    public record PlaceRankInfo(int rank, Long placeId, String placeName, int visitCount, LocalDate firstVisitedDate,
+                                 String category, List<String> stickerNames) {
     }
 
     public record TownRankInfo(int rank, String townName, int visitCount) {
