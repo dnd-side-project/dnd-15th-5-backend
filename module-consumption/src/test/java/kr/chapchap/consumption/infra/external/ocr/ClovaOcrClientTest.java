@@ -2,6 +2,9 @@ package kr.chapchap.consumption.infra.external.ocr;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import kr.chapchap.consumption.application.info.ReceiptOcrDocument;
+import kr.chapchap.consumption.application.info.ReceiptOcrDocument.Point;
+import kr.chapchap.consumption.application.info.ReceiptOcrDocument.TextField;
 import kr.chapchap.consumption.exception.ConsumptionErrorCode;
 import kr.chapchap.consumption.infra.config.ClovaOcrProperties;
 import kr.chapchap.core.exception.BusinessException;
@@ -73,7 +76,7 @@ class ClovaOcrClientTest {
     }
 
     @Test
-    void CLOVA_일반_OCR을_호출하고_인식한_문장을_줄_단위로_반환한다() {
+    void CLOVA_일반_OCR을_호출하고_텍스트와_좌표와_신뢰도를_반환한다() {
         // given
         server.expect(requestTo(INVOKE_URL))
                 .andExpect(method(HttpMethod.POST))
@@ -101,10 +104,34 @@ class ClovaOcrClientTest {
                                   "images": [{
                                     "inferResult": "SUCCESS",
                                     "fields": [
-                                      {"inferText": "투썸플레이스", "lineBreak": false},
-                                      {"inferText": "신논현점", "lineBreak": true},
-                                      {"inferText": "결제금액", "lineBreak": false},
-                                      {"inferText": "33,000원", "lineBreak": true}
+                                      {
+                                        "inferText": "투썸플레이스",
+                                        "inferConfidence": 0.9981,
+                                        "lineBreak": false,
+                                        "boundingPoly": {
+                                          "vertices": [
+                                            {"x": 10.5, "y": 20.25},
+                                            {"x": 110.5, "y": 20.25},
+                                            {"x": 110.5, "y": 40.25},
+                                            {"x": 10.5, "y": 40.25}
+                                          ]
+                                        }
+                                      },
+                                      {
+                                        "inferText": "신논현점",
+                                        "inferConfidence": 0.9972,
+                                        "lineBreak": true,
+                                        "boundingPoly": {
+                                          "vertices": [
+                                            {"x": 120.0, "y": 20.25},
+                                            {"x": 190.0, "y": 20.25},
+                                            {"x": 190.0, "y": 40.25},
+                                            {"x": 120.0, "y": 40.25}
+                                          ]
+                                        }
+                                      },
+                                      {"inferText": "결제금액", "inferConfidence": 0.9963, "lineBreak": false},
+                                      {"inferText": "33,000원", "inferConfidence": 0.9994, "lineBreak": true}
                                     ]
                                   }]
                                 }
@@ -113,13 +140,28 @@ class ClovaOcrClientTest {
                 ));
 
         // when
-        List<String> result = clovaOcrClient.recognize(IMAGE_CONTENT, "image/png");
+        ReceiptOcrDocument result = clovaOcrClient.recognize(IMAGE_CONTENT, "image/png");
 
         // then
-        assertThat(result).containsExactly(
+        assertThat(result.lines()).containsExactly(
                 "투썸플레이스 신논현점",
                 "결제금액 33,000원"
         );
+        assertThat(result.fields().getFirst()).isEqualTo(new TextField(
+                "투썸플레이스",
+                0.9981,
+                false,
+                List.of(
+                        new Point(10.5, 20.25),
+                        new Point(110.5, 20.25),
+                        new Point(110.5, 40.25),
+                        new Point(10.5, 40.25)
+                )
+        ));
+        assertThat(result.fields()).extracting(TextField::confidence)
+                .containsExactly(0.9981, 0.9972, 0.9963, 0.9994);
+        assertThat(result.fields()).extracting(TextField::lineBreak)
+                .containsExactly(false, true, false, true);
         then(rateLimiter).should().awaitPermit();
         server.verify();
     }
@@ -153,10 +195,83 @@ class ClovaOcrClientTest {
                 ));
 
         // when
-        List<String> result = clovaOcrClient.recognize(IMAGE_CONTENT, "image/jpeg");
+        ReceiptOcrDocument result = clovaOcrClient.recognize(IMAGE_CONTENT, "image/jpeg");
 
         // then
-        assertThat(result).isEmpty();
+        assertThat(result.fields()).isEmpty();
+        assertThat(result.lines()).isEmpty();
+        server.verify();
+    }
+
+    @Test
+    void 좌표와_신뢰도가_누락되면_누락_상태를_보존한다() {
+        // given
+        server.expect(requestTo(INVOKE_URL))
+                .andRespond(withSuccess(
+                        """
+                                {
+                                  "images": [{
+                                    "inferResult": "SUCCESS",
+                                    "fields": [{
+                                      "inferText": "합계",
+                                      "lineBreak": true
+                                    }]
+                                  }]
+                                }
+                                """,
+                        MediaType.APPLICATION_JSON
+                ));
+
+        // when
+        ReceiptOcrDocument result = clovaOcrClient.recognize(
+                IMAGE_CONTENT,
+                "image/jpeg"
+        );
+
+        // then
+        assertThat(result.fields()).containsExactly(
+                new TextField("합계", 0.0, true, List.of(), false)
+        );
+        assertThat(result.lines()).containsExactly("합계");
+        server.verify();
+    }
+
+    @Test
+    void 일부_꼭짓점만_유효한_polygon은_좌표_없음으로_처리한다() {
+        // given
+        server.expect(requestTo(INVOKE_URL))
+                .andRespond(withSuccess(
+                        """
+                                {
+                                  "images": [{
+                                    "inferResult": "SUCCESS",
+                                    "fields": [{
+                                      "inferText": "합계",
+                                      "inferConfidence": 0.99,
+                                      "lineBreak": true,
+                                      "boundingPoly": {
+                                        "vertices": [
+                                          {"x": 10.0, "y": 20.0},
+                                          {"x": 110.0, "y": 20.0},
+                                          {"x": null, "y": 40.0},
+                                          {"x": 10.0, "y": 40.0}
+                                        ]
+                                      }
+                                    }]
+                                  }]
+                                }
+                                """,
+                        MediaType.APPLICATION_JSON
+                ));
+
+        // when
+        ReceiptOcrDocument result = clovaOcrClient.recognize(
+                IMAGE_CONTENT,
+                "image/jpeg"
+        );
+
+        // then
+        assertThat(result.fields().getFirst().boundingVertices()).isEmpty();
         server.verify();
     }
 
