@@ -1,6 +1,9 @@
 package kr.chapchap.consumption.infra.external.ocr;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import kr.chapchap.consumption.application.info.ReceiptOcrDocument;
+import kr.chapchap.consumption.application.info.ReceiptOcrDocument.Point;
+import kr.chapchap.consumption.application.info.ReceiptOcrDocument.TextField;
 import kr.chapchap.consumption.application.port.ReceiptOcrPort;
 import kr.chapchap.consumption.exception.ConsumptionErrorCode;
 import kr.chapchap.consumption.infra.config.ClovaOcrProperties;
@@ -13,7 +16,6 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import java.time.Clock;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
@@ -49,7 +51,7 @@ public class ClovaOcrClient implements ReceiptOcrPort {
     }
 
     @Override
-    public List<String> recognize(
+    public ReceiptOcrDocument recognize(
             byte[] content,
             String contentType
     ) {
@@ -79,7 +81,7 @@ public class ClovaOcrClient implements ReceiptOcrPort {
                     .body(request)
                     .retrieve()
                     .body(ClovaOcrResponse.class);
-            return extractLines(response);
+            return extractDocument(response);
         } catch (BusinessException exception) {
             throw exception;
         } catch (RestClientException exception) {
@@ -107,7 +109,7 @@ public class ClovaOcrClient implements ReceiptOcrPort {
         };
     }
 
-    private List<String> extractLines(ClovaOcrResponse response) {
+    private ReceiptOcrDocument extractDocument(ClovaOcrResponse response) {
         if (response == null || response.images() == null || response.images().size() != 1) {
             throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
         }
@@ -124,35 +126,55 @@ public class ClovaOcrClient implements ReceiptOcrPort {
         if (ERROR.equals(image.inferResult()) || !SUCCESS.equals(image.inferResult())) {
             throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
         }
-        return reconstructLines(image.fields());
+        return mapDocument(image.fields());
     }
 
-    private List<String> reconstructLines(List<ClovaOcrField> fields) {
+    private ReceiptOcrDocument mapDocument(List<ClovaOcrField> fields) {
         if (fields == null || fields.isEmpty()) {
+            return ReceiptOcrDocument.empty();
+        }
+
+        List<TextField> mappedFields = fields.stream()
+                .filter(field -> field != null)
+                .map(field -> new TextField(
+                        field.inferText() != null ? field.inferText() : "",
+                        normalizeConfidence(field.inferConfidence()),
+                        Boolean.TRUE.equals(field.lineBreak()),
+                        mapVertices(field.boundingPoly()),
+                        hasConfidence(field.inferConfidence())
+                ))
+                .toList();
+        return mappedFields.isEmpty()
+                ? ReceiptOcrDocument.empty()
+                : new ReceiptOcrDocument(mappedFields);
+    }
+
+    private double normalizeConfidence(Double confidence) {
+        return confidence != null && Double.isFinite(confidence) ? confidence : 0.0;
+    }
+
+    private boolean hasConfidence(Double confidence) {
+        return confidence != null && Double.isFinite(confidence);
+    }
+
+    private List<Point> mapVertices(ClovaOcrBoundingPoly boundingPoly) {
+        if (boundingPoly == null
+                || boundingPoly.vertices() == null
+                || boundingPoly.vertices().isEmpty()) {
             return List.of();
         }
 
-        List<String> lines = new ArrayList<>();
-        StringBuilder currentLine = new StringBuilder();
-        for (ClovaOcrField field : fields) {
-            if (field == null) {
-                continue;
-            }
-            if (field.inferText() != null && !field.inferText().isBlank()) {
-                if (!currentLine.isEmpty()) {
-                    currentLine.append(' ');
-                }
-                currentLine.append(field.inferText().trim());
-            }
-            if (Boolean.TRUE.equals(field.lineBreak()) && !currentLine.isEmpty()) {
-                lines.add(currentLine.toString());
-                currentLine.setLength(0);
-            }
-        }
-        if (!currentLine.isEmpty()) {
-            lines.add(currentLine.toString());
-        }
-        return List.copyOf(lines);
+        List<Point> vertices = boundingPoly.vertices().stream()
+                .filter(vertex -> vertex != null
+                        && vertex.x() != null
+                        && vertex.y() != null
+                        && Double.isFinite(vertex.x())
+                        && Double.isFinite(vertex.y()))
+                .map(vertex -> new Point(vertex.x(), vertex.y()))
+                .toList();
+        return vertices.size() == boundingPoly.vertices().size() && vertices.size() >= 4
+                ? vertices
+                : List.of();
     }
 
     private record ClovaOcrRequest(
@@ -185,7 +207,20 @@ public class ClovaOcrClient implements ReceiptOcrPort {
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record ClovaOcrField(
             String inferText,
-            Boolean lineBreak
+            Double inferConfidence,
+            Boolean lineBreak,
+            ClovaOcrBoundingPoly boundingPoly
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record ClovaOcrBoundingPoly(List<ClovaOcrVertex> vertices) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record ClovaOcrVertex(
+            Double x,
+            Double y
     ) {
     }
 }

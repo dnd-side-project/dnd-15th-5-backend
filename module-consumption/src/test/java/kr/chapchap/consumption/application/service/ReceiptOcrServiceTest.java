@@ -1,6 +1,7 @@
 package kr.chapchap.consumption.application.service;
 
 import kr.chapchap.consumption.application.command.ReceiptOcrCommand;
+import kr.chapchap.consumption.application.info.ReceiptOcrDocument;
 import kr.chapchap.consumption.application.info.ReceiptOcrInfo;
 import kr.chapchap.consumption.application.port.ReceiptImageStorage;
 import kr.chapchap.consumption.application.port.ReceiptOcrPort;
@@ -81,7 +82,9 @@ class ReceiptOcrServiceTest {
     @Test
     void OCR_인식_결과를_반환하고_영수증_이미지를_임시_저장한다() {
         // given
-        List<String> lines = List.of("투썸플레이스 신논현점");
+        ReceiptOcrDocument document = ReceiptOcrDocument.fromLines(
+                List.of("투썸플레이스 신논현점")
+        );
         ReceiptOcrParser.ParsedReceipt parsedReceipt = new ReceiptOcrParser.ParsedReceipt(
                 "투썸플레이스 신논현점",
                 "서울특별시 강남구 봉은사로 125 1층",
@@ -91,8 +94,8 @@ class ReceiptOcrServiceTest {
         );
         given(receiptImageValidator.validateAndGetContentType(IMAGE_CONTENT))
                 .willReturn("image/png");
-        given(receiptOcrPort.recognize(IMAGE_CONTENT, "image/png")).willReturn(lines);
-        given(receiptOcrParser.parse(lines)).willReturn(parsedReceipt);
+        given(receiptOcrPort.recognize(IMAGE_CONTENT, "image/png")).willReturn(document);
+        given(receiptOcrParser.parse(document)).willReturn(parsedReceipt);
         given(receiptImageStorage.store(USER_ID, IMAGE_CONTENT, "image/png"))
                 .willReturn(OBJECT_KEY);
         ReceiptImage receiptImage = ReceiptImage.createTemporary(
@@ -147,7 +150,7 @@ class ReceiptOcrServiceTest {
         );
         inOrder.verify(receiptImageValidator).validateAndGetContentType(IMAGE_CONTENT);
         inOrder.verify(receiptOcrPort).recognize(IMAGE_CONTENT, "image/png");
-        inOrder.verify(receiptOcrParser).parse(lines);
+        inOrder.verify(receiptOcrParser).parse(document);
         inOrder.verify(receiptImageStorage).store(USER_ID, IMAGE_CONTENT, "image/png");
         inOrder.verify(receiptImageCommandService).saveTemporary(
                 USER_ID,
@@ -165,7 +168,9 @@ class ReceiptOcrServiceTest {
     @Test
     void Google_Place_검색_결과가_없어도_OCR_인식_결과를_반환한다() {
         // given
-        List<String> lines = List.of("찹찹카페");
+        ReceiptOcrDocument document = ReceiptOcrDocument.fromLines(
+                List.of("찹찹카페")
+        );
         ReceiptOcrParser.ParsedReceipt parsedReceipt = new ReceiptOcrParser.ParsedReceipt(
                 "찹찹카페",
                 "서울특별시 강남구 테헤란로 123",
@@ -175,8 +180,8 @@ class ReceiptOcrServiceTest {
         );
         given(receiptImageValidator.validateAndGetContentType(IMAGE_CONTENT))
                 .willReturn("image/png");
-        given(receiptOcrPort.recognize(IMAGE_CONTENT, "image/png")).willReturn(lines);
-        given(receiptOcrParser.parse(lines)).willReturn(parsedReceipt);
+        given(receiptOcrPort.recognize(IMAGE_CONTENT, "image/png")).willReturn(document);
+        given(receiptOcrParser.parse(document)).willReturn(parsedReceipt);
         given(receiptImageStorage.store(USER_ID, IMAGE_CONTENT, "image/png"))
                 .willReturn(OBJECT_KEY);
         ReceiptImage receiptImage = ReceiptImage.createTemporary(
@@ -237,11 +242,11 @@ class ReceiptOcrServiceTest {
     @Test
     void 영수증_이미지_업로드에_실패하면_이미지_정보를_DB에_저장하지_않는다() {
         // given
-        List<String> lines = List.of();
+        ReceiptOcrDocument document = ReceiptOcrDocument.fromLines(List.of());
         given(receiptImageValidator.validateAndGetContentType(IMAGE_CONTENT))
                 .willReturn("image/png");
-        given(receiptOcrPort.recognize(IMAGE_CONTENT, "image/png")).willReturn(lines);
-        given(receiptOcrParser.parse(lines)).willReturn(
+        given(receiptOcrPort.recognize(IMAGE_CONTENT, "image/png")).willReturn(document);
+        given(receiptOcrParser.parse(document)).willReturn(
                 new ReceiptOcrParser.ParsedReceipt(null, null, null, null, null)
         );
         given(receiptImageStorage.store(USER_ID, IMAGE_CONTENT, "image/png"))
