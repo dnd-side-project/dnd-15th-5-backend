@@ -5,7 +5,6 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 
-// 월간 리포트 조회 결과
 public record MonthlyReportInfo(
         Long reportId,
         YearMonth yearMonth,
@@ -20,7 +19,7 @@ public record MonthlyReportInfo(
         AdjacentPersonaInfo next
 ) {
 
-    public record PersonaInfo(String type, String typeName, List<String> keywords, ScoresInfo scores) {
+    public record PersonaInfo(String type, String typeName, String description, List<String> keywords, ScoresInfo scores) {
     }
 
     public record AdjacentPersonaInfo(YearMonth yearMonth, String type) {

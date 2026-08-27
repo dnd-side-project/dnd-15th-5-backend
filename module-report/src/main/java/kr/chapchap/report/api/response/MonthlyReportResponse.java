@@ -52,10 +52,11 @@ public record MonthlyReportResponse(
         }
     }
 
-    public record PersonaResponse(String type, String typeName, List<String> keywords, ScoresResponse scores) {
+    public record PersonaResponse(String type, String typeName, String description, List<String> keywords, ScoresResponse scores) {
 
         public static PersonaResponse from(MonthlyReportInfo.PersonaInfo info) {
-            return new PersonaResponse(info.type(), info.typeName(), info.keywords(), ScoresResponse.from(info.scores()));
+            return new PersonaResponse(info.type(), info.typeName(), info.description(), info.keywords(),
+                    ScoresResponse.from(info.scores()));
         }
     }
 

@@ -126,6 +126,7 @@ public class MonthlyReportQueryService {
         return new PersonaInfo(
                 report.getPersonaType().name(),
                 report.getPersonaType().getTypeName(),
+                report.getPersonaType().getDescription(),
                 report.getPersonaType().getKeywords(),
                 new ScoresInfo(
                         report.getScoreExploration(),
