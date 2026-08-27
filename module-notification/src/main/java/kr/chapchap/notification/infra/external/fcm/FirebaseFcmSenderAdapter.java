@@ -6,13 +6,16 @@ import kr.chapchap.notification.application.info.PushSendResult;
 import kr.chapchap.notification.application.port.PushSenderPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
 
+
 @Slf4j
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "chapchap.notification.fcm", name = "project-id")
 @Component
 public class FirebaseFcmSenderAdapter implements PushSenderPort {
     private static final int MAX_TOKENS_PER_REQUEST = 500;

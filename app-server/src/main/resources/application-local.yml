@@ -13,10 +13,6 @@ spring:
       port: 6379
 
 chapchap:
-  notification:
-    fcm:
-      project-id: dnd-15th-5team
-      credentials-file-path: local-json-file
   consumption:
     receipt-ocr:
       clova:
