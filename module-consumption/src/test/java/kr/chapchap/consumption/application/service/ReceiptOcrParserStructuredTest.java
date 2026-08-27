@@ -203,6 +203,24 @@ class ReceiptOcrParserStructuredTest {
     }
 
     @Test
+    void 필드_순서와_좌표_순서가_달라도_상단_영문_로고를_찾는다() {
+        // given
+        ReceiptOcrDocument document = document(
+                field("합계 60,000", true, 20, 300, 220, 325),
+                field("UNI", true, 220, 20, 320, 50),
+                field("QLO", true, 220, 55, 325, 85),
+                field("스타필드 코엑스몰점", true, 20, 100, 280, 125),
+                field("2025-10-03 16:47", true, 20, 240, 260, 265)
+        );
+
+        // when
+        ReceiptOcrParser.ParsedReceipt result = receiptOcrParser.parse(document);
+
+        // then
+        assertThat(result.storeName()).isEqualTo("UNIQLO 스타필드 코엑스몰점");
+    }
+
+    @Test
     void 낮은_신뢰도의_한_글자_가맹점명과_상품행은_상호명으로_선택하지_않는다() {
         // given
         ReceiptOcrDocument document = document(

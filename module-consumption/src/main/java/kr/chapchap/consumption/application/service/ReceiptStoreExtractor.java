@@ -434,7 +434,7 @@ final class ReceiptStoreExtractor {
         for (int index = 0; index < lines.size(); index++) {
             Line line = lines.get(index);
             if (layout.verticalRatio(line) > 0.2) {
-                break;
+                continue;
             }
             String first = uppercaseLogoText(line.text());
             if (first == null) {
