@@ -12,7 +12,8 @@ import org.springframework.stereotype.Component;
 public class FridayReminderScheduler {
     private final PushNotificationService pushNotificationService;
 
-    @Scheduled(cron = "0 0 18 * * FRI", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 * * * *", zone = "Asia/Seoul")
+//    @Scheduled(cron = "0 0 18 * * FRI", zone = "Asia/Seoul")
     public void sendFridayReminder() {
         log.info("금요일 리마인더 발송 시작");
         pushNotificationService.notifyFridayReminderToAll();

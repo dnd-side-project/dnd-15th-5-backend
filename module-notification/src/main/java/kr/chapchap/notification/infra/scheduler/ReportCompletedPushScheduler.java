@@ -12,8 +12,8 @@ import org.springframework.stereotype.Component;
 public class ReportCompletedPushScheduler {
 
     private final PushNotificationService pushNotificationService;
-
-    @Scheduled(cron = "0 0 8 1 * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 * * * *", zone = "Asia/Seoul")
+//    @Scheduled(cron = "0 0 8 1 * *", zone = "Asia/Seoul")
     public void sendReportCompletedPush() {
         log.info("리포트 완성 알림 발송 시작");
         pushNotificationService.sendPendingReportCompletedPush();
