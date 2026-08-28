@@ -19,6 +19,8 @@ module-account
 module-consumption
 module-report
 module-place
+module-recommendation
+module-notification
 module-core
 app-server/src
 

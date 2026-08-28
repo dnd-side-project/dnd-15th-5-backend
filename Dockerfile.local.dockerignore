@@ -11,8 +11,10 @@ infra
 
 app-server/build
 module-account/build
-module-receipt/build
+module-consumption/build
 module-report/build
 module-place/build
+module-recommendation/build
+module-notification/build
 module-core/build
 buildSrc/build

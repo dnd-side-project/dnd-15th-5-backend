@@ -9,6 +9,8 @@ COPY module-account module-account
 COPY module-consumption module-consumption
 COPY module-report module-report
 COPY module-place module-place
+COPY module-recommendation module-recommendation
+COPY module-notification module-notification
 COPY module-core module-core
 
 RUN sed -i 's/\r$//' gradlew && chmod +x gradlew

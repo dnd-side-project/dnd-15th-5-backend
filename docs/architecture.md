@@ -1,8 +1,8 @@
-# 아키텍처
+## 아키텍처
 
-## 🧰 1. 기술 스택 및 구성 요소
+### 🧰 1. 기술 스택 및 구성 요소
 
-### 1.1 백엔드 개발 환경
+#### 1.1 백엔드 개발 환경
 
 | 항목 | 기술 | 버전 |
 | --- | --- | --- |
@@ -20,12 +20,13 @@
 | Query Builder | QueryDSL | Spring Boot BOM |
 | Database Migration | Flyway | Spring Boot BOM |
 | Object Storage Client | AWS SDK for Java 2.x (S3) | 2.49.6 |
+| Push Notification | Firebase Admin SDK for Java (FCM) | 9.5.0 |
 | Logging | SLF4J, Logback | Spring Boot BOM |
 | Test | JUnit 5, Mockito | Spring Boot BOM |
 | Integration Test | Testcontainers | Spring Boot BOM |
 | Monitoring | Spring Boot Actuator | Spring Boot BOM |
 
-### 1.2 데이터 저장소
+#### 1.2 데이터 저장소
 
 | 항목 | 기술 | 버전 |
 | --- | --- | --- |
@@ -33,10 +34,11 @@
 | GIS Extension | PostGIS | 3.5 |
 | Key-Value Store | Redis | 7.4 |
 
+- PostgreSQL은 FCM 기기 토큰·푸시 수신 여부와 알림·읽음·발송 상태를 저장한다.
 - Redis는 Refresh Token의 유효 상태, OAuth 인증 과정의 일회성 상태, CLOVA OCR 요청 간격 및 Google Places Photo Media의 월간 호출 횟수를 저장한다.
 - SGIS Access Token은 만료 시각과 함께 애플리케이션 메모리에 캐시한다.
 
-### 1.3 외부 솔루션 연동
+#### 1.3 외부 솔루션 연동
 
 | 항목 | 기술 | 버전 |
 | --- | --- | --- |
@@ -44,11 +46,13 @@
 | Place Details / Photo | Google Places API (New) | v1 |
 | Address Geocoding | SGIS OpenAPI | OpenAPI3 |
 | Social Login Provider | Kakao OAuth 2.0 / Google OpenID Connect | — |
+| Push Notification | Firebase Cloud Messaging (FCM) | — |
 
 - CLOVA OCR General이 인식한 텍스트를 애플리케이션에서 파싱해 영수증의 상호명, 주소, 일시와 금액을 추출한다.
 - Google Places API는 장소 사진 조회에, SGIS OpenAPI는 도로명주소의 행정동 변환에 사용한다.
+- Firebase Cloud Messaging은 리포트 완료와 소비기록 리마인드 푸시 알림 발송에 사용한다.
 
-### 1.4 인프라 및 배포
+#### 1.4 인프라 및 배포
 
 | 항목 | 기술 | 버전 |
 | --- | --- | --- |
@@ -74,78 +78,83 @@
 
 #### 2.1 시스템 구성도
 
-##### 서비스 구성
+클라이언트 요청 처리와 GitHub Actions의 배포 흐름을 하나의 구성도로 표현한다.
+실선은 런타임 통신, 점선은 배포 및 설정 전달 흐름을 나타낸다.
 
 ```mermaid
-flowchart TB
-    subgraph Clients["클라이언트"]
-        Web["Web Client<br/>(SPA)"]
-        Mobile["Mobile App"]
+%%{init: {"flowchart": {"nodeSpacing": 24, "rankSpacing": 36, "diagramPadding": 8}}}%%
+flowchart LR
+    subgraph clients["Clients"]
+        direction TB
+        web["Web App"]
+        mobile["Mobile App"]
     end
 
-    subgraph AWS["AWS"]
-        subgraph EC2["Public Subnet<br/>단일 EC2 · Docker Compose"]
-            Caddy["Caddy<br/>HTTPS · Reverse Proxy<br/>SPA 정적 파일"]
-            Apps["Application Containers<br/>Production Blue/Green<br/>Development"]
-            Redis["Redis Containers<br/>Production / Development<br/>환경 분리"]
+    subgraph delivery["CI/CD"]
+        actions["GitHub Actions<br/>Backend + Frontend"]
+    end
+
+    subgraph aws["AWS | ap-northeast-2"]
+        direction TB
+
+        subgraph deployment["Deployment Resources"]
+            direction LR
+            ecr["Amazon ECR<br/>Backend Image"]
+            ssm["AWS Systems Manager<br/>Run Command<br/>Parameter Store"]
+            kms["AWS KMS<br/>SecureString"]
+            frontendArtifact["Amazon S3<br/>Frontend Artifact"]
         end
 
-        RDS["Amazon RDS<br/>PostgreSQL + PostGIS<br/>Private Subnets<br/>Single-AZ"]
-        S3["Amazon S3<br/>프로필·영수증 이미지"]
-        CloudWatch["Amazon CloudWatch<br/>Logs"]
+        subgraph compute["Public Subnet | Single EC2<br/>Docker Compose | ARM64"]
+            direction LR
+            caddy["Caddy<br/>HTTPS + Reverse Proxy<br/>Frontend Dist"]
+            apps["Application Containers<br/>Prod Blue/Green + Dev"]
+            redis["Redis Containers<br/>Prod + Dev"]
+        end
+
+        subgraph managed["AWS Managed Services"]
+            direction LR
+            rds["Amazon RDS<br/>PostgreSQL + PostGIS<br/>Prod/Dev"]
+            imageStorage["Amazon S3<br/>Profile + Receipt Images"]
+            cloudwatch["CloudWatch Logs<br/>Caddy + Application"]
+        end
     end
 
-    External["외부 솔루션<br/>CLOVA OCR · OAuth<br/>Google Places · SGIS"]
-
-    Web -->|"HTTPS"| Caddy
-    Mobile -->|"HTTPS"| Caddy
-
-    Caddy -->|"/api · /dev/api"| Apps
-
-    Apps -->|"영속 데이터"| RDS
-    Apps -->|"인증 상태·요청 제한"| Redis
-    Apps -->|"이미지 저장"| S3
-    Apps -.->|"외부 API 호출"| External
-
-    Apps -->|"애플리케이션 로그"| CloudWatch
-    Caddy -->|"접근 로그"| CloudWatch
-```
-
-##### 배포 흐름
-
-```mermaid
-flowchart TB
-    GitHubActions["GitHub Actions<br/>CI/CD"]
-
-    ECR["Amazon ECR<br/>Backend Image"]
-    SSM["AWS Systems Manager<br/>Run Command<br/>Parameter Store"]
-    KMS["AWS KMS<br/>SecureString"]
-    FrontendS3["Amazon S3<br/>Frontend Artifact"]
-
-    subgraph EC2["단일 EC2<br/>Docker Compose"]
-        AppContainers["Application Containers<br/>Production Blue/Green<br/>Development"]
-        Caddy["Caddy<br/>Frontend 정적 파일"]
+    subgraph external["External Services"]
+        integrations["CLOVA OCR + Kakao/Google OAuth<br/>FCM + Google Places + SGIS"]
     end
 
-    GitHubActions -->|"Image Push"| ECR
-    GitHubActions -->|"배포·설정 전달"| SSM
-    GitHubActions -->|"Artifact Upload"| FrontendS3
+    web -->|"HTTPS"| caddy
+    mobile -->|"HTTPS"| caddy
+    caddy -->|"/api + /dev/api"| apps
 
-    SSM -->|"암호화·복호화"| KMS
-    ECR -->|"Image Pull"| AppContainers
-    SSM -->|"배포 실행"| AppContainers
-    FrontendS3 -->|"Artifact Sync"| Caddy
+    apps -->|"Authentication state + Rate limiting"| redis
+    apps -->|"Persistent data"| rds
+    apps -->|"Profile + Receipt images"| imageStorage
+    apps -->|"Application logs"| cloudwatch
+    caddy -->|"Access logs"| cloudwatch
+    apps -->|"External API calls"| integrations
+
+    actions -.->|"Image Push"| ecr
+    actions -.->|"Deploy + Configuration"| ssm
+    actions -.->|"Artifact Upload"| frontendArtifact
+    ecr -.->|"Image Pull"| apps
+    ssm -.->|"Run Command"| apps
+    ssm -.->|"Encrypt + Decrypt"| kms
+    frontendArtifact -.->|"Artifact Sync"| caddy
+
+    %% External Services를 Redis 오른쪽에 정렬해 전체 높이를 줄인다.
+    redis ~~~ integrations
 ```
-
 
 #### 2.2 인프라 및 배포
 
 **인프라**
 
-- Terraform으로 서울 리전의 VPC, EC2, RDS, ECR, S3, CloudWatch Logs, IAM/OIDC와 KMS를 관리한다. Terraform 상태는 암호화된 S3 Backend에 저장한다.
-- 단일 EC2에서 Caddy, Production Blue/Green 애플리케이션, Development 애플리케이션과 환경별 Redis를 Docker Compose로 운영한다.
-- RDS는 2개 AZ의 Private Subnet으로 구성한 DB Subnet Group에 배치하되 Single-AZ로 운영한다. ALB와 NAT Gateway는 사용하지 않는다.
-- 프로필·영수증 이미지는 환경별 S3 버킷에 저장하며, Frontend 배포 산출물도 비공개 S3 버킷을 거쳐 EC2로 동기화한다.
+- Terraform으로 서울 리전의 AWS 리소스를 관리하며, 상태는 암호화된 S3 Backend에 저장한다.
+- 단일 EC2에서 Caddy, Production Blue/Green·Development 애플리케이션과 환경별 Redis를 Docker Compose로 운영한다.
+- RDS는 2개 AZ의 Private Subnet으로 구성한 DB Subnet Group에 Single-AZ로 배치하며, ALB와 NAT Gateway는 사용하지 않는다.
+- 프로필·영수증 이미지는 환경별 S3 버킷에 저장하고, Frontend 산출물은 비공개 S3를 거쳐 EC2로 동기화한다.
 
 **CI/CD 및 배포**
 
@@ -188,6 +197,7 @@ flowchart TB
 | module-report | 현재 월 누적·주별 현황과 월간 소비 리포트 생성 및 조회            |
 | module-place | 장소·좋아요 관리, 위치 기반 조회, 장소 사진 및 행정동 연동         |
 | module-recommendation | 위치·방문 이력·최근 30일 주요 소비 카테고리를 조합한 주변 장소 추천             |
+| module-notification | 알림 조회·읽음 처리와 FCM 푸시 발송 |
 | module-core | 공통 응답·예외 처리, `@ChapChapUserId`, JPA 공통 엔티티, Flyway 및 Testcontainers 설정 |
 
 **3.2.2 모듈 의존 관계**
@@ -199,32 +209,28 @@ flowchart TB
     subgraph DomainModules["도메인 모듈"]
         direction LR
         Account["module-account<br/>계정 및 인증"]
-        Consumption["module-consumption<br/>소비기록 관리 및 등록"]
         Report["module-report<br/>현재 현황 및 월간 리포트"]
-        Place["module-place<br/>장소 및 위치 조회"]
         Recommendation["module-recommendation<br/>주변 장소 추천"]
+        Consumption["module-consumption<br/>소비기록 관리 및 등록"]
+        Place["module-place<br/>장소 및 위치 조회"]
+        Notification["module-notification<br/>알림 관리 및 FCM Push 발송"]
+
+        Account --> Consumption
+        Consumption --> Place
+        Report --> Consumption
+        Report --> Place
+        Report --> Account
+        Report --> Notification
+        Notification --> Account
+        Recommendation --> Consumption
+        Recommendation --> Place
     end
 
     Core["module-core<br/>기술적 공통 요소"]
 
-    App --> Account
-    App --> Consumption
-    App --> Report
-    App --> Place
-    App --> Recommendation
+    App -->|"전체 조립"| DomainModules
     App --> Core
-
-    Account --> Consumption
-    Account --> Core
-    Consumption --> Place
-    Consumption --> Core
-    Report --> Consumption
-    Report --> Place
-    Report --> Core
-    Place --> Core
-    Recommendation --> Consumption
-    Recommendation --> Place
-    Recommendation --> Core
+    DomainModules -->|"모든 모듈 참조"| Core
 ```
 
 **3.2.3 모듈 의존성 원칙**
@@ -299,13 +305,10 @@ module-{domain}
 - infra/config, infra/event, infra/scheduler, infra/security에는 각각 인프라 설정, 이벤트 처리, 배치 실행, 인증 구현을 둔다.
 - exception에는 해당 모듈에서 사용하는 ErrorCode를 둔다.
 
-```
-각 도메인 모듈은 module- 접두사를 제외한 도메인명을 기본 패키지로 사용한다.
-module-account → kr.chapchap.account
-module-consumption → kr.chapchap.consumption
-module-report → kr.chapchap.report
-module-place → kr.chapchap.place
-module-recommendation → kr.chapchap.recommendation
+각 도메인 모듈은 `module-` 접두사를 제외한 도메인명을 기본 패키지로 사용한다.
+
+```text
+module-{domain} → kr.chapchap.{domain}
 ```
 
 **3.3.3 계층 의존 관계**
@@ -363,7 +366,7 @@ Controller
 
 **3.4.1 DDD 적용 원칙**
 
-- Account, Consumption, Report, Place, Recommendation을 각각 도메인 모듈로 구분한다.
+- Account, Consumption, Report, Place, Recommendation, Notification을 각각 도메인 모듈로 구분한다.
 - 각 모듈은 자신의 도메인 모델을 관리하며, 영속 데이터가 있는 경우 해당 데이터를 직접 소유한다.
 - 다른 모듈의 Entity와 Repository를 직접 참조하지 않는다.
 - 모듈 간 연동에는 식별자와 공개된 Application API를 사용한다.
@@ -380,8 +383,9 @@ Controller
 | Report Context | module-report | 현재 월 현황과 월간 소비 리포트 생성 및 조회 | Report와 카테고리·지역·장소·시간대별 집계 데이터 |
 | Place Context | module-place | 장소·좋아요 관리, 위치 기반 조회, 장소 사진 및 행정동 변환 | Place, PlaceLike |
 | Recommendation Context | module-recommendation | 위치·방문 이력·최근 30일 주요 소비 카테고리 기반 주변 장소 추천 | 없음 |
+| Notification Context | module-notification | 알림 조회·읽음 처리와 FCM 푸시 발송 | Notification |
 
 - Consumption Context는 사용자와 장소를 각각 userId와 placeId로 참조하며, User와 Place Entity를 직접 참조하지 않는다.
 - Recommendation Context는 별도의 데이터를 저장하지 않고 Consumption과 Place 모듈에서 조회한 정보를 조합한다.
 - OCR 결과는 소비기록 생성을 위한 자료로 사용하며 별도의 도메인으로 분리하지 않는다.
-- CLOVA OCR, S3, 소셜 로그인 제공자, Google Places와 SGIS는 각 모듈의 Infra 계층에서 연동한다.
+- CLOVA OCR, S3, 소셜 로그인 제공자, Google Places, SGIS와 FCM은 각 모듈의 Infra 계층에서 연동한다.

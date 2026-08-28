@@ -193,6 +193,11 @@ class AccountWithdrawalIntegrationTest {
                 placeId
         );
         jdbcTemplate.update("""
+                INSERT INTO notifications (
+                    user_id, type, title, body, push_status
+                ) VALUES (?, 'FRIDAY_REMINDER', '탈퇴 테스트 알림', '탈퇴 테스트 알림 내용', 'SENT')
+                """, user.getId());
+        jdbcTemplate.update("""
                 INSERT INTO report_category_stat (report_id, category, percentage)
                 VALUES (?, '카페', 100)
                 """, reportId);
@@ -278,6 +283,11 @@ class AccountWithdrawalIntegrationTest {
         )).isZero();
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM place_likes WHERE user_id = ?",
+                Integer.class,
+                user.getId()
+        )).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM notifications WHERE user_id = ?",
                 Integer.class,
                 user.getId()
         )).isZero();
