@@ -17,15 +17,15 @@ import java.util.List;
 public class NotificationQueryService {
 
     private static final int RETENTION_DAYS = 30;
+    private static final int MAX_RESULTS = 500;
 
     private final NotificationRepository notificationRepository;
 
-    public List<NotificationInfo> getNotifications(Long userId, Long cursorId, int size) {
+    public List<NotificationInfo> getNotifications(Long userId) {
         LocalDateTime cutoff = LocalDateTime.now().minusDays(RETENTION_DAYS);
 
-        List<Notification> notifications = cursorId == null
-                ? notificationRepository.findByUserIdAndCreatedAtAfterOrderByIdDesc(userId, cutoff, PageRequest.of(0, size))
-                : notificationRepository.findByUserIdAndIdLessThanAndCreatedAtAfterOrderByIdDesc(userId, cursorId, cutoff, PageRequest.of(0, size));
+        List<Notification> notifications = notificationRepository
+                .findByUserIdAndCreatedAtAfterOrderByIdDesc(userId, cutoff, PageRequest.of(0, MAX_RESULTS));
 
         return notifications.stream().map(this::toInfo).toList();
     }

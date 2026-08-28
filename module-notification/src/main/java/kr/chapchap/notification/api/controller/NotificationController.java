@@ -9,7 +9,6 @@ import kr.chapchap.notification.application.service.NotificationQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -28,11 +27,9 @@ public class NotificationController {
     )
     @GetMapping
     public ApiResponse<List<NotificationResponse>> getNotifications(
-            @ChapChapUserId Long userId,
-            @RequestParam(required = false) Long cursorId,
-            @RequestParam(defaultValue = "20") int size
+            @ChapChapUserId Long userId
     ) {
-        List<NotificationResponse> responses = notificationQueryService.getNotifications(userId, cursorId, size).stream()
+        List<NotificationResponse> responses = notificationQueryService.getNotifications(userId).stream()
                 .map(NotificationResponse::from)
                 .toList();
 

@@ -14,9 +14,6 @@ import java.util.List;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
-    List<Notification> findByUserIdAndIdLessThanAndCreatedAtAfterOrderByIdDesc(
-            Long userId, Long cursorId, LocalDateTime createdAtAfter, Pageable pageable);
-
     List<Notification> findByUserIdAndCreatedAtAfterOrderByIdDesc(
             Long userId, LocalDateTime createdAtAfter, Pageable pageable);
 
