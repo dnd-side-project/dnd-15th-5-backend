@@ -104,7 +104,8 @@ public class RecommendationQueryService {
                 row.visitCount(),
                 likedPlaceIds.contains(row.placeId()),
                 null,
-                null
+                null,
+                place.googlePlaceId()
         );
     }
 

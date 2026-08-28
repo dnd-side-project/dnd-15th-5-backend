@@ -10,12 +10,13 @@ public record RecommendedPlaceInfo(
         Long visitCount,
         boolean liked,
         String thumbnailUrl,
-        String googleMapsUri
+        String googleMapsUri,
+        String googlePlaceId
 ) {
 
     public RecommendedPlaceInfo withPhoto(String thumbnailUrl, String googleMapsUri) {
         return new RecommendedPlaceInfo(
                 placeId, name, dongName, category, latitude, longitude, visitCount, liked,
-                thumbnailUrl, googleMapsUri);
+                thumbnailUrl, googleMapsUri, googlePlaceId);
     }
 }

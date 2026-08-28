@@ -27,13 +27,14 @@ public record NearbyPlacesResponse(
             Long visitCount,
             boolean liked,
             String thumbnailUrl,
-            String googleMapsUri
+            String googleMapsUri,
+            String googlePlaceId
     ) {
         public static RecommendedPlaceItem from(RecommendedPlaceInfo info) {
             return new RecommendedPlaceItem(
                     info.placeId(), info.name(), info.dongName(), info.category(),
                     info.latitude(), info.longitude(), info.visitCount(), info.liked(),
-                    info.thumbnailUrl(), info.googleMapsUri());
+                    info.thumbnailUrl(), info.googleMapsUri(), info.googlePlaceId());
         }
     }
 }
