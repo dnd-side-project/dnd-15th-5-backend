@@ -37,7 +37,7 @@ public class NotificationQueryService {
     private NotificationInfo toInfo(Notification notification) {
         return new NotificationInfo(
                 notification.getId(),
-                notification.getType(),
+                notification.getType().name(),
                 notification.getTitle(),
                 notification.getBody(),
                 notification.isRead(),

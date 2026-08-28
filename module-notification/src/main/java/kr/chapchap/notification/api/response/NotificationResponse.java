@@ -1,13 +1,12 @@
 package kr.chapchap.notification.api.response;
 
 import kr.chapchap.notification.application.info.NotificationInfo;
-import kr.chapchap.notification.domain.entity.NotificationType;
 
 import java.time.LocalDateTime;
 
 public record NotificationResponse(
         Long id,
-        NotificationType type,
+        String type,
         String title,
         String body,
         boolean read,
