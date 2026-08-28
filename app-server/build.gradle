@@ -8,6 +8,7 @@ dependencies {
     implementation project(":module-report")
     implementation project(":module-place")
     implementation project(":module-recommendation")
+    implementation project(":module-notification")
     implementation project(":module-core")
 
     implementation "jakarta.persistence:jakarta.persistence-api"
