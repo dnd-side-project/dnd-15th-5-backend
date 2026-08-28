@@ -101,7 +101,11 @@ public class SgisGeocodingClient implements AdministrativeDongLookupPort {
                     || !StringUtils.hasText(first.sidoCode())
                     || !StringUtils.hasText(first.sigunguCode())
                     || !StringUtils.hasText(first.administrativeDongCode())
-                    || !StringUtils.hasText(first.administrativeDongName())) {
+                    || !StringUtils.hasText(first.administrativeDongName())
+                    || "null".equalsIgnoreCase(first.sidoCode().trim())
+                    || "null".equalsIgnoreCase(first.sigunguCode().trim())
+                    || "null".equalsIgnoreCase(first.administrativeDongCode().trim())
+                    || "null".equalsIgnoreCase(first.administrativeDongName().trim())) {
                 throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
             }
             return new AdministrativeDongInfo(

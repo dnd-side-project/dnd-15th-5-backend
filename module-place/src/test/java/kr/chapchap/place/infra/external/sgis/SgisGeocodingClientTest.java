@@ -220,6 +220,36 @@ class SgisGeocodingClientTest {
     }
 
     @Test
+    void SGIS가_좌표_행정동을_null_문자열로_반환하면_외부_서비스_오류로_변환한다() {
+        // given
+        server.expect(requestTo(expectedReverseGeocodingUri))
+                .andRespond(withSuccess(
+                        """
+                                {
+                                  "result": [{
+                                    "sido_cd": "null",
+                                    "sgg_cd": "null",
+                                    "emdong_cd": "null",
+                                    "emdong_nm": "null"
+                                  }],
+                                  "errCd": 0,
+                                  "errMsg": "Success"
+                                }
+                                """,
+                        MediaType.APPLICATION_JSON
+                ));
+
+        // when & then
+        assertThatThrownBy(() -> geocodingClient.findByCoordinates(LATITUDE, LONGITUDE))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(
+                                CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE
+                        )
+                );
+        server.verify();
+    }
+
+    @Test
     void SGIS에_좌표_검색_결과가_없으면_주소_변환_예외를_던진다() {
         // given
         server.expect(requestTo(expectedReverseGeocodingUri))
