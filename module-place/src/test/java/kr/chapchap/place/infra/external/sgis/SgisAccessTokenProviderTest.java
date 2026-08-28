@@ -23,6 +23,7 @@ class SgisAccessTokenProviderTest {
 
     private static final URI AUTHENTICATION_URI = URI.create("https://sgis.example.com/authentication.json");
     private static final URI GEOCODING_URI = URI.create("https://sgis.example.com/geocodewgs84.json");
+    private static final URI REVERSE_GEOCODING_URI = URI.create("https://sgis.example.com/rgeocodewgs84.json");
     private static final Instant NOW = Instant.parse("2026-08-16T00:00:00Z");
 
     private MockRestServiceServer server;
@@ -38,6 +39,7 @@ class SgisAccessTokenProviderTest {
         SgisProperties properties = new SgisProperties(
                 AUTHENTICATION_URI,
                 GEOCODING_URI,
+                REVERSE_GEOCODING_URI,
                 "consumer-key",
                 "consumer-secret",
                 Duration.ofSeconds(3),
