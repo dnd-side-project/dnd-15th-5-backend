@@ -13,6 +13,7 @@ import java.time.Duration;
 public record SgisProperties(
         @NotNull URI authenticationUri,
         @NotNull URI geocodingUri,
+        @NotNull URI reverseGeocodingUri,
         @NotBlank String consumerKey,
         @NotBlank String consumerSecret,
         @NotNull Duration connectTimeout,
