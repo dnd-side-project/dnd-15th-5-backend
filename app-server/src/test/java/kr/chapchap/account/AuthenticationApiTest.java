@@ -191,6 +191,7 @@ class AuthenticationApiTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                  "ageConfirmed": true,
                                   "serviceTermsAgreed": true
                                 }
                                 """))
@@ -225,6 +226,7 @@ class AuthenticationApiTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                  "ageConfirmed": true,
                                   "serviceTermsAgreed": true,
                                   "privacyPolicyAgreed": true
                                 }
@@ -240,6 +242,53 @@ class AuthenticationApiTest {
     }
 
     @Test
+    void 만_14세_이상_확인이_false이면_가입을_완료하지_않는다() throws Exception {
+        // when & then
+        mockMvc.perform(post("/auth/signup/terms")
+                        .with(jwt()
+                                .jwt(jwt -> jwt
+                                        .subject("1")
+                                        .claim("client_type", "APP"))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_signup")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "ageConfirmed": false,
+                                  "serviceTermsAgreed": true
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("C001"))
+                .andExpect(jsonPath("$.data.ageConfirmed")
+                        .value("만 14세 이상 확인은 필수입니다."));
+
+        then(termsAgreementService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 만_14세_이상_확인이_누락되면_가입을_완료하지_않는다() throws Exception {
+        // when & then
+        mockMvc.perform(post("/auth/signup/terms")
+                        .with(jwt()
+                                .jwt(jwt -> jwt
+                                        .subject("1")
+                                        .claim("client_type", "APP"))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_signup")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "serviceTermsAgreed": true
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("C001"))
+                .andExpect(jsonPath("$.data.ageConfirmed")
+                        .value("만 14세 이상 확인은 필수입니다."));
+
+        then(termsAgreementService).shouldHaveNoInteractions();
+    }
+
+    @Test
     void user_scope로_약관_동의를_요청하면_접근_거부를_반환한다() throws Exception {
         // when & then
         mockMvc.perform(post("/auth/signup/terms")
@@ -249,6 +298,7 @@ class AuthenticationApiTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                  "ageConfirmed": true,
                                   "serviceTermsAgreed": true
                                 }
                                 """))
@@ -265,6 +315,7 @@ class AuthenticationApiTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                  "ageConfirmed": true,
                                   "serviceTermsAgreed": true
                                 }
                                 """))
