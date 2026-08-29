@@ -20,7 +20,7 @@ public class GooglePlacePhotoRateLimiter {
 
     private static final String RATE_LIMIT_KEY_PREFIX =
             "chapchap:place:google-places:photo-media:";
-    private static final int MONTHLY_LIMIT = 1_500;
+    private static final int MONTHLY_LIMIT = 20_000;
     private static final long LIMIT_EXCEEDED = -1L;
     private static final ZoneId RATE_LIMIT_ZONE = ZoneId.of("Asia/Seoul");
 

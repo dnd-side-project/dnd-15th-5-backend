@@ -45,7 +45,7 @@ class GooglePlacePhotoRateLimiterTest {
     @Test
     void Photo_Media를_호출할_때_월간_한도_이내이면_요청을_허용한다() {
         // given
-        givenAcquireResult(1_500L);
+        givenAcquireResult(20_000L);
 
         // when & then
         assertThatCode(rateLimiter::acquirePermit).doesNotThrowAnyException();
@@ -87,7 +87,7 @@ class GooglePlacePhotoRateLimiterTest {
         given(redisTemplate.execute(
                 ArgumentMatchers.<RedisScript<Long>>any(),
                 eq(List.of(RATE_LIMIT_KEY)),
-                eq("1500"),
+                eq("20000"),
                 eq(EXPIRES_AT)
         )).willThrow(cause);
 
@@ -105,7 +105,7 @@ class GooglePlacePhotoRateLimiterTest {
         given(redisTemplate.execute(
                 ArgumentMatchers.<RedisScript<Long>>any(),
                 eq(List.of(RATE_LIMIT_KEY)),
-                eq("1500"),
+                eq("20000"),
                 eq(EXPIRES_AT)
         )).willReturn(result);
     }
