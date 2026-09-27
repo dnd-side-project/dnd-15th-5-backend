@@ -1,5 +1,6 @@
 package kr.chapchap.place.application.service;
 
+import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.place.application.command.PlaceResolveCommand;
 import kr.chapchap.place.application.info.AdministrativeDongInfo;
 import kr.chapchap.place.application.port.AdministrativeDongLookupPort;
@@ -31,8 +32,15 @@ public class PlaceResolveService {
     }
 
     private Long createPlace(PlaceResolveCommand command) {
-        AdministrativeDongInfo administrativeDong =
-                administrativeDongLookupPort.findByRoadAddress(command.roadAddress());
+        AdministrativeDongInfo administrativeDong;
+        try {
+            administrativeDong = administrativeDongLookupPort.findByRoadAddress(command.roadAddress());
+        } catch (BusinessException exception) {
+            administrativeDong = administrativeDongLookupPort.findByCoordinates(
+                    command.latitude(),
+                    command.longitude()
+            );
+        }
         Place place = Place.create(
                 command.googlePlaceId(),
                 command.name(),

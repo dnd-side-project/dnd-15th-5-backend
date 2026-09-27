@@ -46,9 +46,9 @@ class GooglePlacePhotoRateLimiterIntegrationTest {
     }
 
     @Test
-    void Photo_Media_호출을_제한할_때_월간_사용량이_1500건이면_다음_요청을_거부한다() {
+    void Photo_Media_호출을_제한할_때_월간_사용량이_20000건이면_다음_요청을_거부한다() {
         // given
-        redisTemplate.opsForValue().set(RATE_LIMIT_KEY, "1499");
+        redisTemplate.opsForValue().set(RATE_LIMIT_KEY, "19999");
         GooglePlacePhotoRateLimiter firstLimiter = new GooglePlacePhotoRateLimiter(
                 redisTemplate,
                 FIXED_CLOCK
@@ -62,7 +62,7 @@ class GooglePlacePhotoRateLimiterIntegrationTest {
         firstLimiter.acquirePermit();
 
         // then
-        assertThat(redisTemplate.opsForValue().get(RATE_LIMIT_KEY)).isEqualTo("1500");
+        assertThat(redisTemplate.opsForValue().get(RATE_LIMIT_KEY)).isEqualTo("20000");
         assertThat(redisTemplate.getExpire(RATE_LIMIT_KEY)).isPositive();
         assertThatThrownBy(secondLimiter::acquirePermit)
                 .isInstanceOfSatisfying(BusinessException.class, exception ->

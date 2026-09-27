@@ -23,6 +23,7 @@ public class SgisGeocodingClient implements AdministrativeDongLookupPort {
 
     private static final int SUCCESS_CODE = 0;
     private static final int NO_RESULT_CODE = -100;
+    private static final int ADMINISTRATIVE_DONG_ADDRESS_TYPE = 20;
 
     private final RestClient restClient;
     private final SgisProperties properties;
@@ -66,6 +67,60 @@ public class SgisGeocodingClient implements AdministrativeDongLookupPort {
         }
     }
 
+    @Override
+    public AdministrativeDongInfo findByCoordinates(double latitude, double longitude) {
+        URI uri = UriComponentsBuilder.fromUri(properties.reverseGeocodingUri())
+                .queryParam("accessToken", accessTokenProvider.getAccessToken())
+                .queryParam("x_coor", longitude)
+                .queryParam("y_coor", latitude)
+                .queryParam("addr_type", ADMINISTRATIVE_DONG_ADDRESS_TYPE)
+                .build()
+                .encode()
+                .toUri();
+
+        try {
+            ReverseGeocodingResponse response = restClient.get()
+                    .uri(uri)
+                    .retrieve()
+                    .body(ReverseGeocodingResponse.class);
+            if (response == null || response.errCd() == null) {
+                throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
+            }
+            if (response.errCd() == NO_RESULT_CODE) {
+                throw new BusinessException(PlaceErrorCode.ADDRESS_NOT_RESOLVED);
+            }
+            if (response.errCd() != SUCCESS_CODE || response.result() == null) {
+                throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
+            }
+            if (response.result().isEmpty()) {
+                throw new BusinessException(PlaceErrorCode.ADDRESS_NOT_RESOLVED);
+            }
+
+            ReverseGeocodingResultData first = response.result().getFirst();
+            if (first == null
+                    || !StringUtils.hasText(first.sidoCode())
+                    || !StringUtils.hasText(first.sigunguCode())
+                    || !StringUtils.hasText(first.administrativeDongCode())
+                    || !StringUtils.hasText(first.administrativeDongName())
+                    || "null".equalsIgnoreCase(first.sidoCode().trim())
+                    || "null".equalsIgnoreCase(first.sigunguCode().trim())
+                    || "null".equalsIgnoreCase(first.administrativeDongCode().trim())
+                    || "null".equalsIgnoreCase(first.administrativeDongName().trim())) {
+                throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
+            }
+            return new AdministrativeDongInfo(
+                    first.sidoCode().trim()
+                            + first.sigunguCode().trim()
+                            + first.administrativeDongCode().trim(),
+                    first.administrativeDongName().trim()
+            );
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (RestClientException exception) {
+            throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
+        }
+    }
+
     private AdministrativeDongInfo extractAdministrativeDong(GeocodingResponse response) {
         if (response == null || response.errCd() == null) {
             throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
@@ -85,7 +140,9 @@ public class SgisGeocodingClient implements AdministrativeDongLookupPort {
         GeocodingResultData first = resultData.getFirst();
         if (first == null
                 || !StringUtils.hasText(first.administrativeDongCode())
-                || !StringUtils.hasText(first.administrativeDongName())) {
+                || !StringUtils.hasText(first.administrativeDongName())
+                || "null".equalsIgnoreCase(first.administrativeDongCode().trim())
+                || "null".equalsIgnoreCase(first.administrativeDongName().trim())) {
             throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
         }
         return new AdministrativeDongInfo(
@@ -111,6 +168,22 @@ public class SgisGeocodingClient implements AdministrativeDongLookupPort {
     private record GeocodingResultData(
             @JsonProperty("adm_cd") String administrativeDongCode,
             @JsonProperty("adm_nm") String administrativeDongName
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record ReverseGeocodingResponse(
+            List<ReverseGeocodingResultData> result,
+            Integer errCd
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record ReverseGeocodingResultData(
+            @JsonProperty("sido_cd") String sidoCode,
+            @JsonProperty("sgg_cd") String sigunguCode,
+            @JsonProperty("emdong_cd") String administrativeDongCode,
+            @JsonProperty("emdong_nm") String administrativeDongName
     ) {
     }
 }

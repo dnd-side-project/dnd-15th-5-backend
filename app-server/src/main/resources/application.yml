@@ -90,5 +90,6 @@ chapchap:
     sgis:
       authentication-uri: https://sgisapi.mods.go.kr/OpenAPI3/auth/authentication.json
       geocoding-uri: https://sgisapi.mods.go.kr/OpenAPI3/addr/geocodewgs84.json
+      reverse-geocoding-uri: https://sgisapi.mods.go.kr/OpenAPI3/addr/rgeocodewgs84.json
       connect-timeout: 3s
       read-timeout: 5s

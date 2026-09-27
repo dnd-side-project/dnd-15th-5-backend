@@ -1,11 +1,14 @@
 package kr.chapchap.place.application.service;
 
+import kr.chapchap.core.exception.BusinessException;
+import kr.chapchap.core.exception.CommonErrorCode;
 import kr.chapchap.place.application.command.PlaceResolveCommand;
 import kr.chapchap.place.application.info.AdministrativeDongInfo;
 import kr.chapchap.place.application.port.AdministrativeDongLookupPort;
 import kr.chapchap.place.application.port.PlaceCreatePort;
 import kr.chapchap.place.domain.entity.Place;
 import kr.chapchap.place.domain.repository.PlaceRepository;
+import kr.chapchap.place.exception.PlaceErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +20,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -102,5 +106,73 @@ class PlaceResolveServiceTest {
         assertThat(createdPlace.getLatitude()).isEqualTo(COMMAND.latitude());
         assertThat(createdPlace.getLongitude()).isEqualTo(COMMAND.longitude());
         assertThat(createdPlace.getLocation().getSRID()).isEqualTo(4326);
+    }
+
+    @Test
+    void 도로명주소의_행정동을_찾지_못하면_좌표로_재조회한다() {
+        // given
+        when(placeRepository.findByGooglePlaceId(COMMAND.googlePlaceId()))
+                .thenReturn(Optional.empty());
+        when(administrativeDongLookupPort.findByRoadAddress(COMMAND.roadAddress()))
+                .thenThrow(new BusinessException(PlaceErrorCode.ADDRESS_NOT_RESOLVED));
+        when(administrativeDongLookupPort.findByCoordinates(
+                COMMAND.latitude(),
+                COMMAND.longitude()
+        )).thenReturn(new AdministrativeDongInfo("11590620", "사당1동"));
+        when(placeCreatePort.createOrGet(any(Place.class))).thenReturn(103L);
+
+        // when
+        Long result = sut.resolveOrCreate(COMMAND);
+
+        // then
+        assertThat(result).isEqualTo(103L);
+        ArgumentCaptor<Place> captor = ArgumentCaptor.forClass(Place.class);
+        verify(placeCreatePort).createOrGet(captor.capture());
+        assertThat(captor.getValue().getAdministrativeDongCode()).isEqualTo("11590620");
+        assertThat(captor.getValue().getAdministrativeDongName()).isEqualTo("사당1동");
+    }
+
+    @Test
+    void 도로명주소_검색이_실패하면_좌표로_재조회한다() {
+        // given
+        when(placeRepository.findByGooglePlaceId(COMMAND.googlePlaceId()))
+                .thenReturn(Optional.empty());
+        when(administrativeDongLookupPort.findByRoadAddress(COMMAND.roadAddress()))
+                .thenThrow(new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE));
+        when(administrativeDongLookupPort.findByCoordinates(
+                COMMAND.latitude(),
+                COMMAND.longitude()
+        )).thenReturn(new AdministrativeDongInfo("11590620", "사당1동"));
+        when(placeCreatePort.createOrGet(any(Place.class))).thenReturn(104L);
+
+        // when
+        Long result = sut.resolveOrCreate(COMMAND);
+
+        // then
+        assertThat(result).isEqualTo(104L);
+        verify(administrativeDongLookupPort).findByCoordinates(
+                COMMAND.latitude(),
+                COMMAND.longitude()
+        );
+    }
+
+    @Test
+    void 좌표_조회도_실패하면_좌표_조회_예외를_그대로_반환한다() {
+        // given
+        BusinessException coordinateException =
+                new BusinessException(PlaceErrorCode.ADDRESS_NOT_RESOLVED);
+        when(placeRepository.findByGooglePlaceId(COMMAND.googlePlaceId()))
+                .thenReturn(Optional.empty());
+        when(administrativeDongLookupPort.findByRoadAddress(COMMAND.roadAddress()))
+                .thenThrow(new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE));
+        when(administrativeDongLookupPort.findByCoordinates(
+                COMMAND.latitude(),
+                COMMAND.longitude()
+        )).thenThrow(coordinateException);
+
+        // when & then
+        assertThatThrownBy(() -> sut.resolveOrCreate(COMMAND))
+                .isSameAs(coordinateException);
+        verifyNoInteractions(placeCreatePort);
     }
 }
