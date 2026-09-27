@@ -36,6 +36,6 @@ public class UserPushTargetAdapter implements UserPushTargetPort {
     }
 
     private UserPushTarget toUserPushTarget(PushTargetInfo info) {
-        return new UserPushTarget(info.userId(), info.fcmToken());
+        return new UserPushTarget(info.userId(), info.pushToken());
     }
 }

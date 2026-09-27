@@ -20,14 +20,14 @@ public class DeviceTokenCommandService {
     public void registerToken(RegisterDeviceTokenCommand command){
         User user = userRepository.findById(command.userId())
                 .orElseThrow(()->new BusinessException(AccountErrorCode.ACCOUNT_NOT_FOUND));
-        user.registerFcmToken(command.fcmToken(), LocalDateTime.now());
+        user.registerPushToken(command.pushToken(), LocalDateTime.now());
         userRepository.save(user);
     }
 
     public void unregisterToken(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(AccountErrorCode.ACCOUNT_NOT_FOUND));
-        user.clearFcmToken();
+        user.clearPushToken();
         userRepository.save(user);
     }
 }

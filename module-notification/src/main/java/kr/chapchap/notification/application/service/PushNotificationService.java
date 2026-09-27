@@ -143,7 +143,7 @@ public class PushNotificationService {
 
     // notifications와 targets는 같은 순서로 1:1 매칭된다고 가정
     private void sendAndRecord(List<Notification> notifications, List<UserPushTarget> targets, String screen) {
-        List<String> tokens = targets.stream().map(UserPushTarget::fcmToken).toList();
+        List<String> tokens = targets.stream().map(UserPushTarget::pushToken).toList();
         Notification representative = notifications.get(0);
         PushMessage message = new PushMessage(
                 representative.getTitle(),
@@ -159,12 +159,12 @@ public class PushNotificationService {
             Notification notification = notifications.get(i);
             UserPushTarget target = targets.get(i);
 
-            if (invalidTokens.contains(target.fcmToken())) {
+            if (invalidTokens.contains(target.pushToken())) {
                 // 토큰 자체가 죽은 경우: 재발송해도 소용없으므로 FAILED로 확정하고 토큰을 무효화
                 notification.markPushFailed();
                 userPushTargetPort.invalidateToken(target.userId());
                 log.info("무효 토큰 정리. userId={}", target.userId());
-            } else if (failedTokens.contains(target.fcmToken())) {
+            } else if (failedTokens.contains(target.pushToken())) {
                 log.warn("일시적 발송 실패, 다음 배치에서 재시도. userId={}", target.userId());
             } else {
                 notification.markPushSent(null);

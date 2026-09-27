@@ -198,7 +198,7 @@ public class AccountController {
             @ChapChapUserId Long userId,
             @Valid @RequestBody DeviceTokenRegisterRequest request
             ){
-        deviceTokenCommandService.registerToken(new RegisterDeviceTokenCommand(userId, request.fcmToken()));
+        deviceTokenCommandService.registerToken(new RegisterDeviceTokenCommand(userId, request.pushToken()));
         return ApiResponse.ok();
     }
 

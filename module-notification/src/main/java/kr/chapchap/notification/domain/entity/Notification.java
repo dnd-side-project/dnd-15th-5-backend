@@ -43,8 +43,8 @@ public class Notification {
     @Column(name = "push_status", nullable = false, length = 20)
     private PushStatus pushStatus;
 
-    @Column(name = "fcm_message_id", length = 255)
-    private String fcmMessageId;
+    @Column(name = "push_ticket_id", length = 255)
+    private String pushTicketId;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -67,9 +67,9 @@ public class Notification {
         this.readAt = now;
     }
 
-    public void markPushSent(String fcmMessageId) {
+    public void markPushSent(String pushTicketId) {
         this.pushStatus = PushStatus.SENT;
-        this.fcmMessageId = fcmMessageId;
+        this.pushTicketId = pushTicketId;
     }
 
     public void markPushFailed() {

@@ -17,6 +17,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -27,6 +28,8 @@ public class User extends BaseTimeEntity {
     private static final int MIN_NICKNAME_LENGTH = 2;
     private static final int MAX_NICKNAME_LENGTH = 10;
     private static final int MAX_PROFILE_IMAGE_KEY_LENGTH = 1024;
+    private static final Pattern EXPO_PUSH_TOKEN_PATTERN =
+            Pattern.compile("^Expo(nent)?PushToken\\[.+]$");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,26 +48,29 @@ public class User extends BaseTimeEntity {
     @Column(name = "withdrawn_at")
     private LocalDateTime withdrawnAt;
 
-    @Column(name = "fcm_token", length = 512)
-    private String fcmToken;
+    @Column(name = "push_token", length = 512)
+    private String pushToken;
 
     @Column(name = "push_enabled", nullable = false)
     private boolean pushEnabled = true;
 
-    @Column(name = "fcm_token_updated_at")
-    private LocalDateTime fcmTokenUpdatedAt;
+    @Column(name = "push_token_updated_at")
+    private LocalDateTime pushTokenUpdatedAt;
 
-    public void registerFcmToken(String fcmToken, LocalDateTime now) {
-        if (fcmToken == null || fcmToken.isBlank()) {
-            throw new IllegalArgumentException("FCM 토큰은 비어 있을 수 없습니다.");
+    public void registerPushToken(String pushToken, LocalDateTime now) {
+        if (pushToken == null || pushToken.isBlank()) {
+            throw new IllegalArgumentException("푸시 토큰은 비어 있을 수 없습니다.");
         }
-        this.fcmToken = fcmToken;
-        this.fcmTokenUpdatedAt = now;
+        if (!EXPO_PUSH_TOKEN_PATTERN.matcher(pushToken).matches()) {
+            throw new BusinessException(AccountErrorCode.INVALID_PUSH_TOKEN);
+        }
+        this.pushToken = pushToken;
+        this.pushTokenUpdatedAt = now;
     }
 
-    public void clearFcmToken() {
-        this.fcmToken = null;
-        this.fcmTokenUpdatedAt = null;
+    public void clearPushToken() {
+        this.pushToken = null;
+        this.pushTokenUpdatedAt = null;
     }
 
     public void updatePushEnabled(boolean pushEnabled) {
