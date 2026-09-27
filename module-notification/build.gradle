@@ -6,7 +6,5 @@ dependencies {
     implementation project(":module-core")
     implementation project(":module-account")
 
-    implementation "com.google.firebase:firebase-admin:${libs.versions.firebase.admin.get()}"
-
     testImplementation testFixtures(project(":module-core"))
 }
