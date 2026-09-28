@@ -64,27 +64,27 @@ class RecommendationIntegrationTest {
         jdbcTemplate.update(
                 "INSERT INTO consumptions (purchase_date, purchase_time, amount, category, user_id, place_id, sticker_item_id, created_at, updated_at) VALUES "
                         // 101: 카페, 5회 방문 (myTownPlaces 1등)
-                        + "('2026-08-01', '09:00:00', 5000, '카페', 2, 101, 1, now(), now()), "
-                        + "('2026-08-02', '09:00:00', 5000, '카페', 2, 101, 1, now(), now()), "
-                        + "('2026-08-03', '09:00:00', 5000, '카페', 2, 101, 1, now(), now()), "
-                        + "('2026-08-04', '09:00:00', 5000, '카페', 2, 101, 1, now(), now()), "
-                        + "('2026-08-05', '09:00:00', 5000, '카페', 2, 101, 1, now(), now()), "
+                        + "((CURRENT_DATE - INTERVAL '20 days'), '09:00:00', 5000, '카페', 2, 101, 1, now(), now()), "
+                        + "((CURRENT_DATE - INTERVAL '19 days'), '09:00:00', 5000, '카페', 2, 101, 1, now(), now()), "
+                        + "((CURRENT_DATE - INTERVAL '18 days'), '09:00:00', 5000, '카페', 2, 101, 1, now(), now()), "
+                        + "((CURRENT_DATE - INTERVAL '17 days'), '09:00:00', 5000, '카페', 2, 101, 1, now(), now()), "
+                        + "((CURRENT_DATE - INTERVAL '16 days'), '09:00:00', 5000, '카페', 2, 101, 1, now(), now()), "
                         // 102: 음식점, 4회 방문 (myTownPlaces 2등)
-                        + "('2026-08-01', '12:00:00', 12000, '음식점', 2, 102, 1, now(), now()), "
-                        + "('2026-08-02', '12:00:00', 12000, '음식점', 2, 102, 1, now(), now()), "
-                        + "('2026-08-03', '12:00:00', 12000, '음식점', 2, 102, 1, now(), now()), "
-                        + "('2026-08-04', '12:00:00', 12000, '음식점', 2, 102, 1, now(), now()), "
+                        + "((CURRENT_DATE - INTERVAL '20 days'), '12:00:00', 12000, '음식점', 2, 102, 1, now(), now()), "
+                        + "((CURRENT_DATE - INTERVAL '19 days'), '12:00:00', 12000, '음식점', 2, 102, 1, now(), now()), "
+                        + "((CURRENT_DATE - INTERVAL '18 days'), '12:00:00', 12000, '음식점', 2, 102, 1, now(), now()), "
+                        + "((CURRENT_DATE - INTERVAL '17 days'), '12:00:00', 12000, '음식점', 2, 102, 1, now(), now()), "
                         // 104: 카페, 3회 방문 (myTownPlaces엔 안 들고, 카페 중에선 101 다음 순위라 sameCategoryPlaces에 남아야 함)
-                        + "('2026-08-01', '10:00:00', 4500, '카페', 2, 104, 1, now(), now()), "
-                        + "('2026-08-02', '10:00:00', 4500, '카페', 2, 104, 1, now(), now()), "
-                        + "('2026-08-03', '10:00:00', 4500, '카페', 2, 104, 1, now(), now()), "
+                        + "((CURRENT_DATE - INTERVAL '20 days'), '10:00:00', 4500, '카페', 2, 104, 1, now(), now()), "
+                        + "((CURRENT_DATE - INTERVAL '19 days'), '10:00:00', 4500, '카페', 2, 104, 1, now(), now()), "
+                        + "((CURRENT_DATE - INTERVAL '18 days'), '10:00:00', 4500, '카페', 2, 104, 1, now(), now()), "
                         // 103: 반경 밖인데 방문횟수는 훨씬 많음 — 그래도 결과에 안 나와야 함
-                        + "('2026-08-03', '18:00:00', 9000, '카페', 2, 103, 1, now(), now()), "
-                        + "('2026-08-04', '18:00:00', 9000, '카페', 2, 103, 1, now(), now()), "
-                        + "('2026-08-06', '18:00:00', 9000, '카페', 2, 103, 1, now(), now()), "
-                        + "('2026-08-07', '18:00:00', 9000, '카페', 2, 103, 1, now(), now()), "
-                        + "('2026-08-08', '18:00:00', 9000, '카페', 2, 103, 1, now(), now()), "
-                        + "('2026-08-01', '09:00:00', 4000, '카페', 1, 105, 1, now(), now())");
+                        + "((CURRENT_DATE - INTERVAL '18 days'), '18:00:00', 9000, '카페', 2, 103, 1, now(), now()), "
+                        + "((CURRENT_DATE - INTERVAL '17 days'), '18:00:00', 9000, '카페', 2, 103, 1, now(), now()), "
+                        + "((CURRENT_DATE - INTERVAL '15 days'), '18:00:00', 9000, '카페', 2, 103, 1, now(), now()), "
+                        + "((CURRENT_DATE - INTERVAL '14 days'), '18:00:00', 9000, '카페', 2, 103, 1, now(), now()), "
+                        + "((CURRENT_DATE - INTERVAL '13 days'), '18:00:00', 9000, '카페', 2, 103, 1, now(), now()), "
+                        + "((CURRENT_DATE - INTERVAL '20 days'), '09:00:00', 4000, '카페', 1, 105, 1, now(), now())");
     }
 
     @Test
@@ -136,7 +136,7 @@ class RecommendationIntegrationTest {
     void 본인이_방문한_장소는_추천_후보에서_제외한다() {
         jdbcTemplate.update(
                 "INSERT INTO consumptions (purchase_date, purchase_time, amount, category, user_id, place_id, sticker_item_id, created_at, updated_at) VALUES "
-                        + "('2026-08-05', '13:00:00', 12000, '음식점', 1, 102, 1, now(), now())");
+                        + "((CURRENT_DATE - INTERVAL '16 days'), '13:00:00', 12000, '음식점', 1, 102, 1, now(), now())");
 
         // when
         RecommendationInfo info = recommendationQueryService.getNearbyRecommendations(1L, 37.5665, 126.9780, 1000);
