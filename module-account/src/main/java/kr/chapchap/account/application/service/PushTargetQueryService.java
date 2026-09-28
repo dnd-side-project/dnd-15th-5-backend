@@ -19,13 +19,13 @@ public class PushTargetQueryService {
     public Optional<PushTargetInfo> findPushTarget(Long userId) {
         return userRepository.findById(userId)
                 .filter(User::isActive)
-                .filter(user -> user.getFcmToken() != null && user.isPushEnabled())
-                .map(user -> new PushTargetInfo(user.getId(), user.getFcmToken()));
+                .filter(user -> user.getPushToken() != null && user.isPushEnabled())
+                .map(user -> new PushTargetInfo(user.getId(), user.getPushToken()));
     }
 
     public List<PushTargetInfo> findActivePushTargets(Long cursorId, int limit) {
         return userRepository.findActivePushTargets(cursorId, limit).stream()
-                .map(user -> new PushTargetInfo(user.getId(), user.getFcmToken()))
+                .map(user -> new PushTargetInfo(user.getId(), user.getPushToken()))
                 .toList();
     }
 }

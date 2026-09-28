@@ -27,6 +27,6 @@ interface UserJpaRepository extends JpaRepository<User, Long> {
             """)
     List<Long> findIdsByStatus(@Param("status") UserStatus status);
 
-    List<User> findByStatusAndFcmTokenIsNotNullAndPushEnabledTrueAndIdGreaterThanOrderByIdAsc(
+    List<User> findByStatusAndPushTokenIsNotNullAndPushEnabledTrueAndIdGreaterThanOrderByIdAsc(
             UserStatus status, Long cursorId, Pageable pageable);
 }

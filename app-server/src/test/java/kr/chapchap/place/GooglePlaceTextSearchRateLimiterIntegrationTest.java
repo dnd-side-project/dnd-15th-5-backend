@@ -14,8 +14,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
+import java.time.YearMonth;
+import java.time.ZoneId;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -25,12 +25,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @SpringBootTest
 class GooglePlaceTextSearchRateLimiterIntegrationTest {
 
+    private static final ZoneId RATE_LIMIT_ZONE = ZoneId.of("Asia/Seoul");
+    // 만료 시각(다음 달 1일)이 항상 미래여야 하므로 고정 날짜 대신 실제 현재 시각을 기준으로 삼는다.
+    private static final Clock FIXED_CLOCK = Clock.system(RATE_LIMIT_ZONE);
     private static final String RATE_LIMIT_KEY =
-            "chapchap:place:google-places:text-search:2026-08";
-    private static final Clock FIXED_CLOCK = Clock.fixed(
-            Instant.parse("2026-08-26T00:00:00Z"),
-            ZoneOffset.UTC
-    );
+            "chapchap:place:google-places:text-search:" + YearMonth.now(FIXED_CLOCK);
 
     private final StringRedisTemplate redisTemplate;
 

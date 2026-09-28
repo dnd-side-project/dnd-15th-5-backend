@@ -20,7 +20,7 @@
 | Query Builder | QueryDSL | Spring Boot BOM |
 | Database Migration | Flyway | Spring Boot BOM |
 | Object Storage Client | AWS SDK for Java 2.x (S3) | 2.49.6 |
-| Push Notification | Firebase Admin SDK for Java (FCM) | 9.5.0 |
+| Push Notification | Spring RestClient (Expo Push API) | — |
 | Logging | SLF4J, Logback | Spring Boot BOM |
 | Test | JUnit 5, Mockito | Spring Boot BOM |
 | Integration Test | Testcontainers | Spring Boot BOM |
@@ -34,7 +34,7 @@
 | GIS Extension | PostGIS | 3.5 |
 | Key-Value Store | Redis | 7.4 |
 
-- PostgreSQL은 FCM 기기 토큰·푸시 수신 여부와 알림·읽음·발송 상태를 저장한다.
+- PostgreSQL은 Expo Push 기기 토큰·푸시 수신 여부와 알림·읽음·발송 상태를 저장한다.
 - Redis는 Refresh Token의 유효 상태, OAuth 인증 과정의 일회성 상태, CLOVA OCR 요청 간격 및 Google Places Photo Media의 월간 호출 횟수를 저장한다.
 - SGIS Access Token은 만료 시각과 함께 애플리케이션 메모리에 캐시한다.
 
@@ -46,11 +46,11 @@
 | Place Details / Photo | Google Places API (New) | v1 |
 | Address Geocoding | SGIS OpenAPI | OpenAPI3 |
 | Social Login Provider | Kakao OAuth 2.0 / Google OpenID Connect | — |
-| Push Notification | Firebase Cloud Messaging (FCM) | — |
+| Push Notification | Expo Push API | v2 |
 
 - CLOVA OCR General이 인식한 텍스트를 애플리케이션에서 파싱해 영수증의 상호명, 주소, 일시와 금액을 추출한다.
 - Google Places API는 장소 사진 조회에, SGIS OpenAPI는 도로명주소의 행정동 변환에 사용한다.
-- Firebase Cloud Messaging은 리포트 완료와 소비기록 리마인드 푸시 알림 발송에 사용한다.
+- Expo Push API는 리포트 완료와 소비기록 리마인드 푸시 알림 발송에 사용한다.
 
 #### 1.4 인프라 및 배포
 
@@ -121,7 +121,7 @@ flowchart LR
     end
 
     subgraph external["External Services"]
-        integrations["CLOVA OCR + Kakao/Google OAuth<br/>FCM + Google Places + SGIS"]
+        integrations["CLOVA OCR + Kakao/Google OAuth<br/>Expo Push + Google Places + SGIS"]
     end
 
     web -->|"HTTPS"| caddy
@@ -197,7 +197,7 @@ flowchart LR
 | module-report | 현재 월 누적·주별 현황과 월간 소비 리포트 생성 및 조회            |
 | module-place | 장소·좋아요 관리, 위치 기반 조회, 장소 사진 및 행정동 연동         |
 | module-recommendation | 위치·방문 이력·최근 30일 주요 소비 카테고리를 조합한 주변 장소 추천             |
-| module-notification | 알림 조회·읽음 처리와 FCM 푸시 발송 |
+| module-notification | 알림 조회·읽음 처리와 Expo 푸시 발송 |
 | module-core | 공통 응답·예외 처리, `@ChapChapUserId`, JPA 공통 엔티티, Flyway 및 Testcontainers 설정 |
 
 **3.2.2 모듈 의존 관계**
@@ -213,7 +213,7 @@ flowchart TB
         Recommendation["module-recommendation<br/>주변 장소 추천"]
         Consumption["module-consumption<br/>소비기록 관리 및 등록"]
         Place["module-place<br/>장소 및 위치 조회"]
-        Notification["module-notification<br/>알림 관리 및 FCM Push 발송"]
+        Notification["module-notification<br/>알림 관리 및 Expo Push 발송"]
 
         Account --> Consumption
         Consumption --> Place
@@ -383,9 +383,9 @@ Controller
 | Report Context | module-report | 현재 월 현황과 월간 소비 리포트 생성 및 조회 | Report와 카테고리·지역·장소·시간대별 집계 데이터 |
 | Place Context | module-place | 장소·좋아요 관리, 위치 기반 조회, 장소 사진 및 행정동 변환 | Place, PlaceLike |
 | Recommendation Context | module-recommendation | 위치·방문 이력·최근 30일 주요 소비 카테고리 기반 주변 장소 추천 | 없음 |
-| Notification Context | module-notification | 알림 조회·읽음 처리와 FCM 푸시 발송 | Notification |
+| Notification Context | module-notification | 알림 조회·읽음 처리와 Expo 푸시 발송 | Notification |
 
 - Consumption Context는 사용자와 장소를 각각 userId와 placeId로 참조하며, User와 Place Entity를 직접 참조하지 않는다.
 - Recommendation Context는 별도의 데이터를 저장하지 않고 Consumption과 Place 모듈에서 조회한 정보를 조합한다.
 - OCR 결과는 소비기록 생성을 위한 자료로 사용하며 별도의 도메인으로 분리하지 않는다.
-- CLOVA OCR, S3, 소셜 로그인 제공자, Google Places, SGIS와 FCM은 각 모듈의 Infra 계층에서 연동한다.
+- CLOVA OCR, S3, 소셜 로그인 제공자, Google Places, SGIS와 Expo Push API는 각 모듈의 Infra 계층에서 연동한다.
