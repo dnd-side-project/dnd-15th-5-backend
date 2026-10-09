@@ -4,6 +4,7 @@ import kr.chapchap.account.application.command.AccountUpdateCommand;
 import kr.chapchap.account.application.event.ProfileImageCleanupEvent;
 import kr.chapchap.account.application.info.AccountInfo;
 import kr.chapchap.account.application.port.ProfileImageStorage;
+import kr.chapchap.account.domain.entity.ProfileImageCode;
 import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.repository.UserRepository;
 import kr.chapchap.account.exception.AccountErrorCode;
@@ -38,6 +39,13 @@ public class AccountCommandService {
                 ? null
                 : profileImageStorage.createReadUrl(user.getProfileImageKey());
         return AccountInfo.from(user, profileImageUrl);
+    }
+
+    @Transactional
+    public AccountInfo updateProfile(Long userId, String nickname, String profileImageCode) {
+        User user = getActiveUser(userId);
+        user.updateProfile(nickname, ProfileImageCode.from(profileImageCode));
+        return AccountInfo.from(user, null);
     }
 
     private void validateCommand(AccountUpdateCommand command) {

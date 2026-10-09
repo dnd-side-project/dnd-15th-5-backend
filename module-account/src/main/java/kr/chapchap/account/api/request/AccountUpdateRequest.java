@@ -12,8 +12,8 @@ import java.io.UncheckedIOException;
 @Schema(description = "내 정보 수정 요청")
 public record AccountUpdateRequest(
         @Schema(description = "변경할 닉네임", example = "찹찹이", nullable = true)
-        @Size(min = 2, max = 10, message = "닉네임은 2자 이상 10자 이하여야 합니다.")
-        @Pattern(regexp = ".*\\S.*", message = "닉네임은 비어 있을 수 없습니다.")
+        @Size(min = 1, max = 16, message = "닉네임은 1자 이상 16자 이하여야 합니다.")
+        @Pattern(regexp = "[가-힣ㄱ-ㅎㅏ-ㅣ ]+", message = "닉네임은 한글, 자음, 모음과 공백만 사용할 수 있습니다.")
         String nickname,
 
         @Schema(

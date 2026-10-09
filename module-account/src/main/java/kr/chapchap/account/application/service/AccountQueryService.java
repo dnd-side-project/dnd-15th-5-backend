@@ -1,7 +1,6 @@
 package kr.chapchap.account.application.service;
 
 import kr.chapchap.account.application.info.AccountInfo;
-import kr.chapchap.account.application.port.ProfileImageStorage;
 import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.repository.UserRepository;
 import kr.chapchap.core.exception.BusinessException;
@@ -18,7 +17,6 @@ import java.util.Optional;
 public class AccountQueryService {
 
     private final UserRepository userRepository;
-    private final ProfileImageStorage profileImageStorage;
 
     public AccountInfo getAccount(Long userId) {
         User user = userRepository.findById(userId)
@@ -28,11 +26,7 @@ public class AccountQueryService {
             throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
         }
 
-        String profileImageUrl = user.getProfileImageKey() == null
-                ? null
-                : profileImageStorage.createReadUrl(user.getProfileImageKey());
-
-        return AccountInfo.from(user, profileImageUrl);
+        return AccountInfo.from(user, null);
     }
 
     public Optional<String> getNickname(Long userId) {

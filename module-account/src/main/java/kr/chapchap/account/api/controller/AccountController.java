@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import kr.chapchap.account.api.request.AccountUpdateRequest;
 import kr.chapchap.account.api.request.DeviceTokenRegisterRequest;
+import kr.chapchap.account.api.request.ProfileUpdateRequest;
 import kr.chapchap.account.api.response.AccountResponse;
 import kr.chapchap.account.api.response.AuthenticationResponseHandler;
 import kr.chapchap.account.application.command.RegisterDeviceTokenCommand;
@@ -46,7 +47,7 @@ public class AccountController {
 
     @Operation(
             summary = "내 정보 조회",
-            description = "Access Token으로 인증된 사용자의 기본 정보를 조회합니다."
+            description = "Access Token으로 인증된 사용자의 기본 정보를 조회합니다. 프로필 사진은 profileImageCode로 표시합니다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -74,8 +75,11 @@ public class AccountController {
     }
 
     @Operation(
-            summary = "내 정보 수정",
+            summary = "내 정보 수정 (기존 파일 업로드 방식 · 사용 중단)",
+            deprecated = true,
             description = """
+                    2026-10-09 사용 중단 - 기존S3 업로드 구현 보존용 API
+                    
                     닉네임과 프로필 이미지를 선택적으로 수정합니다.
 
                     - `profileImage` 전달: 프로필 이미지를 등록하거나 교체합니다.
@@ -116,12 +120,29 @@ public class AccountController {
                     content = @Content(schema = @Schema(implementation = ApiResponse.class))
             )
     })
-    @PatchMapping(value = "/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PatchMapping(value = "/me/profile-upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<AccountResponse> updateMyAccount(
             @ChapChapUserId Long userId,
             @Valid @ModelAttribute AccountUpdateRequest request
     ) {
         AccountInfo info = accountCommandService.updateAccount(request.toCommand(userId));
+        return ApiResponse.success(AccountResponse.from(info));
+    }
+
+    @Operation(
+            summary = "이름과 기본 프로필 이미지 수정",
+            description = "이름과 6종 중 선택한 이미지 코드를 함께 저장합니다. 기존 S3 이미지는 변경하지 않습니다."
+    )
+    @PatchMapping(value = "/me", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ApiResponse<AccountResponse> updateMyProfile(
+            @ChapChapUserId Long userId,
+            @Valid @RequestBody ProfileUpdateRequest request
+    ) {
+        AccountInfo info = accountCommandService.updateProfile(
+                userId,
+                request.nickname(),
+                request.profileImageCode()
+        );
         return ApiResponse.success(AccountResponse.from(info));
     }
 

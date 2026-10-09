@@ -3,6 +3,7 @@ package kr.chapchap.account.application.service;
 import kr.chapchap.account.application.command.AccountUpdateCommand;
 import kr.chapchap.account.application.event.ProfileImageCleanupEvent;
 import kr.chapchap.account.application.info.AccountInfo;
+import kr.chapchap.account.domain.entity.ProfileImageCode;
 import kr.chapchap.account.application.info.OAuthClientType;
 import kr.chapchap.account.application.port.GoogleAuthenticationPort;
 import kr.chapchap.account.application.port.KakaoAuthenticationPort;
@@ -20,6 +21,8 @@ import kr.chapchap.account.exception.AccountErrorCode;
 import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.core.exception.CommonErrorCode;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -103,7 +106,7 @@ class AccountCommandServiceTest {
 
         // then
         assertThat(user.getNickname()).isEqualTo(UPDATED_NICKNAME);
-        assertThat(result).isEqualTo(new AccountInfo(USER_ID, UPDATED_NICKNAME, null));
+        assertThat(result).isEqualTo(new AccountInfo(USER_ID, UPDATED_NICKNAME, null, "BLUE"));
         then(userRepository).should().findByIdForUpdate(USER_ID);
         then(profileImageStorage).shouldHaveNoInteractions();
     }
@@ -134,7 +137,8 @@ class AccountCommandServiceTest {
         assertThat(result).isEqualTo(new AccountInfo(
                 USER_ID,
                 UPDATED_NICKNAME,
-                PROFILE_IMAGE_URL
+                PROFILE_IMAGE_URL,
+                "BLUE"
         ));
         then(profileImageValidator).should().validateAndGetContentType(PNG_IMAGE);
         then(profileImageStorage).should().store(USER_ID, PNG_IMAGE, "image/png");
@@ -375,6 +379,67 @@ class AccountCommandServiceTest {
         assertThat(user.getStatus()).isEqualTo(UserStatus.ACTIVE);
         assertThat(user.getWithdrawnAt()).isNull();
         then(refreshTokenStore).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 이름과_기본_이미지를_함께_수정하고_S3는_유지한다() {
+        // given
+        User user = createActiveUser(PREVIOUS_PROFILE_IMAGE_KEY);
+        given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
+
+        // when
+        AccountInfo result = accountCommandService.updateProfile(USER_ID, "  ㅋㅋ  ", "TEAL");
+
+        // then
+        assertThat(result.nickname()).isEqualTo("ㅋㅋ");
+        assertThat(result.profileImageCode()).isEqualTo("TEAL");
+        assertThat(result.profileImageUrl()).isNull();
+        assertThat(user.getProfileImageKey()).isEqualTo(PREVIOUS_PROFILE_IMAGE_KEY);
+        then(profileImageStorage).shouldHaveNoInteractions();
+        then(eventPublisher).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 이름이_유효하지_않으면_기본_이미지도_변경하지_않는다() {
+        // given
+        User user = createActiveUser(PREVIOUS_PROFILE_IMAGE_KEY);
+        given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
+
+        // when & then
+        assertThatThrownBy(() -> accountCommandService.updateProfile(USER_ID, "dhgud스톤", "PINK"))
+                .isInstanceOf(BusinessException.class);
+        assertThat(user.getNickname()).isEqualTo(NICKNAME);
+        assertThat(user.getProfileImageCode()).isEqualTo(ProfileImageCode.BLUE);
+        then(profileImageStorage).shouldHaveNoInteractions();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"GREEN", "0", "blue", "", " BLUE "})
+    void 정의되지_않은_이미지_코드면_프로필을_변경하지_않는다(String code) {
+        // given
+        User user = createActiveUser(PREVIOUS_PROFILE_IMAGE_KEY);
+        given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
+
+        // when & then
+        assertThatThrownBy(() -> accountCommandService.updateProfile(USER_ID, "새이름", code))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(AccountErrorCode.INVALID_PROFILE_IMAGE_CODE)
+                );
+        assertThat(user.getNickname()).isEqualTo(NICKNAME);
+        assertThat(user.getProfileImageCode()).isEqualTo(ProfileImageCode.BLUE);
+        then(profileImageStorage).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 이미지_코드가_없으면_이름도_변경하지_않는다() {
+        // given
+        User user = createActiveUser(PREVIOUS_PROFILE_IMAGE_KEY);
+        given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
+
+        // when & then
+        assertThatThrownBy(() -> accountCommandService.updateProfile(USER_ID, "새이름", null))
+                .isInstanceOf(BusinessException.class);
+        assertThat(user.getNickname()).isEqualTo(NICKNAME);
     }
 
     private User createActiveUser(String profileImageKey) {

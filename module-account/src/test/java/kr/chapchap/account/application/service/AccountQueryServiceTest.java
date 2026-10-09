@@ -1,6 +1,7 @@
 package kr.chapchap.account.application.service;
 
 import kr.chapchap.account.application.info.AccountInfo;
+import kr.chapchap.account.domain.entity.ProfileImageCode;
 import kr.chapchap.account.application.port.ProfileImageStorage;
 import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.repository.UserRepository;
@@ -26,7 +27,6 @@ class AccountQueryServiceTest {
     private static final Long USER_ID = 1L;
     private static final String NICKNAME = "찹찹이";
     private static final String PROFILE_IMAGE_KEY = "profiles/1/profile.png";
-    private static final String PROFILE_IMAGE_URL = "https://example.com/profile.png";
 
     @Mock
     private UserRepository userRepository;
@@ -38,12 +38,11 @@ class AccountQueryServiceTest {
     private AccountQueryService accountQueryService;
 
     @Test
-    void 활성_사용자의_내_정보를_조회한다() {
+    void 기존_S3_키가_있어도_기본_이미지_코드로_조회한다() {
         // given
         User user = createActiveUser();
+        user.updateProfile(NICKNAME, ProfileImageCode.TEAL);
         given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
-        given(profileImageStorage.createReadUrl(PROFILE_IMAGE_KEY))
-                .willReturn(PROFILE_IMAGE_URL);
 
         // when
         AccountInfo result = accountQueryService.getAccount(USER_ID);
@@ -52,9 +51,10 @@ class AccountQueryServiceTest {
         assertThat(result).isEqualTo(new AccountInfo(
                 USER_ID,
                 NICKNAME,
-                PROFILE_IMAGE_URL
+                null,
+                "TEAL"
         ));
-        then(profileImageStorage).should().createReadUrl(PROFILE_IMAGE_KEY);
+        then(profileImageStorage).shouldHaveNoInteractions();
     }
 
     @Test

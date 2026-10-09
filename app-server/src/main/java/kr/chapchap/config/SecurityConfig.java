@@ -57,6 +57,8 @@ public class SecurityConfig {
                         )
                 )
                 .authorizeHttpRequests(authorize -> authorize
+                        // 2026-10-09: S3 업로드 구현은 보존하고 외부 호출은 중단
+                        .requestMatchers("/v1/accounts/me/profile-upload").denyAll()
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/v1/oauth/kakao/start",

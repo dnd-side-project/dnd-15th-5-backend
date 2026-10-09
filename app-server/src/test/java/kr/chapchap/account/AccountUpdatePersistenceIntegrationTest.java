@@ -196,6 +196,55 @@ class AccountUpdatePersistenceIntegrationTest {
         }
     }
 
+    @Test
+    void 이름과_이미지_코드를_함께_저장하고_기존_S3_키를_보존한다() {
+        // given
+        User user = saveActiveUserWithProfileImage();
+        String nickname = "가나다라마바사아자차카타파하ㅋㅋ";
+
+        // when
+        accountCommandService.updateProfile(user.getId(), nickname, "SKY_BLUE");
+
+        // then
+        Map<String, Object> userData = findUserData(user.getId());
+        assertThat(userData.get("nickname")).isEqualTo(nickname);
+        assertThat(userData.get("profile_image_code")).isEqualTo("SKY_BLUE");
+        assertThat(userData.get("profile_image_key")).isEqualTo(PREVIOUS_OBJECT_KEY);
+        then(profileImageStorage).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 잘못된_이름이면_기존_이름과_이미지_코드를_유지한다() {
+        // given
+        User user = saveActiveUserWithProfileImage();
+
+        // when & then
+        assertThatThrownBy(() -> accountCommandService.updateProfile(user.getId(), "dhgud스톤", "RED"))
+                .isInstanceOf(BusinessException.class);
+        Map<String, Object> userData = findUserData(user.getId());
+        assertThat(userData.get("nickname")).isEqualTo("찹찹이");
+        assertThat(userData.get("profile_image_code")).isEqualTo("BLUE");
+        assertThat(userData.get("profile_image_key")).isEqualTo(PREVIOUS_OBJECT_KEY);
+        then(profileImageStorage).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 이미지_코드를_생략한_DB_등록도_BLUE를_기본값으로_사용한다() {
+        // given
+        String nickname = "기본이미지";
+
+        // when
+        String code = jdbcTemplate.queryForObject(
+                "INSERT INTO users (nickname, status, created_at, updated_at) "
+                        + "VALUES (?, 'ACTIVE', now(), now()) RETURNING profile_image_code",
+                String.class,
+                nickname
+        );
+
+        // then
+        assertThat(code).isEqualTo("BLUE");
+    }
+
     private User saveActiveUserWithProfileImage() {
         User user = User.create("찹찹이");
         user.completeTermsAgreement();
@@ -205,7 +254,7 @@ class AccountUpdatePersistenceIntegrationTest {
 
     private Map<String, Object> findUserData(Long userId) {
         return jdbcTemplate.queryForMap(
-                "SELECT nickname, profile_image_key FROM users WHERE id = ?",
+                "SELECT nickname, profile_image_key, profile_image_code FROM users WHERE id = ?",
                 userId
         );
     }
