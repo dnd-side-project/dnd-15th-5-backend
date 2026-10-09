@@ -5,7 +5,8 @@ import kr.chapchap.account.domain.entity.User;
 public record AccountInfo(
         Long userId,
         String nickname,
-        String profileImageUrl
+        String profileImageUrl,
+        String profileImageCode
 ) {
 
     public static AccountInfo from(
@@ -15,7 +16,8 @@ public record AccountInfo(
         return new AccountInfo(
                 user.getId(),
                 user.getNickname(),
-                profileImageUrl
+                profileImageUrl,
+                user.getProfileImageCode().name()
         );
     }
 }

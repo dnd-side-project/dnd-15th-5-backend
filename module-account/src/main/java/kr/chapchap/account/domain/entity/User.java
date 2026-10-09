@@ -25,8 +25,8 @@ import java.util.regex.Pattern;
 @Table(name = "users")
 public class User extends BaseTimeEntity {
 
-    private static final int MIN_NICKNAME_LENGTH = 2;
-    private static final int MAX_NICKNAME_LENGTH = 10;
+    private static final int MAX_NICKNAME_LENGTH = 16;
+    private static final String NICKNAME_PATTERN = "[가-힣ㄱ-ㅎㅏ-ㅣ ]+";
     private static final int MAX_PROFILE_IMAGE_KEY_LENGTH = 1024;
     private static final Pattern EXPO_PUSH_TOKEN_PATTERN =
             Pattern.compile("^Expo(nent)?PushToken\\[.+]$");
@@ -40,6 +40,10 @@ public class User extends BaseTimeEntity {
 
     @Column(name = "profile_image_key", length = 1024)
     private String profileImageKey;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "profile_image_code", nullable = false, length = 20)
+    private ProfileImageCode profileImageCode = ProfileImageCode.BLUE;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
@@ -121,6 +125,14 @@ public class User extends BaseTimeEntity {
         this.nickname = validateNickname(nickname);
     }
 
+    public void updateProfile(String nickname, ProfileImageCode profileImageCode) {
+        if (profileImageCode == null) {
+            throw new BusinessException(AccountErrorCode.INVALID_PROFILE_IMAGE_CODE);
+        }
+        this.nickname = validateNickname(nickname);
+        this.profileImageCode = profileImageCode;
+    }
+
     public void updateProfileImageKey(String profileImageKey) {
         if (profileImageKey == null || profileImageKey.isBlank()) {
             throw new IllegalArgumentException("프로필 이미지 Object Key는 비어 있을 수 없습니다.");
@@ -142,13 +154,13 @@ public class User extends BaseTimeEntity {
         }
 
         String trimmedNickname = nickname.trim();
-        if (trimmedNickname.length() < MIN_NICKNAME_LENGTH) {
-            throw new BusinessException(AccountErrorCode.NICKNAME_TOO_SHORT);
-        }
         if (trimmedNickname.length() > MAX_NICKNAME_LENGTH) {
             throw new BusinessException(AccountErrorCode.NICKNAME_TOO_LONG);
         }
 
+        if (!trimmedNickname.matches(NICKNAME_PATTERN)) {
+            throw new BusinessException(AccountErrorCode.INVALID_NICKNAME);
+        }
         return trimmedNickname;
     }
 }

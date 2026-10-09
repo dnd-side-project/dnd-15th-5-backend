@@ -3,6 +3,8 @@ package kr.chapchap.account.domain.entity;
 import kr.chapchap.account.exception.AccountErrorCode;
 import kr.chapchap.core.exception.BusinessException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.LocalDateTime;
 
@@ -96,21 +98,50 @@ class UserTest {
     }
 
     @Test
-    void 닉네임이_2자_미만이거나_10자를_초과하면_사용자를_생성할_수_없다() {
+    void 닉네임이_16자를_초과하면_사용자를_생성할_수_없다() {
         // given
-        String nickname = "찹".repeat(11);
+        String nickname = "찹".repeat(17);
 
         // when & then
-        assertThatThrownBy(() -> User.create("찹"))
-                .isInstanceOfSatisfying(BusinessException.class, exception ->
-                        assertThat(exception.getErrorCode())
-                                .isEqualTo(AccountErrorCode.NICKNAME_TOO_SHORT)
-                );
         assertThatThrownBy(() -> User.create(nickname))
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
-                        assertThat(exception.getErrorCode())
-                                .isEqualTo(AccountErrorCode.NICKNAME_TOO_LONG)
+                        assertThat(exception.getErrorCode()).isEqualTo(AccountErrorCode.NICKNAME_TOO_LONG)
                 );
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"김", "ㅋ", "ㅋㅋ", "ㅏㅣ", "찹 찹", "가나다라마바사아자차카타파하ㅋㅋ"})
+    void 한글과_자모와_공백을_16자까지_허용한다(String nickname) {
+        // given
+        User user = User.create("찹찹이");
+
+        // when
+        user.updateNickname(nickname);
+
+        // then
+        assertThat(user.getNickname()).isEqualTo(nickname);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"dhgud스톤", "찹1", "찹!", "찹😀", "찹\t찹", "찹\n찹", "ㅤ"})
+    void 한글과_자모와_일반_공백_외에는_거부한다(String nickname) {
+        // given
+        User user = User.create("찹찹이");
+
+        // when & then
+        assertThatThrownBy(() -> user.updateNickname(nickname))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(AccountErrorCode.INVALID_NICKNAME)
+                );
+    }
+
+    @Test
+    void 신규_회원의_기본_이미지는_BLUE이다() {
+        // when
+        User user = User.create("찹찹이");
+
+        // then
+        assertThat(user.getProfileImageCode()).isEqualTo(ProfileImageCode.BLUE);
     }
 
     @Test

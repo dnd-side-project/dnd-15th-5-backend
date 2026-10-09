@@ -11,15 +11,19 @@ public record AccountResponse(
         @Schema(description = "닉네임", example = "찹찹이")
         String nickname,
 
-        @Schema(description = "프로필 이미지 URL", nullable = true)
-        String profileImageUrl
+        @Schema(description = "기존 파일 업로드 API의 이미지 URL. 현재 조회에서는 사용하지 않습니다.", nullable = true)
+        String profileImageUrl,
+
+        @Schema(description = "현재 기본 프로필 이미지 코드", example = "BLUE")
+        String profileImageCode
 ) {
 
     public static AccountResponse from(AccountInfo info) {
         return new AccountResponse(
                 info.userId(),
                 info.nickname(),
-                info.profileImageUrl()
+                info.profileImageUrl(),
+                info.profileImageCode()
         );
     }
 }

@@ -10,8 +10,7 @@ import org.springframework.http.HttpStatus;
 public enum AccountErrorCode implements ErrorCode {
 
     NICKNAME_REQUIRED(HttpStatus.BAD_REQUEST, "A001", "닉네임은 비어 있을 수 없습니다."),
-    NICKNAME_TOO_SHORT(HttpStatus.BAD_REQUEST, "A002", "닉네임은 2자 이상이어야 합니다."),
-    NICKNAME_TOO_LONG(HttpStatus.BAD_REQUEST, "A003", "닉네임은 10자를 초과할 수 없습니다."),
+    NICKNAME_TOO_LONG(HttpStatus.BAD_REQUEST, "A003", "닉네임은 16자를 초과할 수 없습니다."),
     ACCOUNT_UPDATE_VALUE_REQUIRED(HttpStatus.BAD_REQUEST, "A004", "수정할 값을 하나 이상 입력해야 합니다."),
     PROFILE_IMAGE_UPDATE_CONFLICT(HttpStatus.BAD_REQUEST, "A005", "프로필 이미지 변경과 삭제를 동시에 요청할 수 없습니다."),
     INVALID_PROFILE_IMAGE(HttpStatus.BAD_REQUEST, "A006", "올바른 프로필 이미지 파일이 아닙니다."),
@@ -22,7 +21,9 @@ public enum AccountErrorCode implements ErrorCode {
     TERMS_AGREEMENT_NOT_ALLOWED(HttpStatus.CONFLICT, "A011", "약관 동의 대기 상태에서만 가입을 완료할 수 있습니다."),
     ACCOUNT_WITHDRAWN(HttpStatus.FORBIDDEN, "A012", "탈퇴한 계정은 로그인할 수 없습니다."),
     INVALID_PUSH_TOKEN(HttpStatus.BAD_REQUEST, "A013", "푸시 토큰이 유효하지 않습니다."),
-    ACCOUNT_NOT_FOUND(HttpStatus.BAD_REQUEST,"A014","해당 계정이 유효하지 않습니다")
+    ACCOUNT_NOT_FOUND(HttpStatus.BAD_REQUEST,"A014","해당 계정이 유효하지 않습니다"),
+    INVALID_NICKNAME(HttpStatus.BAD_REQUEST, "A015", "닉네임은 한글, 자음, 모음과 공백만 사용할 수 있습니다."),
+    INVALID_PROFILE_IMAGE_CODE(HttpStatus.BAD_REQUEST, "A016", "유효한 프로필 이미지 코드를 선택해야 합니다.")
     ;
 
     private final HttpStatus status;
