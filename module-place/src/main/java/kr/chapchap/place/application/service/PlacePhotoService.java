@@ -4,6 +4,7 @@ import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.place.application.info.PlacePhotoInfo;
 import kr.chapchap.place.application.info.PlacePhotoInfo.PhotoMetadataInfo;
 import kr.chapchap.place.application.port.PlacePhotoPort;
+import kr.chapchap.place.exception.PlaceErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -12,7 +13,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
@@ -22,11 +22,27 @@ public class PlacePhotoService {
 
     private static final int MAX_BATCH_SIZE = 5;
     private static final int THUMBNAIL_MAX_WIDTH_PX = 400;
+    private static final int THUMBNAIL_PHOTO_COUNT = 1;
+    private static final int GALLERY_PHOTO_COUNT = 3;
 
     private final PlacePhotoPort placePhotoPort;
     private final Executor executor;
 
     public Map<Long, PlacePhotoInfo> findThumbnails(Map<Long, String> googlePlaceIdsByPlaceId) {
+        Map<Long, PlacePhotoInfo> thumbnails = new LinkedHashMap<>();
+        findPhotos(googlePlaceIdsByPlaceId, THUMBNAIL_PHOTO_COUNT)
+                .forEach((placeId, photos) -> thumbnails.put(placeId, photos.getFirst()));
+        return thumbnails;
+    }
+
+    public Map<Long, List<PlacePhotoInfo>> findPhotos(Map<Long, String> googlePlaceIdsByPlaceId) {
+        return findPhotos(googlePlaceIdsByPlaceId, GALLERY_PHOTO_COUNT);
+    }
+
+    private Map<Long, List<PlacePhotoInfo>> findPhotos(
+            Map<Long, String> googlePlaceIdsByPlaceId,
+            int requestedPhotoCount
+    ) {
         Objects.requireNonNull(googlePlaceIdsByPlaceId);
         if (googlePlaceIdsByPlaceId.size() > MAX_BATCH_SIZE) {
             throw new IllegalArgumentException("사진은 한 번에 최대 5개 장소까지 조회할 수 있습니다.");
@@ -35,49 +51,62 @@ public class PlacePhotoService {
             return Map.of();
         }
 
-        List<CompletableFuture<Optional<ThumbnailEntry>>> futures = new ArrayList<>();
-        googlePlaceIdsByPlaceId.forEach((placeId, googlePlaceId) -> futures.add(
+        Map<Long, CompletableFuture<List<PlacePhotoInfo>>> futures = new LinkedHashMap<>();
+        googlePlaceIdsByPlaceId.forEach((placeId, googlePlaceId) -> futures.put(
+                placeId,
                 CompletableFuture.supplyAsync(
-                        () -> findThumbnail(placeId, googlePlaceId),
+                        () -> findPhotos(placeId, googlePlaceId, requestedPhotoCount),
                         executor
                 )
         ));
 
-        Map<Long, PlacePhotoInfo> thumbnails = new LinkedHashMap<>();
-        futures.stream()
-                .map(CompletableFuture::join)
-                .flatMap(Optional::stream)
-                .forEach(entry -> thumbnails.put(entry.placeId(), entry.photoInfo()));
-        return thumbnails;
+        Map<Long, List<PlacePhotoInfo>> photosByPlaceId = new LinkedHashMap<>();
+        futures.forEach((placeId, future) -> {
+            List<PlacePhotoInfo> photos = future.join();
+            if (!photos.isEmpty()) {
+                photosByPlaceId.put(placeId, photos);
+            }
+        });
+        return photosByPlaceId;
     }
 
-    private Optional<ThumbnailEntry> findThumbnail(Long placeId, String googlePlaceId) {
+    private List<PlacePhotoInfo> findPhotos(Long placeId, String googlePlaceId, int requestedPhotoCount) {
         if (placeId == null || googlePlaceId == null || googlePlaceId.isBlank()) {
-            return Optional.empty();
+            return List.of();
         }
 
+        List<PhotoMetadataInfo> metadata;
         try {
-            return placePhotoPort.findPrimaryPhoto(googlePlaceId.trim())
-                    .map(photo -> new ThumbnailEntry(
-                            placeId,
-                            new PlacePhotoInfo(
-                                    placePhotoPort.resolvePhotoUri(
-                                            photo.name(),
-                                            THUMBNAIL_MAX_WIDTH_PX
-                                    ).toString(),
-                                    photo.googleMapsUri()
-                            )
-                    ));
+            metadata = requestedPhotoCount == THUMBNAIL_PHOTO_COUNT
+                    ? placePhotoPort.findPrimaryPhoto(googlePlaceId.trim()).stream().toList()
+                    : placePhotoPort.findPhotos(googlePlaceId.trim(), requestedPhotoCount);
         } catch (BusinessException exception) {
-            log.warn(
-                    "장소 썸네일 조회에 실패했습니다. placeId={}, code={}",
-                    placeId,
-                    exception.getErrorCode().getCode()
-            );
-            return Optional.empty();
+            logPhotoFailure(placeId, exception);
+            return List.of();
         }
+
+        List<PlacePhotoInfo> photos = new ArrayList<>();
+        for (PhotoMetadataInfo photo : metadata) {
+            try {
+                photos.add(new PlacePhotoInfo(
+                        placePhotoPort.resolvePhotoUri(photo.name(), THUMBNAIL_MAX_WIDTH_PX).toString(),
+                        photo.googleMapsUri()
+                ));
+            } catch (BusinessException exception) {
+                logPhotoFailure(placeId, exception);
+                if (exception.getErrorCode() == PlaceErrorCode.PHOTO_REQUEST_LIMIT_EXCEEDED) {
+                    break;
+                }
+            }
+        }
+        return List.copyOf(photos);
     }
 
-    private record ThumbnailEntry(Long placeId, PlacePhotoInfo photoInfo) {
+    private void logPhotoFailure(Long placeId, BusinessException exception) {
+        log.warn(
+                "장소 사진 조회에 실패했습니다. placeId={}, code={}",
+                placeId,
+                exception.getErrorCode().getCode()
+        );
     }
 }

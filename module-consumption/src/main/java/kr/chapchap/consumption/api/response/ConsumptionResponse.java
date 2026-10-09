@@ -1,5 +1,6 @@
 package kr.chapchap.consumption.api.response;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import kr.chapchap.consumption.application.info.ConsumptionInfo;
 
 import java.time.LocalDate;
@@ -13,6 +14,10 @@ public record ConsumptionResponse(
         Long amount,
         LocalDate purchaseDate,
         LocalTime purchaseTime,
+        @Schema(
+                description = "Google Places 대표 사진의 단기 URL(장소당 최대 1장). 사진이 없거나 조회에 실패하면 null",
+                nullable = true
+        )
         String thumbnailUrl
 ) {
 

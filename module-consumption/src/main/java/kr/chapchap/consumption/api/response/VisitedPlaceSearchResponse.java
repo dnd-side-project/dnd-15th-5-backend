@@ -40,7 +40,7 @@ public record VisitedPlaceSearchResponse(
             String roadAddress,
 
             @Schema(
-                    description = "목록에 표시할 Google Places 단기 사진 URL, 사진이 없거나 조회에 실패하면 null",
+                    description = "Google Places 대표 사진의 단기 URL(장소당 최대 1장). 사진이 없거나 조회에 실패하면 null",
                     nullable = true
             )
             String thumbnailUrl,
