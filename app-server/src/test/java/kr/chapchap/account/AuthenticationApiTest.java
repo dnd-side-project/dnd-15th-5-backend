@@ -78,7 +78,7 @@ class AuthenticationApiTest {
                 ));
 
         // when & then
-        mockMvc.perform(post("/auth/social/exchange")
+        mockMvc.perform(post("/v1/auth/social/exchange")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -104,7 +104,7 @@ class AuthenticationApiTest {
                 .willReturn(createAuthenticationInfo(OAuthClientType.WEB));
 
         // when & then
-        mockMvc.perform(post("/auth/social/exchange")
+        mockMvc.perform(post("/v1/auth/social/exchange")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -136,7 +136,7 @@ class AuthenticationApiTest {
                 .willReturn(createAuthenticationInfo(OAuthClientType.APP));
 
         // when & then
-        mockMvc.perform(post("/auth/social/exchange")
+        mockMvc.perform(post("/v1/auth/social/exchange")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -156,7 +156,7 @@ class AuthenticationApiTest {
     @Test
     void codeVerifier_형식이_올바르지_않으면_검증_오류를_반환한다() throws Exception {
         // when & then
-        mockMvc.perform(post("/auth/social/exchange")
+        mockMvc.perform(post("/v1/auth/social/exchange")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -182,7 +182,7 @@ class AuthenticationApiTest {
                 .willReturn(createAuthenticationInfo(OAuthClientType.WEB));
 
         // when & then
-        mockMvc.perform(post("/auth/signup/terms")
+        mockMvc.perform(post("/v1/auth/signup/terms")
                         .with(jwt()
                                 .jwt(jwt -> jwt
                                         .subject("1")
@@ -217,7 +217,7 @@ class AuthenticationApiTest {
                 .willReturn(createAuthenticationInfo(OAuthClientType.APP));
 
         // when & then
-        mockMvc.perform(post("/auth/signup/terms")
+        mockMvc.perform(post("/v1/auth/signup/terms")
                         .with(jwt()
                                 .jwt(jwt -> jwt
                                         .subject("1")
@@ -244,7 +244,7 @@ class AuthenticationApiTest {
     @Test
     void 만_14세_이상_확인이_false이면_가입을_완료하지_않는다() throws Exception {
         // when & then
-        mockMvc.perform(post("/auth/signup/terms")
+        mockMvc.perform(post("/v1/auth/signup/terms")
                         .with(jwt()
                                 .jwt(jwt -> jwt
                                         .subject("1")
@@ -268,7 +268,7 @@ class AuthenticationApiTest {
     @Test
     void 만_14세_이상_확인이_누락되면_가입을_완료하지_않는다() throws Exception {
         // when & then
-        mockMvc.perform(post("/auth/signup/terms")
+        mockMvc.perform(post("/v1/auth/signup/terms")
                         .with(jwt()
                                 .jwt(jwt -> jwt
                                         .subject("1")
@@ -291,7 +291,7 @@ class AuthenticationApiTest {
     @Test
     void user_scope로_약관_동의를_요청하면_접근_거부를_반환한다() throws Exception {
         // when & then
-        mockMvc.perform(post("/auth/signup/terms")
+        mockMvc.perform(post("/v1/auth/signup/terms")
                         .with(jwt()
                                 .jwt(jwt -> jwt.subject("1"))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_user")))
@@ -311,7 +311,7 @@ class AuthenticationApiTest {
     @Test
     void Signup_Token_없이_약관_동의를_요청하면_인증_오류를_반환한다() throws Exception {
         // when & then
-        mockMvc.perform(post("/auth/signup/terms")
+        mockMvc.perform(post("/v1/auth/signup/terms")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -332,7 +332,7 @@ class AuthenticationApiTest {
                 .willReturn(createRefreshedAuthenticationInfo(OAuthClientType.APP));
 
         // when & then
-        mockMvc.perform(post("/auth/token/refresh")
+        mockMvc.perform(post("/v1/auth/token/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"refreshToken": "refresh-token"}
@@ -352,7 +352,7 @@ class AuthenticationApiTest {
                 .willReturn(createRefreshedAuthenticationInfo(OAuthClientType.WEB));
 
         // when & then
-        mockMvc.perform(post("/auth/token/refresh/web")
+        mockMvc.perform(post("/v1/auth/token/refresh/web")
                         .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, "refresh-token")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.accessToken").value("new-access-token"))
@@ -365,7 +365,7 @@ class AuthenticationApiTest {
     @Test
     void APP_로그아웃하면_요청_본문의_Refresh_Token을_폐기한다() throws Exception {
         // when & then
-        mockMvc.perform(post("/auth/logout")
+        mockMvc.perform(post("/v1/auth/logout")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"refreshToken": "refresh-token"}
@@ -380,7 +380,7 @@ class AuthenticationApiTest {
     @Test
     void WEB_로그아웃하면_쿠키의_Refresh_Token을_폐기하고_쿠키를_삭제한다() throws Exception {
         // when & then
-        mockMvc.perform(post("/auth/logout/web")
+        mockMvc.perform(post("/v1/auth/logout/web")
                         .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, "refresh-token")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("S001"))
@@ -400,7 +400,7 @@ class AuthenticationApiTest {
     @Test
     void Refresh_Token_쿠키가_없어도_WEB_로그아웃에_성공한다() throws Exception {
         // when & then
-        mockMvc.perform(post("/auth/logout/web"))
+        mockMvc.perform(post("/v1/auth/logout/web"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("S001"))
                 .andExpect(cookie().value(REFRESH_TOKEN_COOKIE_NAME, ""))

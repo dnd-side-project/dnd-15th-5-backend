@@ -83,7 +83,7 @@ class ReceiptOcrApiTest {
                 ));
 
         // when & then
-        mockMvc.perform(multipart("/consumptions/receipt-ocr")
+        mockMvc.perform(multipart("/v1/consumptions/receipt-ocr")
                         .file(receiptImage)
                         .with(jwt()
                                 .jwt(jwt -> jwt.subject(USER_ID.toString()))
@@ -123,7 +123,7 @@ class ReceiptOcrApiTest {
                 .willReturn(new ReceiptOcrInfo(15L, null, null, null, null, null, null));
 
         // when & then
-        mockMvc.perform(multipart("/consumptions/receipt-ocr")
+        mockMvc.perform(multipart("/v1/consumptions/receipt-ocr")
                         .file(receiptImage())
                         .with(jwt()
                                 .jwt(jwt -> jwt.subject(USER_ID.toString()))
@@ -141,7 +141,7 @@ class ReceiptOcrApiTest {
     @Test
     void Access_Token이_없으면_영수증_OCR을_요청할_수_없다() throws Exception {
         // when & then
-        mockMvc.perform(multipart("/consumptions/receipt-ocr").file(receiptImage()))
+        mockMvc.perform(multipart("/v1/consumptions/receipt-ocr").file(receiptImage()))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("C004"));
 
@@ -151,7 +151,7 @@ class ReceiptOcrApiTest {
     @Test
     void signup_scope로_영수증_OCR을_요청할_수_없다() throws Exception {
         // when & then
-        mockMvc.perform(multipart("/consumptions/receipt-ocr")
+        mockMvc.perform(multipart("/v1/consumptions/receipt-ocr")
                         .file(receiptImage())
                         .with(jwt()
                                 .jwt(jwt -> jwt.subject(USER_ID.toString()))
@@ -165,7 +165,7 @@ class ReceiptOcrApiTest {
     @Test
     void 숫자가_아닌_JWT_subject면_인증_오류를_반환한다() throws Exception {
         // when & then
-        mockMvc.perform(multipart("/consumptions/receipt-ocr")
+        mockMvc.perform(multipart("/v1/consumptions/receipt-ocr")
                         .file(receiptImage())
                         .with(jwt()
                                 .jwt(jwt -> jwt.subject("invalid-user-id"))
@@ -179,7 +179,7 @@ class ReceiptOcrApiTest {
     @Test
     void 영수증_이미지가_누락되면_입력_오류를_반환한다() throws Exception {
         // when & then
-        mockMvc.perform(multipart("/consumptions/receipt-ocr")
+        mockMvc.perform(multipart("/v1/consumptions/receipt-ocr")
                         .with(jwt()
                                 .jwt(jwt -> jwt.subject(USER_ID.toString()))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_user"))))
@@ -200,7 +200,7 @@ class ReceiptOcrApiTest {
                 ));
 
         // when & then
-        mockMvc.perform(multipart("/consumptions/receipt-ocr")
+        mockMvc.perform(multipart("/v1/consumptions/receipt-ocr")
                         .file(receiptImage())
                         .with(jwt()
                                 .jwt(jwt -> jwt.subject(USER_ID.toString()))

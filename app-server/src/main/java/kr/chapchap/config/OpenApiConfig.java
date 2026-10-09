@@ -22,7 +22,7 @@ public class OpenApiConfig {
                                         .bearerFormat("JWT")
                                         .description(
                                                 "Bearer JWT 인증입니다. "
-                                                        + "POST /auth/signup/terms에서는 Signup Token을 사용하고, "
+                                                        + "POST /v1/auth/signup/terms에서는 Signup Token을 사용하고, "
                                                         + "그 외 bearerAuth가 필요한 API에서는 Access Token을 사용합니다."
                                         )
                         )
@@ -30,6 +30,6 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("ChapChap API")
                         .description("ChapChap 백엔드 API 명세")
-                        .version("current"));
+                        .version("v1"));
     }
 }

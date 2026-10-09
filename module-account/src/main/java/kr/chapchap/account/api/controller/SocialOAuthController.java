@@ -29,7 +29,7 @@ import java.net.URI;
 @Tag(name = "Social OAuth", description = "소셜 OAuth 화면 이동 및 콜백 API")
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/oauth/{provider}")
+@RequestMapping("/v1/oauth/{provider}")
 public class SocialOAuthController {
 
     private final OAuthFlowService oauthFlowService;

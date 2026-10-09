@@ -35,7 +35,7 @@ class KakaoAuthenticationClientTest {
     private static final URI TOKEN_URI = URI.create("https://kauth.kakao.test/oauth/token");
     private static final URI USER_INFO_URI = URI.create("https://kapi.kakao.test/v2/user/me");
     private static final URI UNLINK_URI = URI.create("https://kapi.kakao.test/v1/user/unlink");
-    private static final URI REDIRECT_URI = URI.create("https://client.example.com/oauth/kakao");
+    private static final URI REDIRECT_URI = URI.create("https://client.example.com/v1/oauth/kakao/callback");
 
     private MockRestServiceServer server;
     private KakaoAuthenticationClient kakaoAuthenticationClient;

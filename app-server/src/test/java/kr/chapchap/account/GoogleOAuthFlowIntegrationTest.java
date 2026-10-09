@@ -68,7 +68,7 @@ class GoogleOAuthFlowIntegrationTest {
     @Test
     void Google_로그인_시작부터_ChapChap_로그인_코드_교환까지_처리한다() throws Exception {
         // given
-        MvcResult startResult = mockMvc.perform(get("/oauth/google/start")
+        MvcResult startResult = mockMvc.perform(get("/v1/oauth/google/start")
                         .param("client", "APP")
                         .param("codeChallenge", CODE_CHALLENGE))
                 .andExpect(status().isFound())
@@ -84,7 +84,7 @@ class GoogleOAuthFlowIntegrationTest {
                 .willReturn("google-sub");
 
         // when
-        MvcResult callbackResult = mockMvc.perform(get("/oauth/google/callback")
+        MvcResult callbackResult = mockMvc.perform(get("/v1/oauth/google/callback")
                         .param("code", "authorization-code")
                         .param("state", state))
                 .andExpect(status().isFound())
@@ -95,7 +95,7 @@ class GoogleOAuthFlowIntegrationTest {
         );
 
         // then
-        mockMvc.perform(post("/auth/social/exchange")
+        mockMvc.perform(post("/v1/auth/social/exchange")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {

@@ -41,7 +41,7 @@ import java.util.List;
 @Tag(name = "Consumption", description = "소비내역 API")
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/consumptions")
+@RequestMapping("/v1/consumptions")
 public class ConsumptionController {
 
     private final ConsumptionQueryService consumptionQueryService;

@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Place", description = "장소 API")
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/places")
+@RequestMapping("/v1/places")
 public class VisitedPlaceSearchController {
 
     private final VisitedPlaceSearchService visitedPlaceSearchService;

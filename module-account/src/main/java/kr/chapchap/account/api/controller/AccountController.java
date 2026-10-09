@@ -35,7 +35,7 @@ import java.util.Optional;
 @Tag(name = "Account", description = "사용자 계정 API")
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/accounts")
+@RequestMapping("/v1/accounts")
 public class AccountController {
 
     private final AccountQueryService accountQueryService;

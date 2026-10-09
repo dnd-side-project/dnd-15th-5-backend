@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Consumption", description = "소비내역 API")
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/consumptions")
+@RequestMapping("/v1/consumptions")
 public class ReceiptOcrController {
 
     private final ReceiptOcrService receiptOcrService;
