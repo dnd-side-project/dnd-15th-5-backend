@@ -72,7 +72,7 @@ class ConsumptionCreateApiTest {
                 ));
 
         // when & then
-        mockMvc.perform(post("/consumptions")
+        mockMvc.perform(post("/v1/consumptions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsBytes(validRequest()))
                         .with(userJwt()))
@@ -110,7 +110,7 @@ class ConsumptionCreateApiTest {
                 ));
 
         // when & then
-        mockMvc.perform(post("/consumptions")
+        mockMvc.perform(post("/v1/consumptions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsBytes(request))
                         .with(userJwt()))
@@ -141,7 +141,7 @@ class ConsumptionCreateApiTest {
         request.put("category", " ");
 
         // when & then
-        mockMvc.perform(post("/consumptions")
+        mockMvc.perform(post("/v1/consumptions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsBytes(request))
                         .with(userJwt()))
@@ -168,7 +168,7 @@ class ConsumptionCreateApiTest {
         request.put("category", "스페셜");
 
         // when & then
-        mockMvc.perform(post("/consumptions")
+        mockMvc.perform(post("/v1/consumptions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsBytes(request))
                         .with(userJwt()))
@@ -182,7 +182,7 @@ class ConsumptionCreateApiTest {
     @Test
     void Access_Token이_없으면_소비_기록을_등록할_수_없다() throws Exception {
         // when & then
-        mockMvc.perform(post("/consumptions")
+        mockMvc.perform(post("/v1/consumptions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsBytes(validRequest())))
                 .andExpect(status().isUnauthorized())
@@ -194,7 +194,7 @@ class ConsumptionCreateApiTest {
     @Test
     void signup_scope로_소비_기록을_등록할_수_없다() throws Exception {
         // when & then
-        mockMvc.perform(post("/consumptions")
+        mockMvc.perform(post("/v1/consumptions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsBytes(validRequest()))
                         .with(jwt()
@@ -213,7 +213,7 @@ class ConsumptionCreateApiTest {
                 .willThrow(new BusinessException(ConsumptionErrorCode.RECEIPT_IMAGE_NOT_FOUND));
 
         // when & then
-        mockMvc.perform(post("/consumptions")
+        mockMvc.perform(post("/v1/consumptions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsBytes(validRequest()))
                         .with(userJwt()))
@@ -230,7 +230,7 @@ class ConsumptionCreateApiTest {
                 ));
 
         // when & then
-        mockMvc.perform(post("/consumptions")
+        mockMvc.perform(post("/v1/consumptions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsBytes(validRequest()))
                         .with(userJwt()))
@@ -245,7 +245,7 @@ class ConsumptionCreateApiTest {
                 .willThrow(new BusinessException(PlaceErrorCode.ADDRESS_NOT_RESOLVED));
 
         // when & then
-        mockMvc.perform(post("/consumptions")
+        mockMvc.perform(post("/v1/consumptions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsBytes(validRequest()))
                         .with(userJwt()))

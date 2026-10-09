@@ -117,7 +117,7 @@ class AccountWithdrawalIntegrationTest {
         saveRefreshToken(otherUserId, otherUserRefreshTokenId);
 
         // when
-        mockMvc.perform(delete("/accounts/me")
+        mockMvc.perform(delete("/v1/accounts/me")
                         .header(
                                 HttpHeaders.AUTHORIZATION,
                                 "Bearer " + tokenPair.accessToken()
@@ -140,7 +140,7 @@ class AccountWithdrawalIntegrationTest {
                 .isTrue();
         then(kakaoAuthenticationPort).should().unlink(PROVIDER_USER_ID);
 
-        mockMvc.perform(get("/accounts/me")
+        mockMvc.perform(get("/v1/accounts/me")
                         .header(
                                 HttpHeaders.AUTHORIZATION,
                                 "Bearer " + tokenPair.accessToken()

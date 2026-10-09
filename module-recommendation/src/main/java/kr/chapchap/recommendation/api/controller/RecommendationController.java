@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Recommendation", description = "가게 추천 API")
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/recommendations")
+@RequestMapping("/v1/recommendations")
 public class RecommendationController {
 
     private final RecommendationQueryService recommendationQueryService;

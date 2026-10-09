@@ -44,7 +44,7 @@ class GoogleAuthenticationClientTest {
     private static final URI TOKEN_URI = URI.create("https://oauth2.google.test/token");
     private static final URI REVOKE_URI = URI.create("https://oauth2.google.test/revoke");
     private static final URI REDIRECT_URI = URI.create(
-            "https://client.example.com/oauth/google/callback"
+            "https://client.example.com/v1/oauth/google/callback"
     );
     private static final String STATE = "oauth-state";
 

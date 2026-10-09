@@ -59,31 +59,31 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(
                                 HttpMethod.GET,
-                                "/oauth/kakao/start",
-                                "/oauth/kakao/callback",
-                                "/oauth/google/start",
-                                "/oauth/google/callback"
+                                "/v1/oauth/kakao/start",
+                                "/v1/oauth/kakao/callback",
+                                "/v1/oauth/google/start",
+                                "/v1/oauth/google/callback"
                         )
                         .permitAll()
                         .requestMatchers(
                                 HttpMethod.POST,
-                                "/auth/social/exchange",
-                                "/auth/token/refresh",
-                                "/auth/token/refresh/web",
-                                "/auth/logout",
-                                "/auth/logout/web"
+                                "/v1/auth/social/exchange",
+                                "/v1/auth/token/refresh",
+                                "/v1/auth/token/refresh/web",
+                                "/v1/auth/logout",
+                                "/v1/auth/logout/web"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/signup/terms")
+                        .requestMatchers(HttpMethod.POST, "/v1/auth/signup/terms")
                         .hasAuthority("SCOPE_signup")
                         .requestMatchers(
                                 "/actuator/health",
                                 "/actuator/health/**",
-                                "/accounts/test",
+                                "/v1/accounts/test",
                                 "/v3/api-docs/**",
                                 "/swagger-ui",
                                 "/swagger-ui/**"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/reports/share/*")
+                        .requestMatchers(HttpMethod.GET, "/v1/reports/share/*")
                         .permitAll()
                         .anyRequest().hasAuthority("SCOPE_user")
                 );

@@ -93,7 +93,7 @@ class AccountApiTest {
         ));
 
         // when & then
-        mockMvc.perform(get("/accounts/me")
+        mockMvc.perform(get("/v1/accounts/me")
                         .with(jwt()
                                 .jwt(jwt -> jwt.subject(USER_ID.toString()))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_user"))))
@@ -109,7 +109,7 @@ class AccountApiTest {
     @Test
     void Access_Token이_없으면_인증_오류를_반환한다() throws Exception {
         // when & then
-        mockMvc.perform(get("/accounts/me"))
+        mockMvc.perform(get("/v1/accounts/me"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("C004"));
 
@@ -119,7 +119,7 @@ class AccountApiTest {
     @Test
     void signup_scope로_내_정보를_조회하면_접근_거부를_반환한다() throws Exception {
         // when & then
-        mockMvc.perform(get("/accounts/me")
+        mockMvc.perform(get("/v1/accounts/me")
                         .with(jwt()
                                 .jwt(jwt -> jwt.subject(USER_ID.toString()))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_signup"))))
@@ -132,7 +132,7 @@ class AccountApiTest {
     @Test
     void 숫자가_아닌_JWT_subject로_조회하면_인증_오류를_반환한다() throws Exception {
         // when & then
-        mockMvc.perform(get("/accounts/me")
+        mockMvc.perform(get("/v1/accounts/me")
                         .with(jwt()
                                 .jwt(jwt -> jwt.subject("invalid-user-id"))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_user"))))
@@ -156,7 +156,7 @@ class AccountApiTest {
                 .willReturn(new AccountInfo(USER_ID, "새찹찹이", PROFILE_IMAGE_URL));
 
         // when & then
-        mockMvc.perform(multipart(HttpMethod.PATCH, "/accounts/me")
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/v1/accounts/me")
                         .file(profileImage)
                         .param("nickname", "새찹찹이")
                         .with(jwt()
@@ -185,7 +185,7 @@ class AccountApiTest {
                 .willReturn(new AccountInfo(USER_ID, NICKNAME, null));
 
         // when & then
-        mockMvc.perform(multipart(HttpMethod.PATCH, "/accounts/me")
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/v1/accounts/me")
                         .param("deleteProfileImage", "true")
                         .with(jwt()
                                 .jwt(jwt -> jwt.subject(USER_ID.toString()))
@@ -204,7 +204,7 @@ class AccountApiTest {
     @Test
     void 빈_닉네임으로_수정하면_입력_오류를_반환한다() throws Exception {
         // when & then
-        mockMvc.perform(multipart(HttpMethod.PATCH, "/accounts/me")
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/v1/accounts/me")
                         .param("nickname", " ")
                         .with(jwt()
                                 .jwt(jwt -> jwt.subject(USER_ID.toString()))
@@ -222,7 +222,7 @@ class AccountApiTest {
                 .willThrow(new BusinessException(AccountErrorCode.ACCOUNT_UPDATE_VALUE_REQUIRED));
 
         // when & then
-        mockMvc.perform(multipart(HttpMethod.PATCH, "/accounts/me")
+        mockMvc.perform(multipart(HttpMethod.PATCH, "/v1/accounts/me")
                         .with(jwt()
                                 .jwt(jwt -> jwt.subject(USER_ID.toString()))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_user"))))
@@ -238,7 +238,7 @@ class AccountApiTest {
                 .willReturn(Optional.empty());
 
         // when & then
-        mockMvc.perform(delete("/accounts/me")
+        mockMvc.perform(delete("/v1/accounts/me")
                         .with(jwt()
                                 .jwt(jwt -> jwt
                                         .subject(USER_ID.toString())
@@ -273,7 +273,7 @@ class AccountApiTest {
                 .willReturn(Optional.of(authorizationUri));
 
         // when & then
-        mockMvc.perform(delete("/accounts/me")
+        mockMvc.perform(delete("/v1/accounts/me")
                         .with(jwt()
                                 .jwt(jwt -> jwt
                                         .subject(USER_ID.toString())
@@ -296,7 +296,7 @@ class AccountApiTest {
     @Test
     void Access_Token이_없으면_회원_탈퇴를_요청할_수_없다() throws Exception {
         // when & then
-        mockMvc.perform(delete("/accounts/me"))
+        mockMvc.perform(delete("/v1/accounts/me"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("C004"));
 
@@ -306,7 +306,7 @@ class AccountApiTest {
     @Test
     void signup_scope로_회원_탈퇴를_요청할_수_없다() throws Exception {
         // when & then
-        mockMvc.perform(delete("/accounts/me")
+        mockMvc.perform(delete("/v1/accounts/me")
                         .with(jwt()
                                 .jwt(jwt -> jwt.subject(USER_ID.toString()))
                                 .authorities(new SimpleGrantedAuthority("SCOPE_signup"))))

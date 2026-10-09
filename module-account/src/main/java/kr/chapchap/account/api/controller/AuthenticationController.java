@@ -36,7 +36,7 @@ import static kr.chapchap.account.api.response.AuthenticationResponseHandler.REF
 @Tag(name = "Authentication", description = "소셜 로그인, 회원가입 완료 및 토큰 관리 API")
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/v1/auth")
 public class AuthenticationController {
 
     private final OAuthFlowService oauthFlowService;

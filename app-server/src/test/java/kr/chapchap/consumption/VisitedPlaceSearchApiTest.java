@@ -59,7 +59,7 @@ class VisitedPlaceSearchApiTest {
     @Test
     void Access_Token이_없으면_방문_장소를_검색할_수_없다() throws Exception {
         // when & then
-        mockMvc.perform(get("/places/visited/search")
+        mockMvc.perform(get("/v1/places/visited/search")
                         .param("keyword", KEYWORD))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("C004"));
@@ -70,7 +70,7 @@ class VisitedPlaceSearchApiTest {
     @Test
     void signup_scope로_방문_장소를_검색할_수_없다() throws Exception {
         // when & then
-        mockMvc.perform(get("/places/visited/search")
+        mockMvc.perform(get("/v1/places/visited/search")
                         .param("keyword", KEYWORD)
                         .with(jwt()
                                 .jwt(jwt -> jwt.subject(USER_ID.toString()))
@@ -88,7 +88,7 @@ class VisitedPlaceSearchApiTest {
                 .willReturn(searchInfo());
 
         // when & then
-        mockMvc.perform(get("/places/visited/search")
+        mockMvc.perform(get("/v1/places/visited/search")
                         .param("keyword", "  " + KEYWORD + "  ")
                         .with(jwt()
                                 .jwt(jwt -> jwt.subject(USER_ID.toString()))

@@ -64,7 +64,7 @@ class SocialOAuthApiTest {
         )).willReturn(authorizationUri);
 
         // when & then
-        mockMvc.perform(get("/oauth/kakao/start")
+        mockMvc.perform(get("/v1/oauth/kakao/start")
                         .param("client", "WEB")
                         .param("codeChallenge", CODE_CHALLENGE))
                 .andExpect(status().isFound())
@@ -90,7 +90,7 @@ class SocialOAuthApiTest {
         )).willReturn(authorizationUri);
 
         // when & then
-        mockMvc.perform(get("/oauth/google/start")
+        mockMvc.perform(get("/v1/oauth/google/start")
                         .param("client", "APP")
                         .param("codeChallenge", CODE_CHALLENGE))
                 .andExpect(status().isFound())
@@ -114,7 +114,7 @@ class SocialOAuthApiTest {
         )).willReturn(clientUri);
 
         // when & then
-        mockMvc.perform(get("/oauth/google/callback")
+        mockMvc.perform(get("/v1/oauth/google/callback")
                         .param("code", "authorization-code")
                         .param("state", "state"))
                 .andExpect(status().isFound())
@@ -140,7 +140,7 @@ class SocialOAuthApiTest {
         )).willReturn(new AccountWithdrawalCallbackInfo(clientUri, true));
 
         // when & then
-        mockMvc.perform(get("/oauth/google/callback")
+        mockMvc.perform(get("/v1/oauth/google/callback")
                         .param("code", "authorization-code")
                         .param("state", state))
                 .andExpect(status().isFound())
@@ -165,7 +165,7 @@ class SocialOAuthApiTest {
         )).willReturn(clientUri);
 
         // when & then
-        mockMvc.perform(get("/oauth/kakao/callback")
+        mockMvc.perform(get("/v1/oauth/kakao/callback")
                         .param("code", "authorization-code")
                         .param("state", "state"))
                 .andExpect(status().isFound())
@@ -186,7 +186,7 @@ class SocialOAuthApiTest {
                 .willReturn(clientUri);
 
         // when & then
-        mockMvc.perform(get("/oauth/kakao/callback")
+        mockMvc.perform(get("/v1/oauth/kakao/callback")
                         .param("state", "state"))
                 .andExpect(status().isFound())
                 .andExpect(header().string("Location", clientUri.toString()));
@@ -198,7 +198,7 @@ class SocialOAuthApiTest {
     @Test
     void 지원하지_않는_클라이언트로_로그인을_시작하면_입력값_오류를_반환한다() throws Exception {
         // when & then
-        mockMvc.perform(get("/oauth/google/start")
+        mockMvc.perform(get("/v1/oauth/google/start")
                         .param("client", "DESKTOP")
                         .param("codeChallenge", CODE_CHALLENGE))
                 .andExpect(status().isBadRequest())

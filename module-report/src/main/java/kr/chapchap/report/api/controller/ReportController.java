@@ -36,7 +36,7 @@ import java.time.YearMonth;
 @Tag(name = "Report", description = "리포트 API")
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/reports")
+@RequestMapping("/v1/reports")
 public class ReportController {
 
     private final ReportQueryService reportQueryService;
