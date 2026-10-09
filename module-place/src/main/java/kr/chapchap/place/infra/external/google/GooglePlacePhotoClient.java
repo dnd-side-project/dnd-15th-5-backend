@@ -21,6 +21,7 @@ public class GooglePlacePhotoClient implements PlacePhotoPort {
 
     private static final String PHOTO_FIELD_MASK = "photos";
     private static final int MAX_PHOTO_WIDTH_PX = 4800;
+    private static final int PRIMARY_PHOTO_COUNT = 1;
 
     private final RestClient restClient;
     private final GooglePlacePhotoRateLimiter rateLimiter;
@@ -35,8 +36,16 @@ public class GooglePlacePhotoClient implements PlacePhotoPort {
 
     @Override
     public Optional<PhotoMetadataInfo> findPrimaryPhoto(String googlePlaceId) {
+        return findPhotos(googlePlaceId, PRIMARY_PHOTO_COUNT).stream().findFirst();
+    }
+
+    @Override
+    public List<PhotoMetadataInfo> findPhotos(String googlePlaceId, int requestedPhotoCount) {
+        if (requestedPhotoCount < 1) {
+            throw new IllegalArgumentException("사진 조회 개수는 1 이상이어야 합니다.");
+        }
         if (!StringUtils.hasText(googlePlaceId)) {
-            return Optional.empty();
+            return List.of();
         }
 
         try {
@@ -47,7 +56,7 @@ public class GooglePlacePhotoClient implements PlacePhotoPort {
                     .header("X-Goog-FieldMask", PHOTO_FIELD_MASK)
                     .retrieve()
                     .body(PlaceDetailsResponse.class);
-            return extractPrimaryPhoto(response);
+            return extractPhotos(response, requestedPhotoCount);
         } catch (BusinessException exception) {
             throw exception;
         } catch (RestClientException exception) {
@@ -87,20 +96,23 @@ public class GooglePlacePhotoClient implements PlacePhotoPort {
         }
     }
 
-    private Optional<PhotoMetadataInfo> extractPrimaryPhoto(PlaceDetailsResponse response) {
+    private List<PhotoMetadataInfo> extractPhotos(PlaceDetailsResponse response, int requestedPhotoCount) {
         if (response == null || response.photos() == null || response.photos().isEmpty()) {
-            return Optional.empty();
+            return List.of();
         }
 
-        PhotoResponse photo = response.photos().getFirst();
-        if (photo == null || !StringUtils.hasText(photo.name())) {
-            throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
-        }
-
-        return Optional.of(new PhotoMetadataInfo(
-                photo.name().trim(),
-                requireHttpsUri(photo.googleMapsUri()).toString()
-        ));
+        return response.photos().stream()
+                .limit(requestedPhotoCount)
+                .map(photo -> {
+                    if (photo == null || !StringUtils.hasText(photo.name())) {
+                        throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
+                    }
+                    return new PhotoMetadataInfo(
+                            photo.name().trim(),
+                            requireHttpsUri(photo.googleMapsUri()).toString()
+                    );
+                })
+                .toList();
     }
 
     private String[] requirePhotoNameSegments(String photoName) {

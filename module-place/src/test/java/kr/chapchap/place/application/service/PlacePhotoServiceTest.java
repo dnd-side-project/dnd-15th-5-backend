@@ -10,6 +10,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -22,12 +24,15 @@ import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -175,4 +180,126 @@ class PlacePhotoServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
         verify(placePhotoPort, never()).findPrimaryPhoto(anyString());
     }
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1, 2, 3})
+    void 여러_사진을_조회하면_존재하는_수만큼_순서대로_반환한다(int count) {
+        // given
+        List<PhotoMetadataInfo> metadata = IntStream.rangeClosed(1, count)
+                .mapToObj(i -> new PhotoMetadataInfo(
+                        "places/google-101/photos/" + i,
+                        "https://maps.google.com/photo/" + i
+                ))
+                .toList();
+        when(placePhotoPort.findPhotos("google-101", 3)).thenReturn(metadata);
+        for (PhotoMetadataInfo photo : metadata) {
+            when(placePhotoPort.resolvePhotoUri(photo.name(), THUMBNAIL_WIDTH))
+                    .thenReturn(URI.create("https://images.example.com/" + photo.name()));
+        }
+
+        // when
+        Map<Long, List<PlacePhotoInfo>> result = sut.findPhotos(Map.of(101L, " google-101 "));
+
+        // then
+        assertThat(result.getOrDefault(101L, List.of()))
+                .containsExactlyElementsOf(metadata.stream()
+                        .map(photo -> new PlacePhotoInfo(
+                                "https://images.example.com/" + photo.name(), photo.googleMapsUri()
+                        ))
+                        .toList());
+        verify(placePhotoPort).findPhotos("google-101", 3);
+        verify(placePhotoPort, times(count)).resolvePhotoUri(anyString(), eq(THUMBNAIL_WIDTH));
+        verify(placePhotoPort, never()).findPrimaryPhoto(anyString());
+    }
+
+    @Test
+    void 여러_사진_중_하나의_URL_조회가_실패해도_나머지_사진은_반환한다() {
+        // given
+        List<PhotoMetadataInfo> metadata = List.of(
+                new PhotoMetadataInfo("photo-1", "https://maps.google.com/photo/1"),
+                new PhotoMetadataInfo("photo-2", "https://maps.google.com/photo/2"),
+                new PhotoMetadataInfo("photo-3", "https://maps.google.com/photo/3")
+        );
+        when(placePhotoPort.findPhotos("google-101", 3)).thenReturn(metadata);
+        when(placePhotoPort.resolvePhotoUri("photo-1", THUMBNAIL_WIDTH))
+                .thenReturn(URI.create("https://images.example.com/1"));
+        when(placePhotoPort.resolvePhotoUri("photo-2", THUMBNAIL_WIDTH))
+                .thenThrow(new BusinessException(PlaceErrorCode.PHOTO_NOT_FOUND));
+        when(placePhotoPort.resolvePhotoUri("photo-3", THUMBNAIL_WIDTH))
+                .thenReturn(URI.create("https://images.example.com/3"));
+
+        // when
+        Map<Long, List<PlacePhotoInfo>> result = sut.findPhotos(Map.of(101L, "google-101"));
+
+        // then
+        assertThat(result.get(101L)).containsExactly(
+                new PlacePhotoInfo("https://images.example.com/1", metadata.get(0).googleMapsUri()),
+                new PlacePhotoInfo("https://images.example.com/3", metadata.get(2).googleMapsUri())
+        );
+    }
+
+    @Test
+    void 여러_사진_조회_중_월간_한도를_초과하면_기존_결과를_유지하고_남은_요청을_중단한다() {
+        // given
+        when(placePhotoPort.findPhotos("google-101", 3)).thenReturn(List.of(
+                new PhotoMetadataInfo("photo-1", "https://maps.google.com/photo/1"),
+                new PhotoMetadataInfo("photo-2", "https://maps.google.com/photo/2"),
+                new PhotoMetadataInfo("photo-3", "https://maps.google.com/photo/3")
+        ));
+        when(placePhotoPort.resolvePhotoUri("photo-1", THUMBNAIL_WIDTH))
+                .thenReturn(URI.create("https://images.example.com/1"));
+        when(placePhotoPort.resolvePhotoUri("photo-2", THUMBNAIL_WIDTH))
+                .thenThrow(new BusinessException(PlaceErrorCode.PHOTO_REQUEST_LIMIT_EXCEEDED));
+
+        // when
+        Map<Long, List<PlacePhotoInfo>> result = sut.findPhotos(Map.of(101L, "google-101"));
+
+        // then
+        assertThat(result.get(101L)).containsExactly(
+                new PlacePhotoInfo("https://images.example.com/1", "https://maps.google.com/photo/1")
+        );
+        verify(placePhotoPort, never()).resolvePhotoUri("photo-3", THUMBNAIL_WIDTH);
+    }
+
+    @Test
+    void 여러_사진을_조회할_때_실패한_장소와_잘못된_ID는_제외한다() {
+        // given
+        when(placePhotoPort.findPhotos("google-101", 3))
+                .thenThrow(new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE));
+        when(placePhotoPort.findPhotos("google-102", 3)).thenReturn(List.of(
+                new PhotoMetadataInfo("photo-2", "https://maps.google.com/photo/2")
+        ));
+        when(placePhotoPort.resolvePhotoUri("photo-2", THUMBNAIL_WIDTH))
+                .thenReturn(URI.create("https://images.example.com/2"));
+        Map<Long, String> places = new LinkedHashMap<>();
+        places.put(101L, "google-101");
+        places.put(102L, "google-102");
+        places.put(103L, " ");
+        places.put(null, "google-null");
+        places.put(104L, null);
+
+        // when
+        Map<Long, List<PlacePhotoInfo>> result = sut.findPhotos(places);
+
+        // then
+        assertThat(result).containsOnlyKeys(102L);
+        verify(placePhotoPort, times(2)).findPhotos(anyString(), eq(3));
+    }
+
+    @Test
+    void 여러_사진을_조회할_때_빈_장소는_요청하지_않고_6개_장소는_거부한다() {
+        // given
+        Map<Long, String> places = Map.of(
+                1L, "google-1", 2L, "google-2", 3L, "google-3",
+                4L, "google-4", 5L, "google-5", 6L, "google-6"
+        );
+
+        // when
+        Map<Long, List<PlacePhotoInfo>> result = sut.findPhotos(Map.of());
+
+        // then
+        assertThat(result).isEmpty();
+        assertThatThrownBy(() -> sut.findPhotos(places)).isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(placePhotoPort);
+    }
+
 }

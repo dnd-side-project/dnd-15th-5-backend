@@ -6,6 +6,8 @@ import kr.chapchap.place.application.info.PlacePhotoInfo.PhotoMetadataInfo;
 import kr.chapchap.place.exception.PlaceErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -15,6 +17,9 @@ import org.springframework.web.client.RestClientResponseException;
 
 import java.net.URI;
 import java.util.Optional;
+import java.util.List;
+import java.util.stream.IntStream;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -236,4 +241,77 @@ class GooglePlacePhotoClientTest {
                 });
         server.verify();
     }
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1, 2, 3, 4})
+    void 사진_목록을_한번_조회해서_최대_3개만_순서대로_반환한다(int count) {
+        // given
+        String photos = IntStream.rangeClosed(1, count)
+                .mapToObj(i -> """
+                        {"name":"places/ChIJ123/photos/%d","googleMapsUri":"https://maps.google.com/photo/%d"}
+                        """.formatted(i, i))
+                .collect(Collectors.joining(","));
+        server.expect(requestTo(BASE_URI + "/places/ChIJ123"))
+                .andExpect(header("X-Goog-FieldMask", "photos"))
+                .andRespond(withSuccess("{\"photos\":[" + photos + "]}", MediaType.APPLICATION_JSON));
+
+        // when
+        List<PhotoMetadataInfo> result = client.findPhotos("ChIJ123", 3);
+
+        // then
+        assertThat(result).containsExactlyElementsOf(IntStream.rangeClosed(1, Math.min(count, 3))
+                .mapToObj(i -> new PhotoMetadataInfo(
+                        "places/ChIJ123/photos/" + i, "https://maps.google.com/photo/" + i
+                ))
+                .toList());
+        server.verify();
+    }
+
+    @Test
+    void 여러_사진_조회에서_사진_필드가_없으면_빈_목록을_반환한다() {
+        // given
+        server.expect(requestTo(BASE_URI + "/places/ChIJ123"))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+        // when
+        List<PhotoMetadataInfo> result = client.findPhotos("ChIJ123", 3);
+
+        // then
+        assertThat(result).isEmpty();
+        server.verify();
+    }
+
+    @Test
+    void 여러_사진_조회에서_선택한_사진의_지도_URL이_유효하지_않으면_예외를_던진다() {
+        // given
+        server.expect(requestTo(BASE_URI + "/places/ChIJ123"))
+                .andRespond(withSuccess("""
+                        {"photos":[
+                          {"name":"places/ChIJ123/photos/1","googleMapsUri":"https://maps.google.com/photo/1"},
+                          {"name":"places/ChIJ123/photos/2","googleMapsUri":"http://maps.google.com/photo/2"}
+                        ]}
+                        """, MediaType.APPLICATION_JSON));
+
+        // when & then
+        assertThatThrownBy(() -> client.findPhotos("ChIJ123", 3))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE)
+                );
+        server.verify();
+    }
+
+    @Test
+    void 사진_개수가_잘못되면_거부하고_장소_ID가_비어있으면_요청하지_않는다() {
+        // given
+        String googlePlaceId = "ChIJ123";
+
+        // when
+        List<PhotoMetadataInfo> result = client.findPhotos(" ", 3);
+
+        // then
+        assertThat(result).isEmpty();
+        assertThatThrownBy(() -> client.findPhotos(googlePlaceId, 0))
+                .isInstanceOf(IllegalArgumentException.class);
+        server.verify();
+    }
+
 }
