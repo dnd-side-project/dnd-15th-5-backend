@@ -31,7 +31,7 @@ public class Consumption extends BaseTimeEntity {
     @Column(name = "purchase_time", nullable = false)
     private LocalTime purchaseTime;
 
-    @Column(name = "amount", nullable = false)
+    @Column(name = "amount")
     private Long amount;
 
     @Column(name = "category", nullable = false, length = 40)
@@ -44,12 +44,18 @@ public class Consumption extends BaseTimeEntity {
     private Long placeId;
 
 
-    @Column(name = "sticker_item_id", nullable = false)
+    @Column(name = "sticker_item_id")
     private Long stickerItemId;
+
+    @Column(name = "image_id", unique = true)
+    private Long imageId;
+
+    @Column(name = "memo", columnDefinition = "TEXT")
+    private String memo;
 
     @Builder
     private Consumption(LocalDate purchaseDate, LocalTime purchaseTime, Long amount, String category, Long userId,
-                         Long placeId, Long stickerItemId) {
+                         Long placeId, Long stickerItemId, Long imageId, String memo) {
         this.purchaseDate = purchaseDate;
         this.purchaseTime = purchaseTime;
         this.amount = amount;
@@ -57,6 +63,8 @@ public class Consumption extends BaseTimeEntity {
         this.userId = userId;
         this.placeId = placeId;
         this.stickerItemId = stickerItemId;
+        this.imageId = imageId;
+        this.memo = memo;
     }
 
     public static Consumption create(
@@ -66,7 +74,9 @@ public class Consumption extends BaseTimeEntity {
             LocalTime purchaseTime,
             Long amount,
             String category,
-            Long stickerItemId
+            Long stickerItemId,
+            Long imageId,
+            String memo
     ) {
         if (userId == null || userId <= 0) {
             throw new IllegalArgumentException("사용자 식별자는 0보다 커야 합니다.");
@@ -80,14 +90,20 @@ public class Consumption extends BaseTimeEntity {
         if (purchaseTime == null) {
             throw new IllegalArgumentException("구매 시간은 필수입니다.");
         }
-        if (amount == null || amount <= 0) {
+        if (amount != null && amount <= 0) {
             throw new IllegalArgumentException("소비 금액은 0보다 커야 합니다.");
         }
         if (category == null || category.isBlank() || category.length() > 40) {
             throw new IllegalArgumentException("카테고리는 1자 이상 40자 이하여야 합니다.");
         }
-        if (stickerItemId == null || stickerItemId <= 0) {
-            throw new IllegalArgumentException("스티커 식별자는 필수이며 0보다 커야 합니다.");
+        if ((stickerItemId == null) == (imageId == null)
+                || (stickerItemId != null && stickerItemId <= 0)
+                || (imageId != null && imageId <= 0)) {
+            throw new IllegalArgumentException("스티커와 이미지 중 하나의 유효한 식별자가 필요합니다.");
+        }
+
+        if (memo != null && memo.length() > 1000) {
+            throw new IllegalArgumentException("메모는 1,000자 이하여야 합니다.");
         }
 
         return new Consumption(
@@ -97,7 +113,9 @@ public class Consumption extends BaseTimeEntity {
                 category,
                 userId,
                 placeId,
-                stickerItemId
+                stickerItemId,
+                imageId,
+                memo == null || memo.isBlank() ? null : memo
         );
     }
 }

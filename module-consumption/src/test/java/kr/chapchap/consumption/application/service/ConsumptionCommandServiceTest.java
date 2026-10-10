@@ -8,6 +8,7 @@ import kr.chapchap.consumption.domain.entity.ReceiptImage;
 import kr.chapchap.consumption.domain.entity.ReceiptImageStatus;
 import kr.chapchap.consumption.domain.entity.StickerItem;
 import kr.chapchap.consumption.domain.repository.ConsumptionRepository;
+import kr.chapchap.consumption.domain.repository.ConsumptionImageRepository;
 import kr.chapchap.consumption.domain.repository.ReceiptImageRepository;
 import kr.chapchap.consumption.domain.repository.StickerItemRepository;
 import kr.chapchap.consumption.exception.ConsumptionErrorCode;
@@ -26,7 +27,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -65,13 +65,15 @@ class ConsumptionCommandServiceTest {
     @Mock
     private ReceiptImageRepository receiptImageRepository;
 
+    @Mock
+    private ConsumptionImageRepository consumptionImageRepository;
+
     @Test
-    void 영수증_없이_소비_기록과_획득한_스티커를_저장한다() {
+    void 영수증_없이_소비_기록과_선택한_스티커를_저장한다() {
         // given
         ConsumptionCreateCommand command = createCommand(null);
-        StickerItem stickerItem = stickerItem(7L, "공통", "눈");
-        given(stickerItemRepository.findAllByCategoryIn(List.of("카페", "공통")))
-                .willReturn(List.of(stickerItem));
+        StickerItem stickerItem = stickerItem(7L, "카페", "커피");
+        given(stickerItemRepository.findById(7L)).willReturn(Optional.of(stickerItem));
         given(consumptionRepository.save(any(Consumption.class))).willAnswer(invocation -> {
             Consumption consumption = invocation.getArgument(0);
             ReflectionTestUtils.setField(consumption, "id", CONSUMPTION_ID);
@@ -84,8 +86,8 @@ class ConsumptionCommandServiceTest {
 
         // then
         assertThat(result.consumptionId()).isEqualTo(CONSUMPTION_ID);
-        assertThat(result.stickerCategory()).isEqualTo("공통");
-        assertThat(result.stickerName()).isEqualTo("눈");
+        assertThat(result.stickerCategory()).isEqualTo("카페");
+        assertThat(result.stickerName()).isEqualTo("커피");
 
         ArgumentCaptor<Consumption> consumptionCaptor = ArgumentCaptor.forClass(Consumption.class);
         then(consumptionRepository).should().save(consumptionCaptor.capture());
@@ -94,14 +96,13 @@ class ConsumptionCommandServiceTest {
     }
 
     @Test
-    void 소비_카테고리와_공통_스티커_중_하나를_선택하고_영수증을_연결한다() {
+    void 선택한_스티커를_저장하고_영수증을_연결한다() {
         // given
         ConsumptionCreateCommand command = createCommand(RECEIPT_IMAGE_ID);
-        StickerItem stickerItem = stickerItem(7L, "공통", "따봉");
+        StickerItem stickerItem = stickerItem(7L, "카페", "커피");
         ReceiptImage receiptImage = createTemporaryReceiptImage(NOW.plusHours(1));
 
-        given(stickerItemRepository.findAllByCategoryIn(List.of("카페", "공통")))
-                .willReturn(List.of(stickerItem));
+        given(stickerItemRepository.findById(7L)).willReturn(Optional.of(stickerItem));
         given(consumptionRepository.save(any(Consumption.class))).willAnswer(invocation -> {
             Consumption consumption = invocation.getArgument(0);
             ReflectionTestUtils.setField(consumption, "id", CONSUMPTION_ID);
@@ -127,60 +128,32 @@ class ConsumptionCommandServiceTest {
                 consumptionRepository,
                 receiptImageRepository
         );
-        inOrder.verify(consumptionRepository).countByUserIdAndPlaceId(USER_ID, PLACE_ID);
-        inOrder.verify(stickerItemRepository).findAllByCategoryIn(List.of("카페", "공통"));
+        inOrder.verify(stickerItemRepository).findById(7L);
         inOrder.verify(consumptionRepository).save(any(Consumption.class));
         inOrder.verify(receiptImageRepository).findByIdAndUserIdForUpdate(RECEIPT_IMAGE_ID, USER_ID);
     }
 
     @Test
-    void 같은_장소의_여섯_번째_방문이면_왕관_스티커를_저장한다() {
+    void 스티커와_카테고리가_다르면_저장하지_않는다() {
         // given
-        ConsumptionCreateCommand command = createCommand(null);
-        StickerItem crown = stickerItem(12L, "스페셜", "왕관");
-        given(consumptionRepository.countByUserIdAndPlaceId(USER_ID, PLACE_ID)).willReturn(5L);
-        given(stickerItemRepository.findByCategoryAndName("스페셜", "왕관"))
-                .willReturn(Optional.of(crown));
-        given(consumptionRepository.save(any(Consumption.class))).willAnswer(invocation -> {
-            Consumption consumption = invocation.getArgument(0);
-            ReflectionTestUtils.setField(consumption, "id", CONSUMPTION_ID);
-            return consumption;
-        });
-        ConsumptionCommandService service = createService();
-
-        // when
-        ConsumptionCreateInfo result = service.create(command, PLACE_ID);
-
-        // then
-        assertThat(result.stickerCategory()).isEqualTo("스페셜");
-        assertThat(result.stickerName()).isEqualTo("왕관");
-
-        ArgumentCaptor<Consumption> consumptionCaptor = ArgumentCaptor.forClass(Consumption.class);
-        then(consumptionRepository).should().save(consumptionCaptor.capture());
-        assertThat(consumptionCaptor.getValue().getStickerItemId()).isEqualTo(12L);
+        StickerItem sticker = stickerItem(7L, "운동", "근육");
+        given(stickerItemRepository.findById(7L)).willReturn(Optional.of(sticker));
+        // when & then
+        assertThatThrownBy(() -> createService().create(createCommand(null), PLACE_ID))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ConsumptionErrorCode.STICKER_CATEGORY_MISMATCH));
+        then(consumptionRepository).shouldHaveNoInteractions();
     }
 
     @Test
-    void 같은_장소의_네_번째_방문이면_다시_일반_스티커를_저장한다() {
+    void 없는_스티커면_저장하지_않는다() {
         // given
-        ConsumptionCreateCommand command = createCommand(null);
-        StickerItem common = stickerItem(10L, "공통", "눈");
-        given(consumptionRepository.countByUserIdAndPlaceId(USER_ID, PLACE_ID)).willReturn(3L);
-        given(stickerItemRepository.findAllByCategoryIn(List.of("카페", "공통")))
-                .willReturn(List.of(common));
-        given(consumptionRepository.save(any(Consumption.class))).willAnswer(invocation -> {
-            Consumption consumption = invocation.getArgument(0);
-            ReflectionTestUtils.setField(consumption, "id", CONSUMPTION_ID);
-            return consumption;
-        });
-        ConsumptionCommandService service = createService();
-
-        // when
-        ConsumptionCreateInfo result = service.create(command, PLACE_ID);
-
-        // then
-        assertThat(result.stickerCategory()).isEqualTo("공통");
-        assertThat(result.stickerName()).isEqualTo("눈");
+        given(stickerItemRepository.findById(7L)).willReturn(Optional.empty());
+        // when & then
+        assertThatThrownBy(() -> createService().create(createCommand(null), PLACE_ID))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ConsumptionErrorCode.STICKER_NOT_FOUND));
+        then(consumptionRepository).shouldHaveNoInteractions();
     }
 
     @Test
@@ -278,14 +251,14 @@ class ConsumptionCommandServiceTest {
                 consumptionRepository,
                 stickerItemRepository,
                 receiptImageRepository,
+                consumptionImageRepository,
                 FIXED_CLOCK
         );
     }
 
     private void givenSuccessfulConsumptionSave() {
-        StickerItem stickerItem = stickerItem(7L, "공통", "눈");
-        given(stickerItemRepository.findAllByCategoryIn(List.of("카페", "공통")))
-                .willReturn(List.of(stickerItem));
+        StickerItem stickerItem = stickerItem(7L, "카페", "커피");
+        given(stickerItemRepository.findById(7L)).willReturn(Optional.of(stickerItem));
         given(consumptionRepository.save(any(Consumption.class))).willAnswer(invocation -> {
             Consumption consumption = invocation.getArgument(0);
             ReflectionTestUtils.setField(consumption, "id", CONSUMPTION_ID);
@@ -295,7 +268,6 @@ class ConsumptionCommandServiceTest {
 
     private StickerItem stickerItem(Long id, String category, String name) {
         StickerItem stickerItem = org.mockito.Mockito.mock(StickerItem.class);
-        given(stickerItem.getId()).willReturn(id);
         org.mockito.Mockito.lenient().when(stickerItem.getCategory()).thenReturn(category);
         org.mockito.Mockito.lenient().when(stickerItem.getName()).thenReturn(name);
         return stickerItem;
@@ -309,7 +281,10 @@ class ConsumptionCommandServiceTest {
                 LocalDate.of(2026, 8, 16),
                 LocalTime.of(11, 30),
                 12_000L,
-                "카페"
+                "카페",
+                7L,
+                null,
+                null
         );
     }
 

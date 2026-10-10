@@ -108,7 +108,7 @@ class ConsumptionCreatePersistenceIntegrationTest {
                 "SELECT category, name FROM sticker_item WHERE id = ?",
                 consumption.get("sticker_item_id")
         );
-        assertThat(sticker.get("category")).isIn("카페", "공통");
+        assertThat(sticker.get("category")).isEqualTo("카페");
         assertThat(result.stickerCategory()).isEqualTo(sticker.get("category"));
         assertThat(result.stickerName()).isEqualTo(sticker.get("name"));
 
@@ -123,12 +123,12 @@ class ConsumptionCreatePersistenceIntegrationTest {
     }
 
     @Test
-    void 같은_장소의_세_번째_방문이면_왕관_스티커를_저장하고_반환한다() {
+    void 세_번째_방문도_선택한_스티커를_저장한다() {
         // given
         User user = saveActiveUser("단골손님");
         Long placeId = insertPlace("ChIJ-third-visit-place");
-        Long commonStickerId = jdbcTemplate.queryForObject(
-                "SELECT id FROM sticker_item WHERE category = '공통' AND name = '눈'",
+        Long selectedStickerId = jdbcTemplate.queryForObject(
+                "SELECT id FROM sticker_item WHERE category = '카페' AND name = '커피'",
                 Long.class
         );
         given(placeResolvePort.resolve(any(PlaceResolveCommand.class))).willReturn(placeId);
@@ -148,10 +148,10 @@ class ConsumptionCreatePersistenceIntegrationTest {
                         """,
                 user.getId(),
                 placeId,
-                commonStickerId,
+                selectedStickerId,
                 user.getId(),
                 placeId,
-                commonStickerId
+                selectedStickerId
         );
 
         // when
@@ -162,14 +162,14 @@ class ConsumptionCreatePersistenceIntegrationTest {
         ));
 
         // then
-        assertThat(result.stickerCategory()).isEqualTo("스페셜");
-        assertThat(result.stickerName()).isEqualTo("왕관");
+        assertThat(result.stickerCategory()).isEqualTo("카페");
+        assertThat(result.stickerName()).isEqualTo("커피");
         assertThat(jdbcTemplate.queryForObject(
                 """
                         SELECT COUNT(*)
                         FROM consumptions c
                         JOIN sticker_item s ON s.id = c.sticker_item_id
-                        WHERE c.id = ? AND s.category = '스페셜' AND s.name = '왕관'
+                        WHERE c.id = ? AND s.category = '카페' AND s.name = '커피'
                         """,
                 Long.class,
                 result.consumptionId()
@@ -177,7 +177,7 @@ class ConsumptionCreatePersistenceIntegrationTest {
     }
 
     @Test
-    void 전용_스티커가_없는_카테고리도_공통_스티커와_함께_소비_기록을_저장한다() {
+    void 쇼핑_카테고리의_선택한_스티커를_저장한다() {
         // given
         User user = saveActiveUser("냠냠이");
         Long placeId = insertPlace("ChIJ-manual-place");
@@ -187,7 +187,7 @@ class ConsumptionCreatePersistenceIntegrationTest {
         ConsumptionCreateInfo result = consumptionCreateService.create(command(
                 user.getId(),
                 null,
-                "테스트-스티커-미등록"
+                "쇼핑"
         ));
 
         // then
@@ -196,8 +196,8 @@ class ConsumptionCreatePersistenceIntegrationTest {
                 result.consumptionId()
         );
         assertThat(consumption.get("sticker_item_id")).isNotNull();
-        assertThat(result.stickerCategory()).isEqualTo("공통");
-        assertThat(result.stickerName()).isIn("눈", "따봉");
+        assertThat(result.stickerCategory()).isEqualTo("쇼핑");
+        assertThat(result.stickerName()).isEqualTo("쇼핑백");
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM receipt_images",
                 Long.class
@@ -249,7 +249,11 @@ class ConsumptionCreatePersistenceIntegrationTest {
                 LocalDate.of(2026, 7, 25),
                 LocalTime.of(11, 20),
                 33_000L,
-                category
+                category,
+                jdbcTemplate.queryForObject("SELECT id FROM sticker_item WHERE category = ? AND name = ?",
+                        Long.class, category, category.equals("쇼핑") ? "쇼핑백" : "커피"),
+                null,
+                null
         );
     }
 

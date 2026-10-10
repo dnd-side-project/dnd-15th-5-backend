@@ -12,8 +12,8 @@ public record ConsumptionCreateInfo(
     public static ConsumptionCreateInfo of(Consumption consumption, StickerItem stickerItem) {
         return new ConsumptionCreateInfo(
                 consumption.getId(),
-                stickerItem.getCategory(),
-                stickerItem.getName()
+                stickerItem == null ? null : stickerItem.getCategory(),
+                stickerItem == null ? null : stickerItem.getName()
         );
     }
 }

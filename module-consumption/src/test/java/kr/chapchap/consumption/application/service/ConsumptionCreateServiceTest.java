@@ -43,7 +43,10 @@ class ConsumptionCreateServiceTest {
                 LocalDate.of(2026, 8, 16),
                 LocalTime.of(11, 30),
                 12_000L,
-                "카페"
+                "카페",
+                7L,
+                null,
+                null
         );
         ConsumptionCreateInfo expected = new ConsumptionCreateInfo(
                 10L,
