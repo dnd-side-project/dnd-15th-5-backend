@@ -2,6 +2,7 @@ package kr.chapchap.account.application.service;
 
 import kr.chapchap.account.application.port.ProfileImageStorage;
 import kr.chapchap.consumption.application.service.ReceiptImageCleanupService;
+import kr.chapchap.consumption.application.service.ConsumptionImageCleanupService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,8 @@ public class WithdrawnUserCleanupService {
     private final ProfileImageStorage profileImageStorage;
     private final ReceiptImageCleanupService receiptImageCleanupService;
 
+    private final ConsumptionImageCleanupService consumptionImageCleanupService;
+
     public int cleanupWithdrawnUsers() {
         List<Long> userIds = accountWithdrawalService.findWithdrawnUserIds();
         int deletedCount = 0;
@@ -26,6 +29,7 @@ public class WithdrawnUserCleanupService {
             try {
                 profileImageStorage.deleteAllByUserId(userId);
                 receiptImageCleanupService.deleteAllByUserId(userId);
+                consumptionImageCleanupService.deleteAllByUserId(userId);
                 if (accountWithdrawalService.deleteWithdrawnUser(userId)) {
                     deletedCount++;
                 }
