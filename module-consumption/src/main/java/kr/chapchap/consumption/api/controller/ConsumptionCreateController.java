@@ -40,7 +40,9 @@ public class ConsumptionCreateController {
 
                     신규 장소라면 도로명주소를 SGIS로 조회해 행정동을 저장합니다.
 
-                    receiptImageId는 영수증 OCR을 사용한 경우에만 전달합니다.
+                    stickerItemId와 imageId 중 하나만 전달합니다. 스티커와 category는 일치해야 합니다.
+                    amount와 memo는 생략할 수 있으며, 메모는 최대 1,000자입니다.
+                    receiptImageId는 영수증 OCR을 사용한 경우에만 전달하며, 사진·스티커 선택과 별개입니다.
                     """
     )
     @ApiResponses({
@@ -51,7 +53,7 @@ public class ConsumptionCreateController {
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
-                    description = "요청 값이 유효하지 않음 (C001, CONSUMPTION010)",
+                    description = "요청 값이 유효하지 않음 (C001, CONSUMPTION010, CONSUMPTION025)",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class))
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -66,12 +68,12 @@ public class ConsumptionCreateController {
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
-                    description = "사용 가능한 영수증 이미지를 찾을 수 없음 (CONSUMPTION011)",
+                    description = "스티커 또는 본인의 이미지를 찾을 수 없음 (CONSUMPTION011, CONSUMPTION021, CONSUMPTION024)",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class))
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "409",
-                    description = "영수증 이미지가 이미 사용됐거나 만료됨 (CONSUMPTION012, CONSUMPTION013)",
+                    description = "이미지가 이미 사용됐거나 만료됨 (CONSUMPTION012, CONSUMPTION013, CONSUMPTION022, CONSUMPTION023)",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class))
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(

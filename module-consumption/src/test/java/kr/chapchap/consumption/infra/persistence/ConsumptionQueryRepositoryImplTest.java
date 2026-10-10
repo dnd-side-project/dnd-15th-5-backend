@@ -277,7 +277,9 @@ class ConsumptionQueryRepositoryImplTest {
                 .amount(5000L)
                 .purchaseDate(purchaseDate)
                 .purchaseTime(purchaseTime)
-                .stickerItemId(1L)
+                .stickerItemId(((Number) entityManager.createNativeQuery(
+                        "SELECT id FROM sticker_item WHERE category = '카페' AND name = '커피'"
+                ).getSingleResult()).longValue())
                 .build();
     }
 }

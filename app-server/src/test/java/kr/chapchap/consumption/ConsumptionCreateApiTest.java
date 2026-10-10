@@ -62,13 +62,13 @@ class ConsumptionCreateApiTest {
     }
 
     @Test
-    void 소비_기록을_등록하면_생성된_ID와_획득한_스티커를_반환한다() throws Exception {
+    void 소비_기록을_등록하면_생성된_ID와_선택한_스티커를_반환한다() throws Exception {
         // given
         given(consumptionCreateService.create(any(ConsumptionCreateCommand.class)))
                 .willReturn(new ConsumptionCreateInfo(
                         31L,
-                        "공통",
-                        "눈"
+                        "카페",
+                        "커피"
                 ));
 
         // when & then
@@ -79,8 +79,8 @@ class ConsumptionCreateApiTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.code").value("S002"))
                 .andExpect(jsonPath("$.data.consumptionId").value(31L))
-                .andExpect(jsonPath("$.data.stickerCategory").value("공통"))
-                .andExpect(jsonPath("$.data.stickerName").value("눈"));
+                .andExpect(jsonPath("$.data.stickerCategory").value("카페"))
+                .andExpect(jsonPath("$.data.stickerName").value("커피"));
 
         ArgumentCaptor<ConsumptionCreateCommand> commandCaptor =
                 ArgumentCaptor.forClass(ConsumptionCreateCommand.class);
@@ -105,8 +105,8 @@ class ConsumptionCreateApiTest {
         given(consumptionCreateService.create(any(ConsumptionCreateCommand.class)))
                 .willReturn(new ConsumptionCreateInfo(
                         31L,
-                        "공통",
-                        "눈"
+                        "카페",
+                        "커피"
                 ));
 
         // when & then
@@ -116,8 +116,8 @@ class ConsumptionCreateApiTest {
                         .with(userJwt()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.consumptionId").value(31L))
-                .andExpect(jsonPath("$.data.stickerCategory").value("공통"))
-                .andExpect(jsonPath("$.data.stickerName").value("눈"));
+                .andExpect(jsonPath("$.data.stickerCategory").value("카페"))
+                .andExpect(jsonPath("$.data.stickerName").value("커피"));
 
         ArgumentCaptor<ConsumptionCreateCommand> commandCaptor =
                 ArgumentCaptor.forClass(ConsumptionCreateCommand.class);
@@ -159,6 +159,29 @@ class ConsumptionCreateApiTest {
                 .andExpect(jsonPath("$.data.category").exists());
 
         then(consumptionCreateService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 쇼핑_카테고리로_소비_기록_등록을_요청할_수_있다() throws Exception {
+        // given
+        Map<String, Object> request = validRequest();
+        request.put("category", "쇼핑");
+        given(consumptionCreateService.create(any(ConsumptionCreateCommand.class)))
+                .willReturn(new ConsumptionCreateInfo(31L, "쇼핑", "쇼핑백"));
+
+        // when
+        mockMvc.perform(post("/v1/consumptions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(request))
+                        .with(userJwt()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.consumptionId").value(31L));
+
+        // then
+        ArgumentCaptor<ConsumptionCreateCommand> commandCaptor =
+                ArgumentCaptor.forClass(ConsumptionCreateCommand.class);
+        then(consumptionCreateService).should().create(commandCaptor.capture());
+        assertThat(commandCaptor.getValue().category()).isEqualTo("쇼핑");
     }
 
     @Test
@@ -253,9 +276,67 @@ class ConsumptionCreateApiTest {
                 .andExpect(jsonPath("$.code").value("PLACE003"));
     }
 
+    @Test
+    void 금액_없이_사진과_천자_메모와_영수증을_함께_전달할_수_있다() throws Exception {
+        // given
+        var request = validRequest();
+        request.remove("amount");
+        request.remove("stickerItemId");
+        request.put("imageId", 21L);
+        request.put("memo", "가".repeat(1000));
+        given(consumptionCreateService.create(any())).willReturn(new ConsumptionCreateInfo(31L, null, null));
+        // when
+        mockMvc.perform(post("/v1/consumptions").with(userJwt()).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(request)))
+                .andExpect(status().isCreated());
+        // then
+        ArgumentCaptor<ConsumptionCreateCommand> captor = ArgumentCaptor.forClass(ConsumptionCreateCommand.class);
+        then(consumptionCreateService).should().create(captor.capture());
+        assertThat(captor.getValue().amount()).isNull();
+        assertThat(captor.getValue().stickerItemId()).isNull();
+        assertThat(captor.getValue().imageId()).isEqualTo(21L);
+        assertThat(captor.getValue().receiptImageId()).isEqualTo(15L);
+        assertThat(captor.getValue().memo()).hasSize(1000);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+    void 스티커와_사진이_둘다_있거나_둘다_없으면_거절한다(boolean both) throws Exception {
+        // given
+        var request = validRequest();
+        if (both) {
+            request.put("imageId", 21L);
+        } else {
+            request.remove("stickerItemId");
+        }
+        // when & then
+        mockMvc.perform(post("/v1/consumptions").with(userJwt()).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("CONSUMPTION010"));
+        then(consumptionCreateService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 천자를_넘는_메모와_잘못된_사진_ID는_거절한다() throws Exception {
+        // given
+        var request = validRequest();
+        request.remove("stickerItemId");
+        request.put("imageId", -1);
+        request.put("memo", "가".repeat(1001));
+        // when & then
+        mockMvc.perform(post("/v1/consumptions").with(userJwt()).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.data.imageId").exists())
+                .andExpect(jsonPath("$.data.memo").exists());
+        then(consumptionCreateService).shouldHaveNoInteractions();
+    }
+
     private Map<String, Object> validRequest() {
         Map<String, Object> request = new LinkedHashMap<>();
         request.put("receiptImageId", 15L);
+        request.put("stickerItemId", 7L);
         request.put("googlePlaceId", "ChIJxxxxxxxxxxxxxxxx");
         request.put("placeName", "투썸플레이스 신논현점");
         request.put("roadAddress", "서울특별시 강남구 봉은사로 125 1층");

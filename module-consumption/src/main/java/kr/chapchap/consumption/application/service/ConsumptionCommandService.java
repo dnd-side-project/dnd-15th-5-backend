@@ -3,6 +3,9 @@ package kr.chapchap.consumption.application.service;
 import kr.chapchap.consumption.application.command.ConsumptionCreateCommand;
 import kr.chapchap.consumption.application.info.ConsumptionCreateInfo;
 import kr.chapchap.consumption.domain.entity.Consumption;
+import kr.chapchap.consumption.domain.entity.ConsumptionImage;
+import kr.chapchap.consumption.domain.entity.ConsumptionImageStatus;
+import kr.chapchap.consumption.domain.repository.ConsumptionImageRepository;
 import kr.chapchap.consumption.domain.entity.ReceiptImage;
 import kr.chapchap.consumption.domain.entity.ReceiptImageStatus;
 import kr.chapchap.consumption.domain.entity.StickerItem;
@@ -17,21 +20,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 @RequiredArgsConstructor
 @Service
 public class ConsumptionCommandService {
 
-    private static final long SPECIAL_STICKER_VISIT_COUNT = 3L;
-    private static final String COMMON_STICKER_CATEGORY = "공통";
-    private static final String SPECIAL_STICKER_CATEGORY = "스페셜";
-    private static final String CROWN_STICKER_NAME = "왕관";
-
     private final ConsumptionRepository consumptionRepository;
     private final StickerItemRepository stickerItemRepository;
     private final ReceiptImageRepository receiptImageRepository;
+    private final ConsumptionImageRepository consumptionImageRepository;
     private final Clock clock;
 
     @Transactional
@@ -40,7 +37,9 @@ public class ConsumptionCommandService {
             throw new BusinessException(ConsumptionErrorCode.INVALID_CONSUMPTION_INPUT);
         }
 
-        StickerItem stickerItem = selectStickerItem(command, placeId);
+        StickerItem stickerItem = selectStickerItem(command);
+
+        attachImageIfPresent(command);
 
         Consumption consumption = consumptionRepository.save(Consumption.create(
                 command.userId(),
@@ -49,7 +48,9 @@ public class ConsumptionCommandService {
                 command.purchaseTime(),
                 command.amount(),
                 command.category(),
-                stickerItem.getId()
+                command.stickerItemId(),
+                command.imageId(),
+                command.memo()
         ));
 
         attachReceiptImageIfPresent(command, consumption.getId());
@@ -57,21 +58,33 @@ public class ConsumptionCommandService {
         return ConsumptionCreateInfo.of(consumption, stickerItem);
     }
 
-    private StickerItem selectStickerItem(ConsumptionCreateCommand command, Long placeId) {
-        long visitCount = consumptionRepository.countByUserIdAndPlaceId(command.userId(), placeId) + 1;
-        if (visitCount % SPECIAL_STICKER_VISIT_COUNT == 0) {
-            return stickerItemRepository.findByCategoryAndName(SPECIAL_STICKER_CATEGORY, CROWN_STICKER_NAME)
-                    .orElseThrow(() -> new IllegalStateException("스페셜 왕관 스티커가 등록되어 있지 않습니다."));
+    private StickerItem selectStickerItem(ConsumptionCreateCommand command) {
+        if (command.stickerItemId() == null) {
+            return null;
         }
-
-        List<StickerItem> stickerItems = stickerItemRepository.findAllByCategoryIn(
-                List.of(command.category(), COMMON_STICKER_CATEGORY)
-        );
-        if (stickerItems.isEmpty()) {
-            throw new IllegalStateException("선택 가능한 스티커가 등록되어 있지 않습니다.");
+        StickerItem sticker = stickerItemRepository.findById(command.stickerItemId())
+                .orElseThrow(() -> new BusinessException(ConsumptionErrorCode.STICKER_NOT_FOUND));
+        if (!sticker.getCategory().equals(command.category())) {
+            throw new BusinessException(ConsumptionErrorCode.STICKER_CATEGORY_MISMATCH);
         }
+        return sticker;
+    }
 
-        return stickerItems.get(ThreadLocalRandom.current().nextInt(stickerItems.size()));
+    private void attachImageIfPresent(ConsumptionCreateCommand command) {
+        if (command.imageId() == null) {
+            return;
+        }
+        ConsumptionImage image = consumptionImageRepository.findByIdAndUserIdForUpdate(
+                command.imageId(), command.userId()
+        ).orElseThrow(() -> new BusinessException(ConsumptionErrorCode.IMAGE_NOT_FOUND));
+        if (image.isAttached()) {
+            throw new BusinessException(ConsumptionErrorCode.IMAGE_ALREADY_ATTACHED);
+        }
+        LocalDateTime now = LocalDateTime.now(clock);
+        if (image.getStatus() != ConsumptionImageStatus.TEMPORARY || image.isExpiredAt(now)) {
+            throw new BusinessException(ConsumptionErrorCode.IMAGE_EXPIRED);
+        }
+        image.attach(now);
     }
 
     private void attachReceiptImageIfPresent(ConsumptionCreateCommand command, Long consumptionId) {
