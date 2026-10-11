@@ -90,7 +90,7 @@ public class PlaceDetailQueryService {
         List<Consumption> content = hasNext ? fetched.subList(0, command.size()) : fetched;
 
         List<VisitInfo> visits = content.stream()
-                .map(consumption -> new VisitInfo(consumption.getPurchaseDate(), consumption.getAmount()))
+                .map(consumption -> new VisitInfo(consumption.getId(), consumption.getPurchaseDate(), consumption.getAmount()))
                 .toList();
 
         Consumption last = content.isEmpty() ? null : content.get(content.size() - 1);

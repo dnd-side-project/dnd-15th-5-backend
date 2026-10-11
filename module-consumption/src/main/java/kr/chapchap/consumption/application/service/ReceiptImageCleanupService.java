@@ -25,6 +25,14 @@ public class ReceiptImageCleanupService {
         receiptImageStorage.deleteAllByUserId(userId);
     }
 
+    public void cleanupImage(Long receiptImageId) {
+        try {
+            cleanup(receiptImageId, LocalDateTime.now(clock));
+        } catch (RuntimeException exception) {
+            log.error("영수증 이미지 정리에 실패했습니다. receiptImageId={}", receiptImageId, exception);
+        }
+    }
+
     public int cleanupExpiredImages() {
         LocalDateTime cleanupAt = LocalDateTime.now(clock);
         long afterId = 0L;
@@ -49,7 +57,7 @@ public class ReceiptImageCleanupService {
                 } catch (RuntimeException exception) {
                     failedCount++;
                     log.error(
-                            "만료된 영수증 이미지 정리에 실패했습니다. receiptImageId={}",
+                            "영수증 이미지 정리에 실패했습니다. receiptImageId={}",
                             candidateId,
                             exception
                     );
@@ -59,7 +67,7 @@ public class ReceiptImageCleanupService {
         }
 
         log.info(
-                "만료된 영수증 이미지 정리를 완료했습니다. deletedCount={}, failedCount={}",
+                "영수증 이미지 정리를 완료했습니다. deletedCount={}, failedCount={}",
                 deletedCount,
                 failedCount
         );

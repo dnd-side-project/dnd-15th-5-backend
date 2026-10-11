@@ -28,6 +28,10 @@ public interface ReceiptImageRepository extends JpaRepository<ReceiptImage, Long
             @Param("userId") Long userId
     );
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM ReceiptImage r WHERE r.consumptionId = :consumptionId ORDER BY r.id")
+    List<ReceiptImage> findAllByConsumptionIdForUpdate(@Param("consumptionId") Long consumptionId);
+
     @Query("""
             SELECT receiptImage.id
             FROM ReceiptImage receiptImage

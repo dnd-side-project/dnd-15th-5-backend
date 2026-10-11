@@ -25,6 +25,14 @@ public class ConsumptionImageCleanupService {
         consumptionImageStorage.deleteAllByUserId(userId);
     }
 
+    public void cleanupImage(Long consumptionImageId) {
+        try {
+            cleanup(consumptionImageId, LocalDateTime.now(clock));
+        } catch (RuntimeException exception) {
+            log.error("소비기록 이미지 정리에 실패했습니다. consumptionImageId={}", consumptionImageId, exception);
+        }
+    }
+
     public int cleanupExpiredImages() {
         LocalDateTime cleanupAt = LocalDateTime.now(clock);
         long afterId = 0L;
@@ -49,7 +57,7 @@ public class ConsumptionImageCleanupService {
                 } catch (RuntimeException exception) {
                     failedCount++;
                     log.error(
-                            "만료된 소비기록 이미지 정리에 실패했습니다. consumptionImageId={}",
+                            "소비기록 이미지 정리에 실패했습니다. consumptionImageId={}",
                             candidateId,
                             exception
                     );
@@ -59,7 +67,7 @@ public class ConsumptionImageCleanupService {
         }
 
         log.info(
-                "만료된 소비기록 이미지 정리를 완료했습니다. deletedCount={}, failedCount={}",
+                "소비기록 이미지 정리를 완료했습니다. deletedCount={}, failedCount={}",
                 deletedCount,
                 failedCount
         );

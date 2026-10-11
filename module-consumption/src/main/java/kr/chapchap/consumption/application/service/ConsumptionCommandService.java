@@ -2,6 +2,7 @@ package kr.chapchap.consumption.application.service;
 
 import kr.chapchap.consumption.application.command.ConsumptionCreateCommand;
 import kr.chapchap.consumption.application.info.ConsumptionCreateInfo;
+import kr.chapchap.consumption.application.info.ConsumptionDeleteInfo;
 import kr.chapchap.consumption.domain.entity.Consumption;
 import kr.chapchap.consumption.domain.entity.ConsumptionImage;
 import kr.chapchap.consumption.domain.entity.ConsumptionImageStatus;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @RequiredArgsConstructor
 @Service
@@ -56,6 +58,27 @@ public class ConsumptionCommandService {
         attachReceiptImageIfPresent(command, consumption.getId());
 
         return ConsumptionCreateInfo.of(consumption, stickerItem);
+    }
+
+    @Transactional
+    public ConsumptionDeleteInfo delete(Long userId, Long consumptionId) {
+        Consumption consumption = consumptionRepository.findByIdAndUserIdForUpdate(consumptionId, userId)
+                .orElseThrow(() -> new BusinessException(ConsumptionErrorCode.CONSUMPTION_NOT_FOUND));
+
+        if (consumption.getImageId() != null) {
+            ConsumptionImage image = consumptionImageRepository.findByIdAndUserIdForUpdate(
+                    consumption.getImageId(), userId
+            ).orElseThrow(() -> new BusinessException(ConsumptionErrorCode.IMAGE_NOT_FOUND));
+            image.detachForDeletion();
+        }
+        List<ReceiptImage> receipts = receiptImageRepository.findAllByConsumptionIdForUpdate(consumptionId);
+        receipts.forEach(ReceiptImage::detachForDeletion);
+        consumptionRepository.delete(consumption);
+
+        return new ConsumptionDeleteInfo(
+                consumption.getImageId(),
+                receipts.stream().map(ReceiptImage::getId).toList()
+        );
     }
 
     private StickerItem selectStickerItem(ConsumptionCreateCommand command) {

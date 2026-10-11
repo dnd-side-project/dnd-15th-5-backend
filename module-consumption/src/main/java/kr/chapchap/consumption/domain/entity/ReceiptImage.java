@@ -104,6 +104,16 @@ public class ReceiptImage extends BaseTimeEntity {
         return expiresAt != null && !expiresAt.isAfter(dateTime);
     }
 
+    public void detachForDeletion() {
+        if (status != ReceiptImageStatus.ATTACHED) {
+            throw new IllegalStateException("연결된 영수증 이미지만 삭제 대상으로 변경할 수 있습니다.");
+        }
+
+        this.status = ReceiptImageStatus.DELETING;
+        this.consumptionId = null;
+        this.attachedAt = null;
+    }
+
     public void markDeleting(LocalDateTime cleanupAt) {
         if (status != ReceiptImageStatus.TEMPORARY || isAttached()) {
             throw new IllegalStateException("임시 상태의 영수증 이미지만 정리할 수 있습니다.");

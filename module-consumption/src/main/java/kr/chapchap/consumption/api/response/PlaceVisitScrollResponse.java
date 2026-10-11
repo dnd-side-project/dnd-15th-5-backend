@@ -22,9 +22,9 @@ public record PlaceVisitScrollResponse(
         );
     }
 
-    public record PlaceVisitResponse(LocalDate visitedAt, Long amount) {
+    public record PlaceVisitResponse(Long consumptionId, LocalDate visitedAt, Long amount) {
         public static PlaceVisitResponse from(VisitInfo info) {
-            return new PlaceVisitResponse(info.visitedAt(), info.amount());
+            return new PlaceVisitResponse(info.consumptionId(), info.visitedAt(), info.amount());
         }
     }
 }

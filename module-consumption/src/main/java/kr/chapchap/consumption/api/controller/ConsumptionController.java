@@ -21,12 +21,14 @@ import kr.chapchap.consumption.application.info.PlaceDetailInfo;
 import kr.chapchap.consumption.application.info.PlaceVisitScrollInfo;
 import kr.chapchap.consumption.application.info.VisitedPlaceMarkersInfo;
 import kr.chapchap.consumption.application.service.ConsumptionQueryService;
+import kr.chapchap.consumption.application.service.ConsumptionDeleteService;
 import kr.chapchap.consumption.application.service.FrequentPlaceQueryService;
 import kr.chapchap.consumption.application.service.PlaceDetailQueryService;
 import kr.chapchap.consumption.application.service.VisitedPlaceQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -45,9 +47,23 @@ import java.util.List;
 public class ConsumptionController {
 
     private final ConsumptionQueryService consumptionQueryService;
+    private final ConsumptionDeleteService consumptionDeleteService;
     private final VisitedPlaceQueryService visitedPlaceQueryService;
     private final FrequentPlaceQueryService frequentPlaceQueryService;
     private final PlaceDetailQueryService placeDetailQueryService;
+
+    @Operation(
+            summary = "소비기록 삭제",
+            description = "본인의 소비기록을 삭제합니다. 연결된 사진과 영수증도 삭제하며, 파일 삭제 실패 시 재시도합니다."
+    )
+    @DeleteMapping("/{consumptionId}")
+    public ApiResponse<Void> deleteConsumption(
+            @ChapChapUserId Long userId,
+            @PathVariable Long consumptionId
+    ) {
+        consumptionDeleteService.delete(userId, consumptionId);
+        return ApiResponse.ok();
+    }
 
     @Operation(
             summary = "월별 소비내역 무한스크롤 조회",
