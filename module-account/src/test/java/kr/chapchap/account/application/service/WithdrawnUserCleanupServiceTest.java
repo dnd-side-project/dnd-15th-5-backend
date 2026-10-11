@@ -2,6 +2,7 @@ package kr.chapchap.account.application.service;
 
 import kr.chapchap.account.application.port.ProfileImageStorage;
 import kr.chapchap.consumption.application.service.ReceiptImageCleanupService;
+import kr.chapchap.consumption.application.service.ConsumptionImageCleanupService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
@@ -33,6 +34,9 @@ class WithdrawnUserCleanupServiceTest {
     @Mock
     private ReceiptImageCleanupService receiptImageCleanupService;
 
+    @Mock
+    private ConsumptionImageCleanupService consumptionImageCleanupService;
+
     @InjectMocks
     private WithdrawnUserCleanupService withdrawnUserCleanupService;
 
@@ -52,14 +56,17 @@ class WithdrawnUserCleanupServiceTest {
         InOrder inOrder = inOrder(
                 accountWithdrawalService,
                 profileImageStorage,
-                receiptImageCleanupService
+                receiptImageCleanupService,
+                consumptionImageCleanupService
         );
         inOrder.verify(accountWithdrawalService).findWithdrawnUserIds();
         inOrder.verify(profileImageStorage).deleteAllByUserId(FIRST_USER_ID);
         inOrder.verify(receiptImageCleanupService).deleteAllByUserId(FIRST_USER_ID);
+        inOrder.verify(consumptionImageCleanupService).deleteAllByUserId(FIRST_USER_ID);
         inOrder.verify(accountWithdrawalService).deleteWithdrawnUser(FIRST_USER_ID);
         inOrder.verify(profileImageStorage).deleteAllByUserId(SECOND_USER_ID);
         inOrder.verify(receiptImageCleanupService).deleteAllByUserId(SECOND_USER_ID);
+        inOrder.verify(consumptionImageCleanupService).deleteAllByUserId(SECOND_USER_ID);
         inOrder.verify(accountWithdrawalService).deleteWithdrawnUser(SECOND_USER_ID);
     }
 

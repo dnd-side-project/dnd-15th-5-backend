@@ -52,7 +52,7 @@ class ReceiptOcrSamplesLiveTest {
     @Test
     void 실제_CLOVA_OCR로_영수증_샘플_30개의_후처리_전후_결과를_확인한다() throws IOException {
         // given
-        ReceiptImageValidator imageValidator = new ReceiptImageValidator();
+        ReceiptImageValidator imageValidator = new ReceiptImageValidator(new ImageValidator());
         ReceiptOcrParser receiptOcrParser = new ReceiptOcrParser();
         ClovaOcrClient clovaOcrClient = createClovaOcrClient();
         List<Path> allSamplePaths = findSamplePaths();

@@ -55,8 +55,7 @@ public record ConsumptionCreateRequest(
         @NotNull(message = "소비 시간은 필수입니다.")
         LocalTime purchaseTime,
 
-        @Schema(description = "소비 금액(원)", example = "33000")
-        @NotNull(message = "소비 금액은 필수입니다.")
+        @Schema(description = "소비 금액(원), 미입력 가능", example = "33000", nullable = true)
         @Positive(message = "소비 금액은 0보다 커야 합니다.")
         Long amount,
 
@@ -64,10 +63,22 @@ public record ConsumptionCreateRequest(
         @NotBlank(message = "카테고리는 필수입니다.")
         @Size(max = 40, message = "카테고리는 40자 이하여야 합니다.")
         @Pattern(
-                regexp = "^(카페|운동|편의점/마트|취미/놀거리|음식점|미용/뷰티|기타)$",
+                regexp = "^(카페|운동|편의점/마트|취미/놀거리|음식점|미용/뷰티|쇼핑|기타)$",
                 message = "지원하지 않는 카테고리입니다."
         )
-        String category
+        String category,
+
+        @Schema(description = "선택한 스티커 ID. imageId와 둘 중 하나만 전달", nullable = true)
+        @Positive
+        Long stickerItemId,
+
+        @Schema(description = "이미지 업로드 API에서 받은 ID. stickerItemId와 둘 중 하나만 전달", nullable = true)
+        @Positive
+        Long imageId,
+
+        @Schema(description = "메모, 최대 1,000자", nullable = true)
+        @Size(max = 1000)
+        String memo
 ) {
 
     public ConsumptionCreateRequest {
@@ -92,7 +103,10 @@ public record ConsumptionCreateRequest(
                 purchaseDate,
                 purchaseTime,
                 amount,
-                category
+                category,
+                stickerItemId,
+                imageId,
+                memo
         );
     }
 

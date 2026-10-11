@@ -37,6 +37,15 @@ public enum ConsumptionErrorCode implements ErrorCode {
             "CONSUMPTION016",
             "유효하지 않은 방문 장소 검색 커서입니다."
     ),
+    INVALID_IMAGE(HttpStatus.BAD_REQUEST, "CONSUMPTION017", "올바른 이미지 파일이 아닙니다."),
+    IMAGE_SIZE_EXCEEDED(HttpStatus.PAYLOAD_TOO_LARGE, "CONSUMPTION018", "이미지는 5MB 이하여야 합니다."),
+    UNSUPPORTED_IMAGE_FORMAT(HttpStatus.BAD_REQUEST, "CONSUMPTION019", "이미지는 JPEG 또는 PNG 형식만 지원합니다."),
+    IMAGE_DIMENSION_EXCEEDED(HttpStatus.BAD_REQUEST, "CONSUMPTION020", "이미지 해상도는 4096x4096 이하여야 합니다."),
+    IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "CONSUMPTION021", "사용 가능한 소비기록 이미지를 찾을 수 없습니다."),
+    IMAGE_ALREADY_ATTACHED(HttpStatus.CONFLICT, "CONSUMPTION022", "이미 소비기록에 연결된 이미지입니다."),
+    IMAGE_EXPIRED(HttpStatus.CONFLICT, "CONSUMPTION023", "이미지의 임시 저장 기간이 만료되었습니다."),
+    STICKER_NOT_FOUND(HttpStatus.NOT_FOUND, "CONSUMPTION024", "스티커를 찾을 수 없습니다."),
+    STICKER_CATEGORY_MISMATCH(HttpStatus.BAD_REQUEST, "CONSUMPTION025", "스티커와 소비 카테고리가 일치하지 않습니다."),
     ;
 
     private final HttpStatus status;

@@ -13,3 +13,10 @@ dependencies {
 
     testImplementation testFixtures(project(":module-core"))
 }
+
+// 도메인 통합 테스트에도 app-server의 최신 스키마를 적용한다.
+tasks.named("processTestResources") {
+    from(project(":app-server").file("src/main/resources/db/migration")) {
+        into "db/migration"
+    }
+}

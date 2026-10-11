@@ -379,7 +379,7 @@ Controller
 | Bounded Context | 담당 모듈 | 주요 책임 | 소유 데이터 |
 | --- | --- | --- | --- |
 | Account Context | module-account | 회원가입, 소셜 로그인, 계정 및 약관 동의 관리 | User, SocialAccount, UserTermsAgreement |
-| Consumption Context | module-consumption | 소비기록 관리와 수기·영수증 OCR 기반 등록 | Consumption, ReceiptImage, StickerItem |
+| Consumption Context | module-consumption | 소비기록 관리와 수기·영수증 OCR 기반 등록 | Consumption, ReceiptImage, ConsumptionImage, StickerItem |
 | Report Context | module-report | 현재 월 현황과 월간 소비 리포트 생성 및 조회 | Report와 카테고리·지역·장소·시간대별 집계 데이터 |
 | Place Context | module-place | 장소·좋아요 관리, 위치 기반 조회, 장소 사진 및 행정동 변환 | Place, PlaceLike |
 | Recommendation Context | module-recommendation | 위치·방문 이력·최근 30일 주요 소비 카테고리 기반 주변 장소 추천 | 없음 |
@@ -388,4 +388,5 @@ Controller
 - Consumption Context는 사용자와 장소를 각각 userId와 placeId로 참조하며, User와 Place Entity를 직접 참조하지 않는다.
 - Recommendation Context는 별도의 데이터를 저장하지 않고 Consumption과 Place 모듈에서 조회한 정보를 조합한다.
 - OCR 결과는 소비기록 생성을 위한 자료로 사용하며 별도의 도메인으로 분리하지 않는다.
+- 소비기록 사진은 영수증 이미지 버킷의 `consumption-images/{userId}/` 경로에 저장한다. 미연결 사진은 24시간 후 만료되고 매일 03:00(Asia/Seoul)에 정리한다. 사진 가공은 프론트에서 처리한다.
 - CLOVA OCR, S3, 소셜 로그인 제공자, Google Places, SGIS와 Expo Push API는 각 모듈의 Infra 계층에서 연동한다.

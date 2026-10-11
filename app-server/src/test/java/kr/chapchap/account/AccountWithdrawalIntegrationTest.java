@@ -13,6 +13,7 @@ import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.repository.SocialAccountRepository;
 import kr.chapchap.account.domain.repository.UserRepository;
 import kr.chapchap.consumption.application.port.ReceiptImageStorage;
+import kr.chapchap.consumption.application.port.ConsumptionImageStorage;
 import kr.chapchap.core.test.TestcontainersConfiguration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -74,6 +75,9 @@ class AccountWithdrawalIntegrationTest {
 
     @MockitoBean
     private ReceiptImageStorage receiptImageStorage;
+
+    @MockitoBean
+    private ConsumptionImageStorage consumptionImageStorage;
 
     @Autowired
     AccountWithdrawalIntegrationTest(
@@ -165,9 +169,16 @@ class AccountWithdrawalIntegrationTest {
         Long consumptionId = jdbcTemplate.queryForObject("""
                 INSERT INTO consumptions (
                     purchase_date, purchase_time, amount, category, user_id, place_id, sticker_item_id
-                ) VALUES (CURRENT_DATE, TIME '12:00:00', 10000, '카페', ?, ?, 1)
+                ) VALUES (CURRENT_DATE, TIME '12:00:00', 10000, '카페', ?, ?, (SELECT id FROM sticker_item WHERE category = '카페' AND name = '커피'))
                 RETURNING id
                 """, Long.class, user.getId(), placeId);
+        Long imageId = jdbcTemplate.queryForObject("""
+                INSERT INTO consumption_images (user_id, object_key, content_type, file_size_bytes, status, attached_at)
+                VALUES (?, 'consumption-images/withdrawal/photo', 'image/png', 100, 'ATTACHED', CURRENT_TIMESTAMP)
+                RETURNING id
+                """, Long.class, user.getId());
+        jdbcTemplate.update("UPDATE consumptions SET sticker_item_id = NULL, image_id = ? WHERE id = ?",
+                imageId, consumptionId);
         Long reportId = jdbcTemplate.queryForObject("""
                 INSERT INTO report (
                     user_id, report_month, persona_type, total_visit_count,
@@ -298,6 +309,9 @@ class AccountWithdrawalIntegrationTest {
         )).isOne();
         then(profileImageStorage).should().deleteAllByUserId(user.getId());
         then(receiptImageStorage).should().deleteAllByUserId(user.getId());
+        then(consumptionImageStorage).should().deleteAllByUserId(user.getId());
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM consumption_images WHERE user_id = ?",
+                Integer.class, user.getId())).isZero();
     }
 
     @Test
@@ -327,6 +341,9 @@ class AccountWithdrawalIntegrationTest {
         assertThat(userRepository.findById(user.getId())).isEmpty();
         then(profileImageStorage).should(times(2)).deleteAllByUserId(user.getId());
         then(receiptImageStorage).should().deleteAllByUserId(user.getId());
+        then(consumptionImageStorage).should().deleteAllByUserId(user.getId());
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM consumption_images WHERE user_id = ?",
+                Integer.class, user.getId())).isZero();
     }
 
     private User saveActiveKakaoUser() {

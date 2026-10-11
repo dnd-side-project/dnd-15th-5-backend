@@ -20,7 +20,7 @@ class ReceiptImageValidatorTest {
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
     );
 
-    private final ReceiptImageValidator receiptImageValidator = new ReceiptImageValidator();
+    private final ReceiptImageValidator receiptImageValidator = new ReceiptImageValidator(new ImageValidator());
 
     @Test
     void PNG_이미지를_검증하면_실제_Content_Type을_반환한다() {

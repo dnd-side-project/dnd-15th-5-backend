@@ -30,7 +30,10 @@ class ConsumptionCreateCommandTest {
                 LocalDate.of(2026, 8, 16),
                 LocalTime.of(12, 30),
                 12_000L,
-                "카페"
+                "카페",
+                7L,
+                null,
+                null
         );
 
         // then
@@ -49,7 +52,10 @@ class ConsumptionCreateCommandTest {
                 LocalDate.of(2026, 8, 16),
                 LocalTime.of(12, 30),
                 0L,
-                "카페"
+                "카페",
+                7L,
+                null,
+                null
         )).isInstanceOfSatisfying(BusinessException.class, exception ->
                 assertThat(exception.getErrorCode()).isEqualTo(ConsumptionErrorCode.INVALID_CONSUMPTION_INPUT)
         );
@@ -65,7 +71,10 @@ class ConsumptionCreateCommandTest {
                 LocalDate.of(2026, 8, 16),
                 null,
                 12_000L,
-                "카페"
+                "카페",
+                7L,
+                null,
+                null
         )).isInstanceOfSatisfying(BusinessException.class, exception ->
                 assertThat(exception.getErrorCode()).isEqualTo(ConsumptionErrorCode.INVALID_CONSUMPTION_INPUT)
         );
