@@ -7,7 +7,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import kr.chapchap.consumption.api.request.ConsumptionCreateRequest;
+import kr.chapchap.consumption.api.request.ConsumptionSaveRequest;
 import kr.chapchap.consumption.api.response.ConsumptionCreateResponse;
 import kr.chapchap.consumption.application.info.ConsumptionCreateInfo;
 import kr.chapchap.consumption.application.service.ConsumptionCreateService;
@@ -91,7 +91,7 @@ public class ConsumptionCreateController {
     @PostMapping
     public ApiResponse<ConsumptionCreateResponse> createConsumption(
             @ChapChapUserId Long userId,
-            @Valid @RequestBody ConsumptionCreateRequest request
+            @Valid @RequestBody ConsumptionSaveRequest request
     ) {
         ConsumptionCreateInfo info = consumptionCreateService.create(request.toCommand(userId));
         return ApiResponse.success(SuccessCode.CREATED, ConsumptionCreateResponse.from(info));

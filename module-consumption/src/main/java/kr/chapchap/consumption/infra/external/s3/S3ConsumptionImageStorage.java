@@ -10,11 +10,15 @@ import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
+import java.time.Duration;
 import java.util.UUID;
 
 @RequiredArgsConstructor
@@ -24,8 +28,27 @@ public class S3ConsumptionImageStorage implements ConsumptionImageStorage {
     private static final String CONSUMPTION_IMAGE_KEY_FORMAT = "consumption-images/%d/%s";
     private static final String CONSUMPTION_IMAGE_PREFIX_FORMAT = "consumption-images/%d/";
 
+    private static final Duration READ_URL_EXPIRATION = Duration.ofMinutes(2);
+
     private final S3Client s3Client;
+    private final S3Presigner s3Presigner;
     private final ReceiptImageStorageProperties properties;
+
+    @Override
+    public String createReadUrl(String objectKey) {
+        if (objectKey == null || objectKey.isBlank()) {
+            throw new IllegalArgumentException("소비기록 이미지 Object Key는 비어 있을 수 없습니다.");
+        }
+        GetObjectPresignRequest request = GetObjectPresignRequest.builder()
+                .signatureDuration(READ_URL_EXPIRATION)
+                .getObjectRequest(GetObjectRequest.builder().bucket(properties.bucket()).key(objectKey).build())
+                .build();
+        try {
+            return s3Presigner.presignGetObject(request).url().toString();
+        } catch (SdkException exception) {
+            throw new BusinessException(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE, exception);
+        }
+    }
 
     @Override
     public String store(

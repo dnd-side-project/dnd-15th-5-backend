@@ -2,7 +2,7 @@ package kr.chapchap.consumption;
 
 import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.repository.UserRepository;
-import kr.chapchap.consumption.application.command.ConsumptionCreateCommand;
+import kr.chapchap.consumption.application.command.ConsumptionSaveCommand;
 import kr.chapchap.consumption.application.command.PlaceResolveCommand;
 import kr.chapchap.consumption.application.port.ConsumptionImageStorage;
 import kr.chapchap.consumption.application.port.ReceiptImageStorage;
@@ -300,7 +300,7 @@ class ConsumptionDeleteIntegrationTest {
     }
 
     private Long create(Long ownerId, Long imageId, Long receiptId) {
-        return commands.create(new ConsumptionCreateCommand(
+        return commands.create(new ConsumptionSaveCommand(
                 ownerId, receiptId,
                 new PlaceResolveCommand("test", "테스트카페", "서울특별시 강남구", 37.506481, 127.024551),
                 LocalDate.now(), LocalTime.NOON, null, "카페", imageId == null ? stickerId : null, imageId, null

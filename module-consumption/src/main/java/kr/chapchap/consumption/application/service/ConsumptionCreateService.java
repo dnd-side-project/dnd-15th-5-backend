@@ -1,6 +1,6 @@
 package kr.chapchap.consumption.application.service;
 
-import kr.chapchap.consumption.application.command.ConsumptionCreateCommand;
+import kr.chapchap.consumption.application.command.ConsumptionSaveCommand;
 import kr.chapchap.consumption.application.info.ConsumptionCreateInfo;
 import kr.chapchap.consumption.application.port.PlaceResolvePort;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +13,7 @@ public class ConsumptionCreateService {
     private final PlaceResolvePort placeResolvePort;
     private final ConsumptionCommandService consumptionCommandService;
 
-    public ConsumptionCreateInfo create(ConsumptionCreateCommand command) {
+    public ConsumptionCreateInfo create(ConsumptionSaveCommand command) {
         Long placeId = placeResolvePort.resolve(command.place());
         return consumptionCommandService.create(command, placeId);
     }

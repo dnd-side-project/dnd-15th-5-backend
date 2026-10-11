@@ -1,15 +1,16 @@
 package kr.chapchap.consumption.application.service;
 
-import kr.chapchap.consumption.application.command.ConsumptionCreateCommand;
+import kr.chapchap.consumption.application.command.ConsumptionSaveCommand;
 import kr.chapchap.consumption.application.info.ConsumptionCreateInfo;
 import kr.chapchap.consumption.application.info.ConsumptionDeleteInfo;
+import kr.chapchap.consumption.application.info.ConsumptionUpdateInfo;
 import kr.chapchap.consumption.domain.entity.Consumption;
 import kr.chapchap.consumption.domain.entity.ConsumptionImage;
 import kr.chapchap.consumption.domain.entity.ConsumptionImageStatus;
-import kr.chapchap.consumption.domain.repository.ConsumptionImageRepository;
 import kr.chapchap.consumption.domain.entity.ReceiptImage;
 import kr.chapchap.consumption.domain.entity.ReceiptImageStatus;
 import kr.chapchap.consumption.domain.entity.StickerItem;
+import kr.chapchap.consumption.domain.repository.ConsumptionImageRepository;
 import kr.chapchap.consumption.domain.repository.ConsumptionRepository;
 import kr.chapchap.consumption.domain.repository.ReceiptImageRepository;
 import kr.chapchap.consumption.domain.repository.StickerItemRepository;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @RequiredArgsConstructor
 @Service
@@ -34,7 +36,7 @@ public class ConsumptionCommandService {
     private final Clock clock;
 
     @Transactional
-    public ConsumptionCreateInfo create(ConsumptionCreateCommand command, Long placeId) {
+    public ConsumptionCreateInfo create(ConsumptionSaveCommand command, Long placeId) {
         if (placeId == null || placeId <= 0) {
             throw new BusinessException(ConsumptionErrorCode.INVALID_CONSUMPTION_INPUT);
         }
@@ -61,6 +63,46 @@ public class ConsumptionCommandService {
     }
 
     @Transactional
+    public ConsumptionUpdateInfo update(Long consumptionId, ConsumptionSaveCommand command, Long placeId) {
+        Consumption consumption = consumptionRepository.findByIdAndUserIdForUpdate(consumptionId, command.userId())
+                .orElseThrow(() -> new BusinessException(ConsumptionErrorCode.CONSUMPTION_NOT_FOUND));
+        consumption.validateImageType(command.imageId());
+        selectStickerItem(command);
+
+        Long replacedImageId = null;
+        if (!Objects.equals(consumption.getImageId(), command.imageId())) {
+            attachImageIfPresent(command);
+            ConsumptionImage previousImage = consumptionImageRepository.findByIdAndUserIdForUpdate(
+                    consumption.getImageId(), command.userId()
+            ).orElseThrow(() -> new BusinessException(ConsumptionErrorCode.IMAGE_NOT_FOUND));
+            previousImage.detachForDeletion();
+            replacedImageId = previousImage.getId();
+        }
+
+        List<Long> replacedReceiptImageIds = List.of();
+        if (attachReceiptImageIfPresent(command, consumptionId)) {
+            List<ReceiptImage> previousReceipts = receiptImageRepository.findAllByConsumptionIdForUpdate(consumptionId)
+                    .stream()
+                    .filter(receipt -> !receipt.getId().equals(command.receiptImageId()))
+                    .toList();
+            previousReceipts.forEach(ReceiptImage::detachForDeletion);
+            replacedReceiptImageIds = previousReceipts.stream().map(ReceiptImage::getId).toList();
+        }
+
+        consumption.update(
+                placeId,
+                command.purchaseDate(),
+                command.purchaseTime(),
+                command.amount(),
+                command.category(),
+                command.stickerItemId(),
+                command.imageId(),
+                command.memo()
+        );
+        return new ConsumptionUpdateInfo(replacedImageId, replacedReceiptImageIds);
+    }
+
+    @Transactional
     public ConsumptionDeleteInfo delete(Long userId, Long consumptionId) {
         Consumption consumption = consumptionRepository.findByIdAndUserIdForUpdate(consumptionId, userId)
                 .orElseThrow(() -> new BusinessException(ConsumptionErrorCode.CONSUMPTION_NOT_FOUND));
@@ -81,7 +123,7 @@ public class ConsumptionCommandService {
         );
     }
 
-    private StickerItem selectStickerItem(ConsumptionCreateCommand command) {
+    private StickerItem selectStickerItem(ConsumptionSaveCommand command) {
         if (command.stickerItemId() == null) {
             return null;
         }
@@ -93,7 +135,7 @@ public class ConsumptionCommandService {
         return sticker;
     }
 
-    private void attachImageIfPresent(ConsumptionCreateCommand command) {
+    private void attachImageIfPresent(ConsumptionSaveCommand command) {
         if (command.imageId() == null) {
             return;
         }
@@ -110,9 +152,9 @@ public class ConsumptionCommandService {
         image.attach(now);
     }
 
-    private void attachReceiptImageIfPresent(ConsumptionCreateCommand command, Long consumptionId) {
+    private boolean attachReceiptImageIfPresent(ConsumptionSaveCommand command, Long consumptionId) {
         if (command.receiptImageId() == null) {
-            return;
+            return false;
         }
 
         ReceiptImage receiptImage = receiptImageRepository.findByIdAndUserIdForUpdate(
@@ -121,6 +163,10 @@ public class ConsumptionCommandService {
                 )
                 .orElseThrow(() -> new BusinessException(ConsumptionErrorCode.RECEIPT_IMAGE_NOT_FOUND));
 
+        if (receiptImage.getStatus() == ReceiptImageStatus.ATTACHED
+                && consumptionId.equals(receiptImage.getConsumptionId())) {
+            return false;
+        }
         if (receiptImage.isAttached()) {
             throw new BusinessException(ConsumptionErrorCode.RECEIPT_IMAGE_ALREADY_ATTACHED);
         }
@@ -132,5 +178,6 @@ public class ConsumptionCommandService {
         }
 
         receiptImage.attach(consumptionId, attachedAt);
+        return true;
     }
 }

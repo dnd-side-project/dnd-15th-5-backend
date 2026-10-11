@@ -2,7 +2,7 @@ package kr.chapchap.consumption;
 
 import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.repository.UserRepository;
-import kr.chapchap.consumption.application.command.ConsumptionCreateCommand;
+import kr.chapchap.consumption.application.command.ConsumptionSaveCommand;
 import kr.chapchap.consumption.application.command.ConsumptionImageUploadCommand;
 import kr.chapchap.consumption.application.command.PlaceResolveCommand;
 import kr.chapchap.consumption.application.port.ConsumptionImageStorage;
@@ -222,8 +222,8 @@ class ConsumptionImageRegistrationIntegrationTest {
         return images.save(ConsumptionImage.createTemporary(owner, UUID.randomUUID().toString(), "image/png", 100, expiresAt));
     }
 
-    private ConsumptionCreateCommand command(Long imageId, Long receiptId) {
-        return new ConsumptionCreateCommand(userId, receiptId,
+    private ConsumptionSaveCommand command(Long imageId, Long receiptId) {
+        return new ConsumptionSaveCommand(userId, receiptId,
                 new PlaceResolveCommand("test", "사진카페", "서울특별시 강남구", 37.506481, 127.024551),
                 LocalDate.now(), LocalTime.NOON, null, "카페", null, imageId, "가".repeat(1000));
     }

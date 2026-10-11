@@ -6,6 +6,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import kr.chapchap.consumption.exception.ConsumptionErrorCode;
+import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.core.persistence.BaseTimeEntity;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -78,6 +80,60 @@ public class Consumption extends BaseTimeEntity {
             Long imageId,
             String memo
     ) {
+        validate(userId, placeId, purchaseDate, purchaseTime, amount, category, stickerItemId, imageId, memo);
+
+        return new Consumption(
+                purchaseDate,
+                purchaseTime,
+                amount,
+                category,
+                userId,
+                placeId,
+                stickerItemId,
+                imageId,
+                memo == null || memo.isBlank() ? null : memo
+        );
+    }
+
+    public void validateImageType(Long imageId) {
+        if ((this.imageId == null) != (imageId == null)) {
+            throw new BusinessException(ConsumptionErrorCode.IMAGE_TYPE_CHANGE_NOT_ALLOWED);
+        }
+    }
+
+    public void update(
+            Long placeId,
+            LocalDate purchaseDate,
+            LocalTime purchaseTime,
+            Long amount,
+            String category,
+            Long stickerItemId,
+            Long imageId,
+            String memo
+    ) {
+        validate(userId, placeId, purchaseDate, purchaseTime, amount, category, stickerItemId, imageId, memo);
+        validateImageType(imageId);
+        this.placeId = placeId;
+        this.purchaseDate = purchaseDate;
+        this.purchaseTime = purchaseTime;
+        this.amount = amount;
+        this.category = category;
+        this.stickerItemId = stickerItemId;
+        this.imageId = imageId;
+        this.memo = memo == null || memo.isBlank() ? null : memo;
+    }
+
+    private static void validate(
+            Long userId,
+            Long placeId,
+            LocalDate purchaseDate,
+            LocalTime purchaseTime,
+            Long amount,
+            String category,
+            Long stickerItemId,
+            Long imageId,
+            String memo
+    ) {
         if (userId == null || userId <= 0) {
             throw new IllegalArgumentException("사용자 식별자는 0보다 커야 합니다.");
         }
@@ -105,17 +161,5 @@ public class Consumption extends BaseTimeEntity {
         if (memo != null && memo.length() > 1000) {
             throw new IllegalArgumentException("메모는 1,000자 이하여야 합니다.");
         }
-
-        return new Consumption(
-                purchaseDate,
-                purchaseTime,
-                amount,
-                category,
-                userId,
-                placeId,
-                stickerItemId,
-                imageId,
-                memo == null || memo.isBlank() ? null : memo
-        );
     }
 }

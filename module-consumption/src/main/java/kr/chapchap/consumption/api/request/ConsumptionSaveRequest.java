@@ -8,15 +8,15 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
-import kr.chapchap.consumption.application.command.ConsumptionCreateCommand;
+import kr.chapchap.consumption.application.command.ConsumptionSaveCommand;
 import kr.chapchap.consumption.application.command.PlaceResolveCommand;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-@Schema(description = "소비 기록 등록 요청")
-public record ConsumptionCreateRequest(
-        @Schema(description = "OCR에서 발급받은 임시 영수증 이미지 ID", example = "15", nullable = true)
+@Schema(description = "소비기록 등록·수정 요청")
+public record ConsumptionSaveRequest(
+        @Schema(description = "OCR에서 발급받은 영수증 이미지 ID. 수정 시 생략하거나 null이면 기존 영수증 유지", example = "15", nullable = true)
         @Positive(message = "영수증 이미지 ID는 0보다 커야 합니다.")
         Long receiptImageId,
 
@@ -55,7 +55,7 @@ public record ConsumptionCreateRequest(
         @NotNull(message = "소비 시간은 필수입니다.")
         LocalTime purchaseTime,
 
-        @Schema(description = "소비 금액(원), 미입력 가능", example = "33000", nullable = true)
+        @Schema(description = "소비 금액(원), 미입력 가능. 수정 시 생략하거나 null이면 기존 금액 삭제", example = "33000", nullable = true)
         @Positive(message = "소비 금액은 0보다 커야 합니다.")
         Long amount,
 
@@ -72,23 +72,23 @@ public record ConsumptionCreateRequest(
         @Positive
         Long stickerItemId,
 
-        @Schema(description = "이미지 업로드 API에서 받은 ID. stickerItemId와 둘 중 하나만 전달", nullable = true)
+        @Schema(description = "이미지 업로드 API에서 받은 ID. 수정 시 유지할 기존 ID 또는 교체할 새 ID. stickerItemId와 둘 중 하나만 전달", nullable = true)
         @Positive
         Long imageId,
 
-        @Schema(description = "메모, 최대 1,000자", nullable = true)
+        @Schema(description = "메모, 최대 1,000자. 수정 시 생략하거나 null·공백이면 기존 메모 삭제", nullable = true)
         @Size(max = 1000)
         String memo
 ) {
 
-    public ConsumptionCreateRequest {
+    public ConsumptionSaveRequest {
         googlePlaceId = trim(googlePlaceId);
         placeName = trim(placeName);
         roadAddress = trim(roadAddress);
         category = trim(category);
     }
 
-    public ConsumptionCreateCommand toCommand(Long userId) {
+    public ConsumptionSaveCommand toCommand(Long userId) {
         PlaceResolveCommand place = new PlaceResolveCommand(
                 googlePlaceId,
                 placeName,
@@ -96,7 +96,7 @@ public record ConsumptionCreateRequest(
                 latitude,
                 longitude
         );
-        return new ConsumptionCreateCommand(
+        return new ConsumptionSaveCommand(
                 userId,
                 receiptImageId,
                 place,

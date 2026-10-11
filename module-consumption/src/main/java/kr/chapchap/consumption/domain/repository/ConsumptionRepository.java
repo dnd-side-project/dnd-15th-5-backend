@@ -11,6 +11,8 @@ import java.util.Optional;
 
 public interface ConsumptionRepository extends JpaRepository<Consumption, Long> {
 
+    Optional<Consumption> findByIdAndUserId(Long id, Long userId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT c FROM Consumption c WHERE c.id = :id AND c.userId = :userId")
     Optional<Consumption> findByIdAndUserIdForUpdate(

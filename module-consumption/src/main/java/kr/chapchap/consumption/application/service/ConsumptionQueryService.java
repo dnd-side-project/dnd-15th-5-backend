@@ -3,13 +3,21 @@ package kr.chapchap.consumption.application.service;
 import kr.chapchap.consumption.application.command.ConsumptionSearchCommand;
 import kr.chapchap.consumption.application.info.AcquiredStickerInfo;
 import kr.chapchap.consumption.application.info.ConsumptionActivityInfo;
+import kr.chapchap.consumption.application.info.ConsumptionDetailInfo;
 import kr.chapchap.consumption.application.info.ConsumptionInfo;
 import kr.chapchap.consumption.application.info.ConsumptionScrollInfo;
 import kr.chapchap.consumption.application.info.PlaceSummaryInfo;
+import kr.chapchap.consumption.application.port.ConsumptionImageStorage;
 import kr.chapchap.consumption.application.port.PlaceSummaryLookupPort;
 import kr.chapchap.consumption.domain.entity.Consumption;
+import kr.chapchap.consumption.domain.entity.ConsumptionImage;
 import kr.chapchap.consumption.domain.entity.PlaceStickerRow;
+import kr.chapchap.consumption.domain.entity.StickerItem;
+import kr.chapchap.consumption.domain.repository.ConsumptionImageRepository;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
+import kr.chapchap.consumption.domain.repository.ConsumptionRepository;
+import kr.chapchap.consumption.exception.ConsumptionErrorCode;
+import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.place.application.info.PlacePhotoInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -32,9 +40,54 @@ public class ConsumptionQueryService {
             new PlaceSummaryInfo(UNKNOWN_PLACE_NAME, null, null, null, null);
 
     private final ConsumptionQueryRepository consumptionQueryRepository;
+    private final ConsumptionRepository consumptionRepository;
+    private final ConsumptionImageRepository consumptionImageRepository;
+    private final ConsumptionImageStorage consumptionImageStorage;
     private final PlaceSummaryLookupPort placeSummaryLookupPort;
     private final PlaceThumbnailBatchLookup placeThumbnailBatchLookup;
     private final StickerQueryService stickerQueryService;
+
+    public ConsumptionDetailInfo getDetail(Long userId, Long consumptionId) {
+        Consumption consumption = consumptionRepository.findByIdAndUserId(consumptionId, userId)
+                .orElseThrow(() -> new BusinessException(ConsumptionErrorCode.CONSUMPTION_NOT_FOUND));
+        Map<Long, PlaceSummaryInfo> summaries = placeSummaryLookupPort.findSummaries(List.of(consumption.getPlaceId()));
+        PlaceSummaryInfo place = summaries.get(consumption.getPlaceId());
+        if (place == null) {
+            throw new BusinessException(ConsumptionErrorCode.PLACE_LOCATION_NOT_FOUND);
+        }
+        String imageUrl = null;
+        StickerItem sticker = null;
+        if (consumption.getImageId() != null) {
+            ConsumptionImage image = consumptionImageRepository.findByIdAndUserId(consumption.getImageId(), userId)
+                    .filter(ConsumptionImage::isAttached)
+                    .orElseThrow(() -> new BusinessException(ConsumptionErrorCode.IMAGE_NOT_FOUND));
+            imageUrl = consumptionImageStorage.createReadUrl(image.getObjectKey());
+        } else {
+            sticker = stickerQueryService.findItems(List.of(consumption.getStickerItemId()))
+                    .get(consumption.getStickerItemId());
+        }
+        PlacePhotoInfo thumbnail = findThumbnails(List.of(consumption), summaries).get(consumption.getPlaceId());
+        return new ConsumptionDetailInfo(
+                consumption.getId(),
+                consumption.getPlaceId(),
+                place.googlePlaceId(),
+                place.name(),
+                place.address(),
+                place.latitude(),
+                place.longitude(),
+                thumbnail != null ? thumbnail.thumbnailUrl() : null,
+                consumption.getPurchaseDate(),
+                consumption.getPurchaseTime(),
+                consumption.getAmount(),
+                consumption.getCategory(),
+                consumption.getStickerItemId(),
+                sticker != null ? sticker.getCategory() : null,
+                sticker != null ? sticker.getName() : null,
+                consumption.getImageId(),
+                imageUrl,
+                consumption.getMemo()
+        );
+    }
 
     public ConsumptionScrollInfo search(ConsumptionSearchCommand command) {
         YearMonth yearMonth = command.yearMonth();

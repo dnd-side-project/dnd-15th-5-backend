@@ -1,6 +1,6 @@
 package kr.chapchap.consumption.application.service;
 
-import kr.chapchap.consumption.application.command.ConsumptionCreateCommand;
+import kr.chapchap.consumption.application.command.ConsumptionSaveCommand;
 import kr.chapchap.consumption.application.command.PlaceResolveCommand;
 import kr.chapchap.consumption.application.info.ConsumptionCreateInfo;
 import kr.chapchap.consumption.domain.entity.Consumption;
@@ -71,7 +71,7 @@ class ConsumptionCommandServiceTest {
     @Test
     void 영수증_없이_소비_기록과_선택한_스티커를_저장한다() {
         // given
-        ConsumptionCreateCommand command = createCommand(null);
+        ConsumptionSaveCommand command = createCommand(null);
         StickerItem stickerItem = stickerItem(7L, "카페", "커피");
         given(stickerItemRepository.findById(7L)).willReturn(Optional.of(stickerItem));
         given(consumptionRepository.save(any(Consumption.class))).willAnswer(invocation -> {
@@ -98,7 +98,7 @@ class ConsumptionCommandServiceTest {
     @Test
     void 선택한_스티커를_저장하고_영수증을_연결한다() {
         // given
-        ConsumptionCreateCommand command = createCommand(RECEIPT_IMAGE_ID);
+        ConsumptionSaveCommand command = createCommand(RECEIPT_IMAGE_ID);
         StickerItem stickerItem = stickerItem(7L, "카페", "커피");
         ReceiptImage receiptImage = createTemporaryReceiptImage(NOW.plusHours(1));
 
@@ -159,7 +159,7 @@ class ConsumptionCommandServiceTest {
     @Test
     void 만료_시각이_없는_영수증_이미지를_소비_기록에_연결한다() {
         // given
-        ConsumptionCreateCommand command = createCommand(RECEIPT_IMAGE_ID);
+        ConsumptionSaveCommand command = createCommand(RECEIPT_IMAGE_ID);
         ReceiptImage receiptImage = createTemporaryReceiptImage(null);
         givenSuccessfulConsumptionSave();
         given(receiptImageRepository.findByIdAndUserIdForUpdate(RECEIPT_IMAGE_ID, USER_ID))
@@ -178,7 +178,7 @@ class ConsumptionCommandServiceTest {
     @Test
     void 사용자에게_속한_영수증_이미지가_없으면_예외가_발생한다() {
         // given
-        ConsumptionCreateCommand command = createCommand(RECEIPT_IMAGE_ID);
+        ConsumptionSaveCommand command = createCommand(RECEIPT_IMAGE_ID);
         givenSuccessfulConsumptionSave();
         given(receiptImageRepository.findByIdAndUserIdForUpdate(RECEIPT_IMAGE_ID, USER_ID))
                 .willReturn(Optional.empty());
@@ -194,7 +194,7 @@ class ConsumptionCommandServiceTest {
     @Test
     void 이미_연결된_영수증_이미지면_예외가_발생한다() {
         // given
-        ConsumptionCreateCommand command = createCommand(RECEIPT_IMAGE_ID);
+        ConsumptionSaveCommand command = createCommand(RECEIPT_IMAGE_ID);
         ReceiptImage receiptImage = createTemporaryReceiptImage(NOW.plusHours(1));
         receiptImage.attach(99L, NOW.minusMinutes(1));
         givenSuccessfulConsumptionSave();
@@ -214,7 +214,7 @@ class ConsumptionCommandServiceTest {
     @Test
     void 만료된_영수증_이미지면_예외가_발생한다() {
         // given
-        ConsumptionCreateCommand command = createCommand(RECEIPT_IMAGE_ID);
+        ConsumptionSaveCommand command = createCommand(RECEIPT_IMAGE_ID);
         ReceiptImage receiptImage = createTemporaryReceiptImage(NOW.minusSeconds(1));
         givenSuccessfulConsumptionSave();
         given(receiptImageRepository.findByIdAndUserIdForUpdate(RECEIPT_IMAGE_ID, USER_ID))
@@ -231,7 +231,7 @@ class ConsumptionCommandServiceTest {
     @Test
     void 정리_중인_영수증_이미지면_만료_예외가_발생한다() {
         // given
-        ConsumptionCreateCommand command = createCommand(RECEIPT_IMAGE_ID);
+        ConsumptionSaveCommand command = createCommand(RECEIPT_IMAGE_ID);
         ReceiptImage receiptImage = createTemporaryReceiptImage(NOW.minusSeconds(1));
         receiptImage.markDeleting(NOW);
         givenSuccessfulConsumptionSave();
@@ -273,8 +273,8 @@ class ConsumptionCommandServiceTest {
         return stickerItem;
     }
 
-    private ConsumptionCreateCommand createCommand(Long receiptImageId) {
-        return new ConsumptionCreateCommand(
+    private ConsumptionSaveCommand createCommand(Long receiptImageId) {
+        return new ConsumptionSaveCommand(
                 USER_ID,
                 receiptImageId,
                 PLACE,
