@@ -1,6 +1,6 @@
 package kr.chapchap.consumption.application.service;
 
-import kr.chapchap.consumption.application.command.ConsumptionCreateCommand;
+import kr.chapchap.consumption.application.command.ConsumptionSaveCommand;
 import kr.chapchap.consumption.application.command.PlaceResolveCommand;
 import kr.chapchap.consumption.application.info.ConsumptionCreateInfo;
 import kr.chapchap.consumption.application.port.PlaceResolvePort;
@@ -36,7 +36,7 @@ class ConsumptionCreateServiceTest {
                 37.501,
                 127.039
         );
-        ConsumptionCreateCommand command = new ConsumptionCreateCommand(
+        ConsumptionSaveCommand command = new ConsumptionSaveCommand(
                 1L,
                 null,
                 place,

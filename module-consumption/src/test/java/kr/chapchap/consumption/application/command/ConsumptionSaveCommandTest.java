@@ -10,7 +10,7 @@ import java.time.LocalTime;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class ConsumptionCreateCommandTest {
+class ConsumptionSaveCommandTest {
 
     private static final PlaceResolveCommand PLACE = new PlaceResolveCommand(
             "google-place-id",
@@ -23,7 +23,7 @@ class ConsumptionCreateCommandTest {
     @Test
     void 필수_입력으로_소비_등록_명령을_생성한다() {
         // when
-        ConsumptionCreateCommand command = new ConsumptionCreateCommand(
+        ConsumptionSaveCommand command = new ConsumptionSaveCommand(
                 1L,
                 null,
                 PLACE,
@@ -45,7 +45,7 @@ class ConsumptionCreateCommandTest {
     @Test
     void 금액이_0_이하면_유효하지_않은_입력_예외가_발생한다() {
         // when & then
-        assertThatThrownBy(() -> new ConsumptionCreateCommand(
+        assertThatThrownBy(() -> new ConsumptionSaveCommand(
                 1L,
                 null,
                 PLACE,
@@ -64,7 +64,7 @@ class ConsumptionCreateCommandTest {
     @Test
     void 구매_시간이_없으면_유효하지_않은_입력_예외가_발생한다() {
         // when & then
-        assertThatThrownBy(() -> new ConsumptionCreateCommand(
+        assertThatThrownBy(() -> new ConsumptionSaveCommand(
                 1L,
                 null,
                 PLACE,

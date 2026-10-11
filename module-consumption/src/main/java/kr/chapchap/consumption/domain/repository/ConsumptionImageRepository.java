@@ -16,6 +16,8 @@ import java.util.Optional;
 
 public interface ConsumptionImageRepository extends JpaRepository<ConsumptionImage, Long> {
 
+    Optional<ConsumptionImage> findByIdAndUserId(Long id, Long userId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             SELECT consumptionImage

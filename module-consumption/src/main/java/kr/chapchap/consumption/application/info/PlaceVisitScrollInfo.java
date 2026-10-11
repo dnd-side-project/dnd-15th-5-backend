@@ -12,6 +12,6 @@ public record PlaceVisitScrollInfo(
         Long nextCursorId
 ) {
 
-    public record VisitInfo(LocalDate visitedAt, Long amount) {
+    public record VisitInfo(Long consumptionId, LocalDate visitedAt, Long amount) {
     }
 }

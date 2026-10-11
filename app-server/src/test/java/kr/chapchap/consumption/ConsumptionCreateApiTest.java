@@ -5,7 +5,7 @@ import kr.chapchap.config.CorsConfig;
 import kr.chapchap.config.SecurityConfig;
 import kr.chapchap.config.WebMvcConfig;
 import kr.chapchap.consumption.api.controller.ConsumptionCreateController;
-import kr.chapchap.consumption.application.command.ConsumptionCreateCommand;
+import kr.chapchap.consumption.application.command.ConsumptionSaveCommand;
 import kr.chapchap.consumption.application.info.ConsumptionCreateInfo;
 import kr.chapchap.consumption.application.service.ConsumptionCreateService;
 import kr.chapchap.consumption.exception.ConsumptionErrorCode;
@@ -64,7 +64,7 @@ class ConsumptionCreateApiTest {
     @Test
     void 소비_기록을_등록하면_생성된_ID와_선택한_스티커를_반환한다() throws Exception {
         // given
-        given(consumptionCreateService.create(any(ConsumptionCreateCommand.class)))
+        given(consumptionCreateService.create(any(ConsumptionSaveCommand.class)))
                 .willReturn(new ConsumptionCreateInfo(
                         31L,
                         "카페",
@@ -82,10 +82,10 @@ class ConsumptionCreateApiTest {
                 .andExpect(jsonPath("$.data.stickerCategory").value("카페"))
                 .andExpect(jsonPath("$.data.stickerName").value("커피"));
 
-        ArgumentCaptor<ConsumptionCreateCommand> commandCaptor =
-                ArgumentCaptor.forClass(ConsumptionCreateCommand.class);
+        ArgumentCaptor<ConsumptionSaveCommand> commandCaptor =
+                ArgumentCaptor.forClass(ConsumptionSaveCommand.class);
         then(consumptionCreateService).should().create(commandCaptor.capture());
-        ConsumptionCreateCommand command = commandCaptor.getValue();
+        ConsumptionSaveCommand command = commandCaptor.getValue();
         assertThat(command.userId()).isEqualTo(USER_ID);
         assertThat(command.receiptImageId()).isEqualTo(15L);
         assertThat(command.place().googlePlaceId()).isEqualTo("ChIJxxxxxxxxxxxxxxxx");
@@ -102,7 +102,7 @@ class ConsumptionCreateApiTest {
         // given
         Map<String, Object> request = validRequest();
         request.remove("receiptImageId");
-        given(consumptionCreateService.create(any(ConsumptionCreateCommand.class)))
+        given(consumptionCreateService.create(any(ConsumptionSaveCommand.class)))
                 .willReturn(new ConsumptionCreateInfo(
                         31L,
                         "카페",
@@ -119,8 +119,8 @@ class ConsumptionCreateApiTest {
                 .andExpect(jsonPath("$.data.stickerCategory").value("카페"))
                 .andExpect(jsonPath("$.data.stickerName").value("커피"));
 
-        ArgumentCaptor<ConsumptionCreateCommand> commandCaptor =
-                ArgumentCaptor.forClass(ConsumptionCreateCommand.class);
+        ArgumentCaptor<ConsumptionSaveCommand> commandCaptor =
+                ArgumentCaptor.forClass(ConsumptionSaveCommand.class);
         then(consumptionCreateService).should().create(commandCaptor.capture());
         assertThat(commandCaptor.getValue().receiptImageId()).isNull();
     }
@@ -166,7 +166,7 @@ class ConsumptionCreateApiTest {
         // given
         Map<String, Object> request = validRequest();
         request.put("category", "쇼핑");
-        given(consumptionCreateService.create(any(ConsumptionCreateCommand.class)))
+        given(consumptionCreateService.create(any(ConsumptionSaveCommand.class)))
                 .willReturn(new ConsumptionCreateInfo(31L, "쇼핑", "쇼핑백"));
 
         // when
@@ -178,8 +178,8 @@ class ConsumptionCreateApiTest {
                 .andExpect(jsonPath("$.data.consumptionId").value(31L));
 
         // then
-        ArgumentCaptor<ConsumptionCreateCommand> commandCaptor =
-                ArgumentCaptor.forClass(ConsumptionCreateCommand.class);
+        ArgumentCaptor<ConsumptionSaveCommand> commandCaptor =
+                ArgumentCaptor.forClass(ConsumptionSaveCommand.class);
         then(consumptionCreateService).should().create(commandCaptor.capture());
         assertThat(commandCaptor.getValue().category()).isEqualTo("쇼핑");
     }
@@ -232,7 +232,7 @@ class ConsumptionCreateApiTest {
     @Test
     void 사용자에게_속한_영수증_이미지가_없으면_404를_반환한다() throws Exception {
         // given
-        given(consumptionCreateService.create(any(ConsumptionCreateCommand.class)))
+        given(consumptionCreateService.create(any(ConsumptionSaveCommand.class)))
                 .willThrow(new BusinessException(ConsumptionErrorCode.RECEIPT_IMAGE_NOT_FOUND));
 
         // when & then
@@ -247,7 +247,7 @@ class ConsumptionCreateApiTest {
     @Test
     void 이미_연결된_영수증_이미지면_409를_반환한다() throws Exception {
         // given
-        given(consumptionCreateService.create(any(ConsumptionCreateCommand.class)))
+        given(consumptionCreateService.create(any(ConsumptionSaveCommand.class)))
                 .willThrow(new BusinessException(
                         ConsumptionErrorCode.RECEIPT_IMAGE_ALREADY_ATTACHED
                 ));
@@ -264,7 +264,7 @@ class ConsumptionCreateApiTest {
     @Test
     void 도로명주소의_행정동을_찾지_못하면_422를_반환한다() throws Exception {
         // given
-        given(consumptionCreateService.create(any(ConsumptionCreateCommand.class)))
+        given(consumptionCreateService.create(any(ConsumptionSaveCommand.class)))
                 .willThrow(new BusinessException(PlaceErrorCode.ADDRESS_NOT_RESOLVED));
 
         // when & then
@@ -290,7 +290,7 @@ class ConsumptionCreateApiTest {
                         .content(objectMapper.writeValueAsBytes(request)))
                 .andExpect(status().isCreated());
         // then
-        ArgumentCaptor<ConsumptionCreateCommand> captor = ArgumentCaptor.forClass(ConsumptionCreateCommand.class);
+        ArgumentCaptor<ConsumptionSaveCommand> captor = ArgumentCaptor.forClass(ConsumptionSaveCommand.class);
         then(consumptionCreateService).should().create(captor.capture());
         assertThat(captor.getValue().amount()).isNull();
         assertThat(captor.getValue().stickerItemId()).isNull();

@@ -2,7 +2,7 @@ package kr.chapchap.consumption;
 
 import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.repository.UserRepository;
-import kr.chapchap.consumption.application.command.ConsumptionCreateCommand;
+import kr.chapchap.consumption.application.command.ConsumptionSaveCommand;
 import kr.chapchap.consumption.application.command.PlaceResolveCommand;
 import kr.chapchap.consumption.application.info.ConsumptionCreateInfo;
 import kr.chapchap.consumption.application.port.PlaceResolvePort;
@@ -235,8 +235,8 @@ class ConsumptionCreatePersistenceIntegrationTest {
         )).isZero();
     }
 
-    private ConsumptionCreateCommand command(Long userId, Long receiptImageId, String category) {
-        return new ConsumptionCreateCommand(
+    private ConsumptionSaveCommand command(Long userId, Long receiptImageId, String category) {
+        return new ConsumptionSaveCommand(
                 userId,
                 receiptImageId,
                 new PlaceResolveCommand(

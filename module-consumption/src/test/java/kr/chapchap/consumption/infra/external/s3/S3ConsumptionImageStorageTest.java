@@ -19,12 +19,19 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
+
+import java.net.URI;
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,12 +44,16 @@ class S3ConsumptionImageStorageTest {
     @Mock
     private S3Client s3Client;
 
+    @Mock
+    private S3Presigner s3Presigner;
+
     private S3ConsumptionImageStorage receiptImageStorage;
 
     @BeforeEach
     void setUp() {
         receiptImageStorage = new S3ConsumptionImageStorage(
                 s3Client,
+                s3Presigner,
                 new ReceiptImageStorageProperties(BUCKET)
         );
     }
@@ -157,4 +168,38 @@ class S3ConsumptionImageStorageTest {
             assertThat(exception.getCause()).isSameAs(cause);
         });
     }
+    @Test
+    void 비공개_사진에_대한_2분짜리_GET_URL을_발급한다() throws Exception {
+        // given
+        PresignedGetObjectRequest signed = mock(PresignedGetObjectRequest.class);
+        given(signed.url()).willReturn(URI.create("https://example.com/photo?signed=test").toURL());
+        given(s3Presigner.presignGetObject(any(GetObjectPresignRequest.class))).willReturn(signed);
+
+        // when
+        String url = receiptImageStorage.createReadUrl(OBJECT_KEY);
+
+        // then
+        assertThat(url).isEqualTo("https://example.com/photo?signed=test");
+        ArgumentCaptor<GetObjectPresignRequest> captor = ArgumentCaptor.forClass(GetObjectPresignRequest.class);
+        then(s3Presigner).should().presignGetObject(captor.capture());
+        assertThat(captor.getValue().signatureDuration()).isEqualTo(Duration.ofMinutes(2));
+        assertThat(captor.getValue().getObjectRequest().bucket()).isEqualTo(BUCKET);
+        assertThat(captor.getValue().getObjectRequest().key()).isEqualTo(OBJECT_KEY);
+        then(s3Client).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void URL_발급_실패는_원인을_보존해_외부_서비스_오류로_반환한다() {
+        // given
+        SdkClientException cause = SdkClientException.create("signing failed");
+        given(s3Presigner.presignGetObject(any(GetObjectPresignRequest.class))).willThrow(cause);
+
+        // when & then
+        assertThatThrownBy(() -> receiptImageStorage.createReadUrl(OBJECT_KEY))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.getErrorCode()).isEqualTo(CommonErrorCode.EXTERNAL_SERVICE_UNAVAILABLE);
+                    assertThat(exception.getCause()).isSameAs(cause);
+                });
+    }
+
 }

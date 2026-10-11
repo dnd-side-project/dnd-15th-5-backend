@@ -46,6 +46,8 @@ public enum ConsumptionErrorCode implements ErrorCode {
     IMAGE_EXPIRED(HttpStatus.CONFLICT, "CONSUMPTION023", "이미지의 임시 저장 기간이 만료되었습니다."),
     STICKER_NOT_FOUND(HttpStatus.NOT_FOUND, "CONSUMPTION024", "스티커를 찾을 수 없습니다."),
     STICKER_CATEGORY_MISMATCH(HttpStatus.BAD_REQUEST, "CONSUMPTION025", "스티커와 소비 카테고리가 일치하지 않습니다."),
+    CONSUMPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "CONSUMPTION026", "소비기록을 찾을 수 없습니다."),
+    IMAGE_TYPE_CHANGE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "CONSUMPTION027", "사진과 스티커 사이의 변경은 지원하지 않습니다."),
     ;
 
     private final HttpStatus status;

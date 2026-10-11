@@ -104,6 +104,15 @@ public class ConsumptionImage extends BaseTimeEntity {
         return expiresAt != null && !expiresAt.isAfter(dateTime);
     }
 
+    public void detachForDeletion() {
+        if (status != ConsumptionImageStatus.ATTACHED) {
+            throw new IllegalStateException("연결된 소비기록 이미지만 삭제 대상으로 변경할 수 있습니다.");
+        }
+
+        this.status = ConsumptionImageStatus.DELETING;
+        this.attachedAt = null;
+    }
+
     public void markDeleting(LocalDateTime cleanupAt) {
         if (status != ConsumptionImageStatus.TEMPORARY || isAttached()) {
             throw new IllegalStateException("임시 상태의 소비기록 이미지만 정리할 수 있습니다.");

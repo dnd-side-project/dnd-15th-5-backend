@@ -4,8 +4,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import kr.chapchap.core.web.auth.ChapChapUserId;
-import kr.chapchap.core.web.response.ApiResponse;
+import jakarta.validation.Valid;
+import kr.chapchap.consumption.api.request.ConsumptionSaveRequest;
+import kr.chapchap.consumption.api.response.ConsumptionDetailResponse;
 import kr.chapchap.consumption.api.response.ConsumptionScrollResponse;
 import kr.chapchap.consumption.api.response.FrequentPlaceResponse;
 import kr.chapchap.consumption.api.response.PlaceDetailResponse;
@@ -20,14 +21,21 @@ import kr.chapchap.consumption.application.info.FrequentPlaceRankInfo;
 import kr.chapchap.consumption.application.info.PlaceDetailInfo;
 import kr.chapchap.consumption.application.info.PlaceVisitScrollInfo;
 import kr.chapchap.consumption.application.info.VisitedPlaceMarkersInfo;
+import kr.chapchap.consumption.application.service.ConsumptionDeleteService;
 import kr.chapchap.consumption.application.service.ConsumptionQueryService;
+import kr.chapchap.consumption.application.service.ConsumptionUpdateService;
 import kr.chapchap.consumption.application.service.FrequentPlaceQueryService;
 import kr.chapchap.consumption.application.service.PlaceDetailQueryService;
 import kr.chapchap.consumption.application.service.VisitedPlaceQueryService;
+import kr.chapchap.core.web.auth.ChapChapUserId;
+import kr.chapchap.core.web.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -45,9 +53,53 @@ import java.util.List;
 public class ConsumptionController {
 
     private final ConsumptionQueryService consumptionQueryService;
+    private final ConsumptionDeleteService consumptionDeleteService;
+    private final ConsumptionUpdateService consumptionUpdateService;
     private final VisitedPlaceQueryService visitedPlaceQueryService;
     private final FrequentPlaceQueryService frequentPlaceQueryService;
     private final PlaceDetailQueryService placeDetailQueryService;
+
+    @Operation(summary = "소비기록 한 건 조회", description = "본인의 소비기록을 조회합니다. 수정 화면에 필요한 장소·스티커·사진·입력값을 반환합니다.")
+    @GetMapping("/{consumptionId}")
+    public ApiResponse<ConsumptionDetailResponse> getConsumption(
+            @ChapChapUserId Long userId,
+            @PathVariable Long consumptionId
+    ) {
+        return ApiResponse.success(ConsumptionDetailResponse.from(consumptionQueryService.getDetail(userId, consumptionId)));
+    }
+
+    @Operation(
+            summary = "소비기록 수정",
+            description = """
+                    본인의 소비기록을 등록과 같은 입력 항목으로 수정합니다. 사진과 스티커 사이의 전환은 지원하지 않습니다.
+                    같은 imageId는 유지하고, 새 imageId는 검증 후 교체합니다.
+                    receiptImageId를 생략하거나 null로 보내면 기존 영수증을 유지합니다.
+                    amount와 memo를 생략하거나 null로 보내면 기존 값을 지웁니다.
+                    교체한 사진·영수증은 수정 확정 후 정리하며, 이미 생성된 월간 리포트는 갱신하지 않습니다.
+                    """
+    )
+    @PutMapping("/{consumptionId}")
+    public ApiResponse<Void> updateConsumption(
+            @ChapChapUserId Long userId,
+            @PathVariable Long consumptionId,
+            @Valid @RequestBody ConsumptionSaveRequest request
+    ) {
+        consumptionUpdateService.update(consumptionId, request.toCommand(userId));
+        return ApiResponse.ok();
+    }
+
+    @Operation(
+            summary = "소비기록 삭제",
+            description = "본인의 소비기록을 삭제합니다. 연결된 사진과 영수증도 삭제하며, 파일 삭제 실패 시 재시도합니다."
+    )
+    @DeleteMapping("/{consumptionId}")
+    public ApiResponse<Void> deleteConsumption(
+            @ChapChapUserId Long userId,
+            @PathVariable Long consumptionId
+    ) {
+        consumptionDeleteService.delete(userId, consumptionId);
+        return ApiResponse.ok();
+    }
 
     @Operation(
             summary = "월별 소비내역 무한스크롤 조회",
