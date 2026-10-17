@@ -5,18 +5,23 @@ import kr.chapchap.place.domain.entity.PlaceLike;
 import kr.chapchap.place.domain.repository.PlaceLikeRepository;
 import kr.chapchap.place.domain.repository.PlaceRepository;
 import kr.chapchap.place.exception.PlaceErrorCode;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
+import java.sql.SQLException;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -66,7 +71,70 @@ class PlaceLikeCommandServiceTest {
         // then
         assertThat(liked).isFalse();
         verify(placeLikeRepository, times(1)).delete(existing);
+        verify(placeLikeRepository).flush();
         verify(placeLikeRepository, never()).save(any());
+    }
+
+    @Test
+    void 동시_등록의_좋아요_유니크_충돌만_비즈니스_충돌로_변환한다() {
+        // given
+        when(placeRepository.existsById(101L)).thenReturn(true);
+        when(placeLikeRepository.findByUserIdAndPlaceId(1L, 101L)).thenReturn(Optional.empty());
+        DataIntegrityViolationException cause = constraintFailure("uk_place_likes_user_place", "23505");
+        when(placeLikeRepository.save(any())).thenThrow(cause);
+
+        // when & then
+        assertThatThrownBy(() -> sut.toggle(1L, 101L))
+                .isInstanceOf(BusinessException.class)
+                .hasCause(cause)
+                .extracting(exception -> ((BusinessException) exception).getErrorCode())
+                .isEqualTo(PlaceErrorCode.LIKE_CONFLICT);
+    }
+
+    @Test
+    void 다른_제약조건_위반은_충돌로_바꾸지_않는다() {
+        // given
+        when(placeRepository.existsById(101L)).thenReturn(true);
+        when(placeLikeRepository.findByUserIdAndPlaceId(1L, 101L)).thenReturn(Optional.empty());
+        DataIntegrityViolationException cause = constraintFailure("fk_place_likes_user", "23503");
+        when(placeLikeRepository.save(any())).thenThrow(cause);
+
+        // when & then
+        assertThatThrownBy(() -> sut.toggle(1L, 101L)).isSameAs(cause);
+    }
+
+    @Test
+    void 동시_해제의_flush_충돌도_비즈니스_충돌로_변환한다() {
+        // given
+        when(placeRepository.existsById(101L)).thenReturn(true);
+        when(placeLikeRepository.findByUserIdAndPlaceId(1L, 101L))
+                .thenReturn(Optional.of(PlaceLike.builder().userId(1L).placeId(101L).build()));
+        var cause = new ObjectOptimisticLockingFailureException(PlaceLike.class, 10L);
+        doThrow(cause).when(placeLikeRepository).flush();
+
+        // when & then
+        assertThatThrownBy(() -> sut.toggle(1L, 101L))
+                .isInstanceOf(BusinessException.class)
+                .hasCause(cause)
+                .extracting(exception -> ((BusinessException) exception).getErrorCode())
+                .isEqualTo(PlaceErrorCode.LIKE_CONFLICT);
+    }
+
+    @Test
+    void 다른_엔티티의_충돌은_좋아요_충돌로_바꾸지_않는다() {
+        // given
+        when(placeRepository.existsById(101L)).thenReturn(true);
+        var cause = new ObjectOptimisticLockingFailureException("OtherEntity", 1L);
+        when(placeLikeRepository.findByUserIdAndPlaceId(1L, 101L)).thenThrow(cause);
+
+        // when & then
+        assertThatThrownBy(() -> sut.toggle(1L, 101L)).isSameAs(cause);
+    }
+
+    private DataIntegrityViolationException constraintFailure(String constraint, String sqlState) {
+        return new DataIntegrityViolationException("constraint failure", new ConstraintViolationException(
+                "constraint failure", new SQLException("constraint failure", sqlState), constraint
+        ));
     }
 
     @Test
