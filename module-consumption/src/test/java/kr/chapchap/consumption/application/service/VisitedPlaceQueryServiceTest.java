@@ -81,6 +81,31 @@ class VisitedPlaceQueryServiceTest {
     }
 
     @Test
+    void 사진으로만_기록한_장소도_스티커_없이_마커를_반환한다() {
+        // given
+        when(consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, null)).thenReturn(List.of(
+                new PlaceCategoryVisitRow(101L, "카페", 1L)
+        ));
+        when(placeSummaryLookupPort.findSummaries(any())).thenReturn(Map.of(
+                101L, new PlaceSummaryInfo("테스트카페", "역삼동", "주소", 37.5, 127.0)
+        ));
+        when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of());
+        when(consumptionQueryRepository.findFirstStickerItemIdsByPlace(eq(1L), any())).thenReturn(List.of());
+
+        // when
+        VisitedPlaceMarkersInfo result = sut.getVisitedPlaceMarkers(1L, null);
+
+        // then
+        assertThat(result.markers()).hasSize(1);
+        VisitedPlaceMarkerInfo marker = result.markers().getFirst();
+        assertThat(marker.placeId()).isEqualTo(101L);
+        assertThat(marker.visitCount()).isEqualTo(1L);
+        assertThat(marker.stickerCategory()).isNull();
+        assertThat(marker.stickerName()).isNull();
+        verifyNoInteractions(stickerQueryService);
+    }
+
+    @Test
     void 방문_횟수가_많은_순으로_마커를_정렬해서_반환한다() {
         // given
         when(consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, null)).thenReturn(List.of(

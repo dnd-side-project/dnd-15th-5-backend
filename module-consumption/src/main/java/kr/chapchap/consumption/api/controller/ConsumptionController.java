@@ -71,7 +71,7 @@ public class ConsumptionController {
     @Operation(
             summary = "소비기록 수정",
             description = """
-                    본인의 소비기록을 등록과 같은 입력 항목으로 수정합니다. 사진과 스티커 사이의 전환은 지원하지 않습니다.
+                    본인의 소비기록을 등록과 같은 입력 항목으로 수정합니다. 사진과 스티커 사이의 전환도 지원합니다.
                     같은 imageId는 유지하고, 새 imageId는 검증 후 교체합니다.
                     receiptImageId를 생략하거나 null로 보내면 기존 영수증을 유지합니다.
                     amount와 memo를 생략하거나 null로 보내면 기존 값을 지웁니다.

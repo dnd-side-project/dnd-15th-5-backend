@@ -3,7 +3,6 @@ package kr.chapchap.consumption.application.service;
 import kr.chapchap.consumption.application.command.ConsumptionSaveCommand;
 import kr.chapchap.consumption.application.info.ConsumptionUpdateInfo;
 import kr.chapchap.consumption.application.port.PlaceResolvePort;
-import kr.chapchap.consumption.domain.entity.Consumption;
 import kr.chapchap.consumption.domain.repository.ConsumptionRepository;
 import kr.chapchap.consumption.exception.ConsumptionErrorCode;
 import kr.chapchap.core.exception.BusinessException;
@@ -24,9 +23,8 @@ public class ConsumptionUpdateService {
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void update(Long consumptionId, ConsumptionSaveCommand command) {
-        Consumption consumption = consumptionRepository.findByIdAndUserId(consumptionId, command.userId())
+        consumptionRepository.findByIdAndUserId(consumptionId, command.userId())
                 .orElseThrow(() -> new BusinessException(ConsumptionErrorCode.CONSUMPTION_NOT_FOUND));
-        consumption.validateImageType(command.imageId());
         Long placeId = placeResolvePort.resolve(command.place());
         ConsumptionUpdateInfo updated = consumptionCommandService.update(consumptionId, command, placeId);
         if (updated.replacedImageId() != null) {

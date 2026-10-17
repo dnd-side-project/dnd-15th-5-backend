@@ -326,18 +326,80 @@ class ConsumptionUpdateIntegrationTest {
     }
 
     @Test
-    void 사진과_스티커_전환을_양방향으로_거절한다() {
+    void 사진을_스티커로_전환하면_기존_사진만_정리하고_영수증과_입력값을_유지한다() throws Exception {
         // given
         ConsumptionImage image = image(userId);
-        Long photoId = create(image.getId(), null);
-        Long stickerRecordId = create(null, null);
-        ConsumptionImage candidate = image(userId);
+        ReceiptImage receipt = receipt();
+        Long id = create(image.getId(), receipt.getId());
+        Map<String, Object> body = body(null, null);
+        body.put("amount", 5500);
+        body.put("memo", "기존 메모");
+        willAnswer(invocation -> {
+            assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
+            assertThat(consumptions.findById(id).orElseThrow().getImageId()).isNull();
+            return null;
+        }).given(imageStorage).delete(image.getObjectKey());
 
-        // when & then
-        assertError(() -> update.update(photoId, command(null, null)), ConsumptionErrorCode.IMAGE_TYPE_CHANGE_NOT_ALLOWED);
-        assertError(() -> update.update(stickerRecordId, command(candidate.getId(), null)), ConsumptionErrorCode.IMAGE_TYPE_CHANGE_NOT_ALLOWED);
-        then(places).shouldHaveNoInteractions();
-        assertThat(images.findById(candidate.getId()).orElseThrow().getStatus()).isEqualTo(ConsumptionImageStatus.TEMPORARY);
+        // when
+        mvc.perform(put("/v1/consumptions/{id}", id).with(userJwt(userId))
+                        .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsBytes(body)))
+                .andExpect(status().isOk());
+
+        // then
+        Consumption changed = consumptions.findById(id).orElseThrow();
+        assertThat(changed.getStickerItemId()).isEqualTo(stickerId);
+        assertThat(changed.getImageId()).isNull();
+        assertThat(changed.getAmount()).isEqualTo(5500L);
+        assertThat(changed.getMemo()).isEqualTo("기존 메모");
+        assertThat(images.existsById(image.getId())).isFalse();
+        assertThat(receipts.findById(receipt.getId()).orElseThrow().getConsumptionId()).isEqualTo(id);
+        then(imageStorage).should().delete(image.getObjectKey());
+        then(receiptStorage).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 스티커를_사진으로_전환하면_새_사진을_연결하고_지도_조회도_성공한다() throws Exception {
+        // given
+        Long id = create(null, null);
+        ConsumptionImage image = image(userId);
+
+        // when
+        mvc.perform(put("/v1/consumptions/{id}", id).with(userJwt(userId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsBytes(body(image.getId(), null))))
+                .andExpect(status().isOk());
+
+        // then
+        Consumption changed = consumptions.findById(id).orElseThrow();
+        assertThat(changed.getStickerItemId()).isNull();
+        assertThat(changed.getImageId()).isEqualTo(image.getId());
+        assertThat(images.findById(image.getId()).orElseThrow().getStatus()).isEqualTo(ConsumptionImageStatus.ATTACHED);
+        then(imageStorage).shouldHaveNoInteractions();
+        mvc.perform(get("/v1/consumptions/visited-places").with(userJwt(userId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.places[0].placeId").value(placeId))
+                .andExpect(jsonPath("$.data.places[0].stickerCategory").isEmpty())
+                .andExpect(jsonPath("$.data.places[0].stickerName").isEmpty());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void 전환_중_영수증_검증이_실패하면_기존_유형과_사진_상태를_유지한다(boolean fromPhoto) {
+        // given
+        ConsumptionImage image = image(userId);
+        Long id = create(fromPhoto ? image.getId() : null, null);
+
+        // when
+        assertError(() -> update.update(id, command(fromPhoto ? null : image.getId(), Long.MAX_VALUE)),
+                ConsumptionErrorCode.RECEIPT_IMAGE_NOT_FOUND);
+
+        // then
+        Consumption unchanged = consumptions.findById(id).orElseThrow();
+        assertThat(unchanged.getImageId()).isEqualTo(fromPhoto ? image.getId() : null);
+        assertThat(unchanged.getStickerItemId()).isEqualTo(fromPhoto ? null : stickerId);
+        assertThat(images.findById(image.getId()).orElseThrow().getStatus()).isEqualTo(
+                fromPhoto ? ConsumptionImageStatus.ATTACHED : ConsumptionImageStatus.TEMPORARY);
+        then(imageStorage).shouldHaveNoInteractions();
     }
 
     @Test
