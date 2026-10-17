@@ -125,8 +125,8 @@ public class VisitedPlaceQueryService {
                 summary.longitude(),
                 row.visitCount(),
                 likedPlaceIds.contains(row.placeId()),
-                stickerItem.getCategory(),
-                stickerItem.getName(),
+                stickerItem != null ? stickerItem.getCategory() : null,
+                stickerItem != null ? stickerItem.getName() : null,
                 summary.googlePlaceId()
         );
     }
