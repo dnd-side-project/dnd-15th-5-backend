@@ -66,17 +66,18 @@ public class ConsumptionCommandService {
     public ConsumptionUpdateInfo update(Long consumptionId, ConsumptionSaveCommand command, Long placeId) {
         Consumption consumption = consumptionRepository.findByIdAndUserIdForUpdate(consumptionId, command.userId())
                 .orElseThrow(() -> new BusinessException(ConsumptionErrorCode.CONSUMPTION_NOT_FOUND));
-        consumption.validateImageType(command.imageId());
         selectStickerItem(command);
 
         Long replacedImageId = null;
         if (!Objects.equals(consumption.getImageId(), command.imageId())) {
             attachImageIfPresent(command);
-            ConsumptionImage previousImage = consumptionImageRepository.findByIdAndUserIdForUpdate(
-                    consumption.getImageId(), command.userId()
-            ).orElseThrow(() -> new BusinessException(ConsumptionErrorCode.IMAGE_NOT_FOUND));
-            previousImage.detachForDeletion();
-            replacedImageId = previousImage.getId();
+            if (consumption.getImageId() != null) {
+                ConsumptionImage previousImage = consumptionImageRepository.findByIdAndUserIdForUpdate(
+                        consumption.getImageId(), command.userId()
+                ).orElseThrow(() -> new BusinessException(ConsumptionErrorCode.IMAGE_NOT_FOUND));
+                previousImage.detachForDeletion();
+                replacedImageId = previousImage.getId();
+            }
         }
 
         List<Long> replacedReceiptImageIds = List.of();

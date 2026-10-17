@@ -6,8 +6,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import kr.chapchap.consumption.exception.ConsumptionErrorCode;
-import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.core.persistence.BaseTimeEntity;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -95,12 +93,6 @@ public class Consumption extends BaseTimeEntity {
         );
     }
 
-    public void validateImageType(Long imageId) {
-        if ((this.imageId == null) != (imageId == null)) {
-            throw new BusinessException(ConsumptionErrorCode.IMAGE_TYPE_CHANGE_NOT_ALLOWED);
-        }
-    }
-
     public void update(
             Long placeId,
             LocalDate purchaseDate,
@@ -112,7 +104,6 @@ public class Consumption extends BaseTimeEntity {
             String memo
     ) {
         validate(userId, placeId, purchaseDate, purchaseTime, amount, category, stickerItemId, imageId, memo);
-        validateImageType(imageId);
         this.placeId = placeId;
         this.purchaseDate = purchaseDate;
         this.purchaseTime = purchaseTime;
