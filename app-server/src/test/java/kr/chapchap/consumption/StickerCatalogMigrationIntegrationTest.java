@@ -102,6 +102,41 @@ class StickerCatalogMigrationIntegrationTest {
     }
 
     @Test
+    void 잘못된_스티커_이름을_수정하면서_ID와_기존_기록을_보존한다() {
+        // given
+        migrate(false);
+        insertUserAndPlace();
+        Map<String, Map<String, String>> corrections = Map.of(
+                "운동", Map.of("운동화", "수영"),
+                "미용/뷰티", Map.of("이발소", "사우나", "헤어커트", "헤어"),
+                "편의점/마트", Map.of("물", "휴지"),
+                "쇼핑", Map.of("하이힐", "운동화"),
+                "기타", Map.of("열쇠", "위치핀", "우체국", "병원")
+        );
+        Map<Long, String> expectedNames = new LinkedHashMap<>();
+        Map<Long, Long> recordStickers = new LinkedHashMap<>();
+        corrections.forEach((category, names) -> names.forEach((oldName, newName) -> {
+            Long stickerId = findStickerId(category, oldName);
+            expectedNames.put(stickerId, newName);
+            recordStickers.put(insertConsumption(category, stickerId), stickerId);
+        }));
+
+        // when
+        Flyway.configure().dataSource(dataSource).locations("classpath:db/migration")
+                .target("23").load().migrate();
+
+        // then
+        assertCatalog();
+        expectedNames.forEach((id, name) -> assertThat(jdbcTemplate.queryForObject(
+                "SELECT name FROM sticker_item WHERE id = ?", String.class, id
+        )).isEqualTo(name));
+        recordStickers.forEach((recordId, stickerId) -> assertThat(jdbcTemplate.queryForObject(
+                "SELECT sticker_item_id FROM consumptions WHERE id = ?", Long.class, recordId
+        )).isEqualTo(stickerId));
+        assertThat(findStickerId("편의점/마트", "우유")).isNotNull();
+    }
+
+    @Test
     void 알_수_없는_소비_카테고리는_임의로_바꾸지_않고_마이그레이션을_롤백한다() {
         // given
         insertUserAndPlace();
