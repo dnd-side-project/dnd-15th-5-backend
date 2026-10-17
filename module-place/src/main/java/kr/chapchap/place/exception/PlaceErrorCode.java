@@ -15,6 +15,7 @@ public enum PlaceErrorCode implements ErrorCode {
     PHOTO_NOT_FOUND(HttpStatus.NOT_FOUND, "PLACE004", "장소 사진을 찾을 수 없습니다."),
     PHOTO_REQUEST_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "PLACE005", "월간 장소 사진 조회 한도를 초과했습니다."),
     TEXT_SEARCH_REQUEST_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "PLACE006", "월간 Google Place 검색 한도를 초과했습니다."),
+    LIKE_CONFLICT(HttpStatus.CONFLICT, "PLACE007", "좋아요 상태가 다른 요청에 의해 변경되었습니다. 현재 상태를 확인해 주세요."),
     ;
 
     private final HttpStatus status;

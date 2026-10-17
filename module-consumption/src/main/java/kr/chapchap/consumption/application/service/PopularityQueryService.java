@@ -3,6 +3,7 @@ package kr.chapchap.consumption.application.service;
 import kr.chapchap.consumption.application.info.PlacePopularityInfo;
 import kr.chapchap.consumption.domain.entity.CategoryCountRow;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
+import kr.chapchap.consumption.domain.service.PlacePopularityCalculator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-// module-recommendation이 크로스모듈로 조회하는 공개 API.
+// 추천과 좋아요 목록이 공유하는 장소별 소비기록 집계 API.
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 @Service
@@ -25,9 +26,10 @@ public class PopularityQueryService {
     private final ConsumptionQueryRepository consumptionQueryRepository;
     private final Clock clock;
 
-    //반경 내 인기
     public List<PlacePopularityInfo> aggregatePopularityByPlaceIds(List<Long> placeIds) {
-        return consumptionQueryRepository.aggregatePopularityByPlaceIds(placeIds).stream()
+        return PlacePopularityCalculator.aggregate(
+                consumptionQueryRepository.aggregatePopularityByPlaceIds(placeIds)
+        ).stream()
                 .map(row -> new PlacePopularityInfo(row.placeId(), row.category(), row.visitCount(), row.lastVisitedDate()))
                 .toList();
     }
