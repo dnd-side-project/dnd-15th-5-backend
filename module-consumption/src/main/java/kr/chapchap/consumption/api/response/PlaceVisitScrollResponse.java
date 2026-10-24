@@ -12,13 +12,14 @@ public record PlaceVisitScrollResponse(
         boolean hasNext,
         LocalDate nextCursorPurchaseDate,
         LocalTime nextCursorPurchaseTime,
-        Long nextCursorId
+        Long nextCursorId,
+        String thumbnailUrl
 ) {
     public static PlaceVisitScrollResponse from(PlaceVisitScrollInfo info) {
         List<PlaceVisitResponse> visits = info.visits().stream().map(PlaceVisitResponse::from).toList();
         return new PlaceVisitScrollResponse(
                 visits, info.hasNext(), info.nextCursorPurchaseDate(), info.nextCursorPurchaseTime(),
-                info.nextCursorId()
+                info.nextCursorId(), info.thumbnailUrl()
         );
     }
 
