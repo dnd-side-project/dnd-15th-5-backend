@@ -1,13 +1,18 @@
 package kr.chapchap.consumption.application.service;
 
+import kr.chapchap.consumption.application.info.PlacePopularityInfo;
 import kr.chapchap.consumption.application.info.PlaceSummaryInfo;
 import kr.chapchap.consumption.application.info.VisitedPlaceMarkerInfo;
 import kr.chapchap.consumption.application.info.VisitedPlaceMarkersInfo;
+import kr.chapchap.consumption.application.port.ConsumptionImageStorage;
 import kr.chapchap.consumption.application.port.PlaceLikeLookupPort;
 import kr.chapchap.consumption.application.port.PlaceSummaryLookupPort;
+import kr.chapchap.consumption.domain.entity.ConsumptionImage;
 import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
-import kr.chapchap.consumption.domain.entity.PlaceFirstStickerRow;
+import kr.chapchap.consumption.domain.entity.PlaceLatestImageRow;
+import kr.chapchap.consumption.domain.entity.PlaceLatestStickerRow;
 import kr.chapchap.consumption.domain.entity.StickerItem;
+import kr.chapchap.consumption.domain.repository.ConsumptionImageRepository;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
 import kr.chapchap.consumption.exception.ConsumptionErrorCode;
 import kr.chapchap.core.exception.BusinessException;
@@ -52,7 +57,19 @@ class VisitedPlaceQueryServiceTest {
     private StickerQueryService stickerQueryService;
 
     @Mock
+    private ConsumptionImageRepository consumptionImageRepository;
+
+    @Mock
+    private ConsumptionImageStorage consumptionImageStorage;
+
+    @Mock
+    private PopularityQueryService popularityQueryService;
+
+    @Mock
     private StickerItem stickerItem;
+
+    @Mock
+    private ConsumptionImage consumptionImage;
 
     private VisitedPlaceQueryService sut;
 
@@ -60,7 +77,9 @@ class VisitedPlaceQueryServiceTest {
     void setUp() {
         sut = new VisitedPlaceQueryService(
                 consumptionQueryRepository, placeSummaryLookupPort,
-                placeLikeLookupPort, stickerQueryService, fixedClock);
+                placeLikeLookupPort, stickerQueryService,
+                consumptionImageRepository, consumptionImageStorage,
+                popularityQueryService, fixedClock);
     }
 
     @Test
@@ -81,7 +100,7 @@ class VisitedPlaceQueryServiceTest {
     }
 
     @Test
-    void 사진으로만_기록한_장소도_스티커_없이_마커를_반환한다() {
+    void 사진_기록도_스티커도_없는_장소는_핀_비주얼이_모두_비어있다() {
         // given
         when(consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, null)).thenReturn(List.of(
                 new PlaceCategoryVisitRow(101L, "카페", 1L)
@@ -90,7 +109,8 @@ class VisitedPlaceQueryServiceTest {
                 101L, new PlaceSummaryInfo("테스트카페", "역삼동", "주소", 37.5, 127.0)
         ));
         when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of());
-        when(consumptionQueryRepository.findFirstStickerItemIdsByPlace(eq(1L), any())).thenReturn(List.of());
+        when(consumptionQueryRepository.findLatestImageIdsByPlace(eq(1L), any())).thenReturn(List.of());
+        when(consumptionQueryRepository.findLatestStickerItemsByPlace(eq(1L), any())).thenReturn(List.of());
 
         // when
         VisitedPlaceMarkersInfo result = sut.getVisitedPlaceMarkers(1L, null);
@@ -100,7 +120,35 @@ class VisitedPlaceQueryServiceTest {
         VisitedPlaceMarkerInfo marker = result.markers().getFirst();
         assertThat(marker.placeId()).isEqualTo(101L);
         assertThat(marker.visitCount()).isEqualTo(1L);
-        assertThat(marker.stickerCategory()).isNull();
+        assertThat(marker.stickerName()).isNull();
+        assertThat(marker.imageUrl()).isNull();
+        verifyNoInteractions(stickerQueryService);
+    }
+
+    @Test
+    void 사진_기록이_있으면_스티커보다_사진을_우선해서_핀에_노출한다() {
+        // given
+        when(consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, null)).thenReturn(List.of(
+                new PlaceCategoryVisitRow(101L, "카페", 2L)
+        ));
+        when(placeSummaryLookupPort.findSummaries(any())).thenReturn(Map.of(
+                101L, new PlaceSummaryInfo("테스트카페", "역삼동", "주소", 37.5, 127.0)
+        ));
+        when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of());
+        when(consumptionQueryRepository.findLatestImageIdsByPlace(eq(1L), any()))
+                .thenReturn(List.of(new PlaceLatestImageRow(101L, 7L)));
+        when(consumptionImageRepository.findAllByIdInAndUserId(eq(List.of(7L)), eq(1L)))
+                .thenReturn(List.of(consumptionImage));
+        when(consumptionImage.getId()).thenReturn(7L);
+        when(consumptionImage.getObjectKey()).thenReturn("consumption-images/7");
+        when(consumptionImageStorage.createReadUrl("consumption-images/7")).thenReturn("https://cdn.example.com/7");
+
+        // when
+        VisitedPlaceMarkersInfo result = sut.getVisitedPlaceMarkers(1L, null);
+
+        // then
+        VisitedPlaceMarkerInfo marker = result.markers().getFirst();
+        assertThat(marker.imageUrl()).isEqualTo("https://cdn.example.com/7");
         assertThat(marker.stickerName()).isNull();
         verifyNoInteractions(stickerQueryService);
     }
@@ -117,9 +165,10 @@ class VisitedPlaceQueryServiceTest {
                 102L, new PlaceSummaryInfo("국밥집", "역삼동", "주소2", 37.4999, 127.0364)
         ));
         when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of());
-        when(consumptionQueryRepository.findFirstStickerItemIdsByPlace(eq(1L), any())).thenReturn(List.of(
-                new PlaceFirstStickerRow(101L, 3L),
-                new PlaceFirstStickerRow(102L, 3L)
+        when(consumptionQueryRepository.findLatestImageIdsByPlace(eq(1L), any())).thenReturn(List.of());
+        when(consumptionQueryRepository.findLatestStickerItemsByPlace(eq(1L), any())).thenReturn(List.of(
+                new PlaceLatestStickerRow(101L, 3L),
+                new PlaceLatestStickerRow(102L, 3L)
         ));
         when(stickerQueryService.findItems(any())).thenReturn(Map.of(3L, stickerItem));
         when(consumptionQueryRepository.countDistinctPlacesByUserAndDateRange(eq(1L), any(), any())).thenReturn(0L);
@@ -171,7 +220,7 @@ class VisitedPlaceQueryServiceTest {
     }
 
     @Test
-    void 좋아요한_장소는_liked가_true고_처음_받은_스티커_카테고리와_이름이_채워진다() {
+    void 좋아요한_장소는_liked가_true고_최신_스티커_이름이_채워진다() {
         // given
         when(consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, null)).thenReturn(List.of(
                 new PlaceCategoryVisitRow(101L, "카페", 3L)
@@ -180,10 +229,10 @@ class VisitedPlaceQueryServiceTest {
                 101L, new PlaceSummaryInfo("투썸플레이스", "역삼동", "주소1", 37.5447, 127.0557, "ChIJtest101")
         ));
         when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of(101L));
-        when(consumptionQueryRepository.findFirstStickerItemIdsByPlace(eq(1L), any()))
-                .thenReturn(List.of(new PlaceFirstStickerRow(101L, 3L)));
+        when(consumptionQueryRepository.findLatestImageIdsByPlace(eq(1L), any())).thenReturn(List.of());
+        when(consumptionQueryRepository.findLatestStickerItemsByPlace(eq(1L), any()))
+                .thenReturn(List.of(new PlaceLatestStickerRow(101L, 3L)));
         when(stickerQueryService.findItems(any())).thenReturn(Map.of(3L, stickerItem));
-        when(stickerItem.getCategory()).thenReturn("카페");
         when(stickerItem.getName()).thenReturn("도넛");
         when(consumptionQueryRepository.countDistinctPlacesByUserAndDateRange(eq(1L), any(), any())).thenReturn(0L);
 
@@ -193,14 +242,13 @@ class VisitedPlaceQueryServiceTest {
         // then
         VisitedPlaceMarkerInfo marker = result.markers().get(0);
         assertThat(marker.liked()).isTrue();
-        assertThat(marker.stickerCategory()).isEqualTo("카페");
         assertThat(marker.stickerName()).isEqualTo("도넛");
         assertThat(marker.googlePlaceId()).isEqualTo("ChIJtest101");
     }
 
     @Test
-    void 방문한_적_없어도_좋아요한_장소는_카테고리_없이_마커로_포함된다() {
-        // given: 101L은 방문 기록 있음, 102L은 방문 기록 없이 좋아요만 함
+    void 방문한_적_없고_다른_유저_소비기록도_없는_좋아요_장소는_카테고리_없이_마커로_포함된다() {
+        // given: 101L은 방문 기록 있음, 102L은 방문 기록 없이 좋아요만 함(다른 유저 소비기록도 없음)
         when(consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, null)).thenReturn(List.of(
                 new PlaceCategoryVisitRow(101L, "카페", 5L)
         ));
@@ -209,9 +257,11 @@ class VisitedPlaceQueryServiceTest {
                 101L, new PlaceSummaryInfo("투썸플레이스", "역삼동", "주소1", 37.5447, 127.0557),
                 102L, new PlaceSummaryInfo("국밥집", "역삼동", "주소2", 37.4999, 127.0364)
         ));
-        when(consumptionQueryRepository.findFirstStickerItemIdsByPlace(eq(1L), any()))
-                .thenReturn(List.of(new PlaceFirstStickerRow(101L, 3L)));
+        when(consumptionQueryRepository.findLatestImageIdsByPlace(eq(1L), any())).thenReturn(List.of());
+        when(consumptionQueryRepository.findLatestStickerItemsByPlace(eq(1L), any()))
+                .thenReturn(List.of(new PlaceLatestStickerRow(101L, 3L)));
         when(stickerQueryService.findItems(any())).thenReturn(Map.of(3L, stickerItem));
+        when(popularityQueryService.aggregatePopularityByPlaceIds(List.of(102L))).thenReturn(List.of());
         when(consumptionQueryRepository.countDistinctPlacesByUserAndDateRange(eq(1L), any(), any())).thenReturn(0L);
 
         // when
@@ -225,8 +275,38 @@ class VisitedPlaceQueryServiceTest {
         assertThat(likedOnly.liked()).isTrue();
         assertThat(likedOnly.category()).isNull();
         assertThat(likedOnly.visitCount()).isZero();
-        assertThat(likedOnly.stickerCategory()).isNull();
         assertThat(likedOnly.stickerName()).isNull();
+    }
+
+    @Test
+    void 방문한_적_없어도_다른_유저가_소비기록을_남긴_좋아요_장소는_카테고리가_채워진다() {
+        // given: 102L은 내가 방문한 적 없지만, 다른 유저가 거기서 소비한 기록이 있어 카테고리를 끌어올 수 있음
+        when(consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, null)).thenReturn(List.of(
+                new PlaceCategoryVisitRow(101L, "카페", 5L)
+        ));
+        when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of(102L));
+        when(placeSummaryLookupPort.findSummaries(any())).thenReturn(Map.of(
+                101L, new PlaceSummaryInfo("투썸플레이스", "역삼동", "주소1", 37.5447, 127.0557),
+                102L, new PlaceSummaryInfo("신논현 헬스장 매점", "신논현동", "주소2", 37.5045, 127.0248)
+        ));
+        when(consumptionQueryRepository.findLatestImageIdsByPlace(eq(1L), any())).thenReturn(List.of());
+        when(consumptionQueryRepository.findLatestStickerItemsByPlace(eq(1L), any()))
+                .thenReturn(List.of(new PlaceLatestStickerRow(101L, 3L)));
+        when(stickerQueryService.findItems(any())).thenReturn(Map.of(3L, stickerItem));
+        when(popularityQueryService.aggregatePopularityByPlaceIds(List.of(102L))).thenReturn(List.of(
+                new PlacePopularityInfo(102L, "편의점/마트", 1L, LocalDate.of(2026, 7, 23))
+        ));
+        when(consumptionQueryRepository.countDistinctPlacesByUserAndDateRange(eq(1L), any(), any())).thenReturn(0L);
+
+        // when
+        VisitedPlaceMarkersInfo result = sut.getVisitedPlaceMarkers(1L, null);
+
+        // then
+        VisitedPlaceMarkerInfo likedOnly = result.markers().stream()
+                .filter(marker -> marker.placeId().equals(102L))
+                .findFirst().orElseThrow();
+        assertThat(likedOnly.category()).isEqualTo("편의점/마트");
+        assertThat(likedOnly.visitCount()).isZero();
     }
 
     @Test

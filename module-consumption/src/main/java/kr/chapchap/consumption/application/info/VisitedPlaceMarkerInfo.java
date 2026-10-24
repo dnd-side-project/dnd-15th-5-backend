@@ -8,8 +8,8 @@ public record VisitedPlaceMarkerInfo(
         Double longitude,
         long visitCount,
         boolean liked,
-        String stickerCategory,
         String stickerName,
+        String imageUrl,
         String googlePlaceId
 ) {
 }

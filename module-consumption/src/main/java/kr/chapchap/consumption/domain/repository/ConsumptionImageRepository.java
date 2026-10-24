@@ -18,6 +18,8 @@ public interface ConsumptionImageRepository extends JpaRepository<ConsumptionIma
 
     Optional<ConsumptionImage> findByIdAndUserId(Long id, Long userId);
 
+    List<ConsumptionImage> findAllByIdInAndUserId(List<Long> ids, Long userId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             SELECT consumptionImage

@@ -1,13 +1,18 @@
 package kr.chapchap.consumption.application.service;
 
+import kr.chapchap.consumption.application.info.PlacePopularityInfo;
 import kr.chapchap.consumption.application.info.PlaceSummaryInfo;
 import kr.chapchap.consumption.application.info.VisitedPlaceMarkerInfo;
 import kr.chapchap.consumption.application.info.VisitedPlaceMarkersInfo;
+import kr.chapchap.consumption.application.port.ConsumptionImageStorage;
 import kr.chapchap.consumption.application.port.PlaceLikeLookupPort;
 import kr.chapchap.consumption.application.port.PlaceSummaryLookupPort;
+import kr.chapchap.consumption.domain.entity.ConsumptionImage;
 import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
-import kr.chapchap.consumption.domain.entity.PlaceFirstStickerRow;
+import kr.chapchap.consumption.domain.entity.PlaceLatestImageRow;
+import kr.chapchap.consumption.domain.entity.PlaceLatestStickerRow;
 import kr.chapchap.consumption.domain.entity.StickerItem;
+import kr.chapchap.consumption.domain.repository.ConsumptionImageRepository;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
 import kr.chapchap.consumption.exception.ConsumptionErrorCode;
 import kr.chapchap.core.exception.BusinessException;
@@ -36,6 +41,9 @@ public class VisitedPlaceQueryService {
     private final PlaceSummaryLookupPort placeSummaryLookupPort; //가게 이름/위치 등 조회
     private final PlaceLikeLookupPort placeLikeLookupPort; //좋아요 여부 조회
     private final StickerQueryService stickerQueryService; //스티커 조회
+    private final ConsumptionImageRepository consumptionImageRepository; //사진 조회
+    private final ConsumptionImageStorage consumptionImageStorage; //사진 URL 변환
+    private final PopularityQueryService popularityQueryService; //좋아요만 한 가게의 카테고리 조회(전체 유저 소비기록 기준)
     private final Clock clock;
 
     public VisitedPlaceMarkersInfo getVisitedPlaceMarkers(Long userId, List<String> categories) {
@@ -57,15 +65,16 @@ public class VisitedPlaceQueryService {
         List<Long> allPlaceIds = Stream.concat(visitedPlaceIds.stream(), likedOnlyPlaceIds.stream()).toList();
         Map<Long, PlaceSummaryInfo> summaries = placeSummaryLookupPort.findSummaries(allPlaceIds);
         requireAllLocationsPresent(allPlaceIds, summaries);
-        Map<Long, StickerItem> firstStickerByPlace = findFirstStickersByPlace(userId, visitedPlaceIds);
+        Map<Long, PlacePinVisual> pinVisualsByPlace = resolvePinVisuals(userId, visitedPlaceIds);
 
         List<VisitedPlaceMarkerInfo> visitedMarkers = rows.stream()
-                .map(row -> toMarkerInfo(row, summaries, likedPlaceIds, firstStickerByPlace))
+                .map(row -> toMarkerInfo(row, summaries, likedPlaceIds, pinVisualsByPlace))
                 .toList();
 
         // 방문X 좋아요
+        Map<Long, String> categoriesByLikedOnlyPlace = resolveLikedOnlyCategories(likedOnlyPlaceIds);
         List<VisitedPlaceMarkerInfo> likedOnlyMarkers = likedOnlyPlaceIds.stream()
-                .map(placeId -> toLikedOnlyMarkerInfo(placeId, summaries))
+                .map(placeId -> toLikedOnlyMarkerInfo(placeId, summaries, categoriesByLikedOnlyPlace))
                 .toList();
 
         List<VisitedPlaceMarkerInfo> markers = Stream.concat(visitedMarkers.stream(), likedOnlyMarkers.stream())
@@ -82,23 +91,84 @@ public class VisitedPlaceQueryService {
     }
 
 
-    private Map<Long, StickerItem> findFirstStickersByPlace(Long userId, List<Long> visitedPlaceIds) {
+    // 핀 비주얼: 가게별 사진 기록이 있으면 최신 사진, 없으면 최신 스티커
+    private Map<Long, PlacePinVisual> resolvePinVisuals(Long userId, List<Long> visitedPlaceIds) {
         if (visitedPlaceIds.isEmpty()) {
             return Map.of();
         }
 
-        List<PlaceFirstStickerRow> firstStickerRows = consumptionQueryRepository.findFirstStickerItemIdsByPlace(userId, visitedPlaceIds);
-        if (firstStickerRows.isEmpty()) {
+        Map<Long, String> imageUrlsByPlace = resolveLatestImageUrls(userId, visitedPlaceIds);
+        List<Long> placeIdsWithoutImage = visitedPlaceIds.stream()
+                .filter(placeId -> !imageUrlsByPlace.containsKey(placeId))
+                .toList();
+        Map<Long, StickerItem> stickersByPlace = resolveLatestStickers(userId, placeIdsWithoutImage);
+
+        Map<Long, PlacePinVisual> visuals = new java.util.HashMap<>();
+        for (Long placeId : visitedPlaceIds) {
+            String imageUrl = imageUrlsByPlace.get(placeId);
+            if (imageUrl != null) {
+                visuals.put(placeId, new PlacePinVisual(null, imageUrl));
+                continue;
+            }
+            StickerItem stickerItem = stickersByPlace.get(placeId);
+            if (stickerItem != null) {
+                visuals.put(placeId, new PlacePinVisual(stickerItem, null));
+            }
+        }
+        return visuals;
+    }
+
+    private Map<Long, String> resolveLatestImageUrls(Long userId, List<Long> placeIds) {
+        List<PlaceLatestImageRow> rows = consumptionQueryRepository.findLatestImageIdsByPlace(userId, placeIds);
+        if (rows.isEmpty()) {
             return Map.of();
         }
 
-        List<Long> stickerItemIds = firstStickerRows.stream().map(PlaceFirstStickerRow::stickerItemId).toList();
+        List<Long> imageIds = rows.stream().map(PlaceLatestImageRow::imageId).toList();
+        Map<Long, ConsumptionImage> imagesById = consumptionImageRepository.findAllByIdInAndUserId(imageIds, userId)
+                .stream()
+                .collect(Collectors.toMap(ConsumptionImage::getId, image -> image));
+
+        Map<Long, String> urlsByPlace = new java.util.HashMap<>();
+        for (PlaceLatestImageRow row : rows) {
+            ConsumptionImage image = imagesById.get(row.imageId());
+            if (image != null) {
+                urlsByPlace.put(row.placeId(), consumptionImageStorage.createReadUrl(image.getObjectKey()));
+            }
+        }
+        return urlsByPlace;
+    }
+
+    private Map<Long, StickerItem> resolveLatestStickers(Long userId, List<Long> placeIds) {
+        if (placeIds.isEmpty()) {
+            return Map.of();
+        }
+
+        List<PlaceLatestStickerRow> rows = consumptionQueryRepository.findLatestStickerItemsByPlace(userId, placeIds);
+        if (rows.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> stickerItemIds = rows.stream().map(PlaceLatestStickerRow::stickerItemId).toList();
         Map<Long, StickerItem> stickerItemsById = stickerQueryService.findItems(stickerItemIds);
 
-        return firstStickerRows.stream()
+        return rows.stream()
                 .filter(row -> stickerItemsById.containsKey(row.stickerItemId()))
-                .collect(Collectors.toMap(PlaceFirstStickerRow::placeId,
+                .collect(Collectors.toMap(PlaceLatestStickerRow::placeId,
                         row -> stickerItemsById.get(row.stickerItemId())));
+    }
+
+    private record PlacePinVisual(StickerItem stickerItem, String imageUrl) {
+    }
+
+    // 좋아요만 하고 방문한 적 없는 가게도, 다른 유저의 소비기록이 있으면 그걸 기준으로 카테고리를 채운다
+    private Map<Long, String> resolveLikedOnlyCategories(List<Long> likedOnlyPlaceIds) {
+        if (likedOnlyPlaceIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return popularityQueryService.aggregatePopularityByPlaceIds(likedOnlyPlaceIds).stream()
+                .collect(Collectors.toMap(PlacePopularityInfo::placeId, PlacePopularityInfo::category));
     }
 
     private void requireAllLocationsPresent(List<Long> placeIds, Map<Long, PlaceSummaryInfo> summaries) {
@@ -113,9 +183,10 @@ public class VisitedPlaceQueryService {
     }
 
     private VisitedPlaceMarkerInfo toMarkerInfo(PlaceCategoryVisitRow row, Map<Long, PlaceSummaryInfo> summaries,
-                                                 Set<Long> likedPlaceIds, Map<Long, StickerItem> firstStickerByPlace) {
+                                                 Set<Long> likedPlaceIds, Map<Long, PlacePinVisual> pinVisualsByPlace) {
         PlaceSummaryInfo summary = summaries.get(row.placeId());
-        StickerItem stickerItem = firstStickerByPlace.get(row.placeId());
+        PlacePinVisual visual = pinVisualsByPlace.get(row.placeId());
+        StickerItem stickerItem = visual != null ? visual.stickerItem() : null;
 
         return new VisitedPlaceMarkerInfo(
                 row.placeId(),
@@ -125,19 +196,20 @@ public class VisitedPlaceQueryService {
                 summary.longitude(),
                 row.visitCount(),
                 likedPlaceIds.contains(row.placeId()),
-                stickerItem != null ? stickerItem.getCategory() : null,
                 stickerItem != null ? stickerItem.getName() : null,
+                visual != null ? visual.imageUrl() : null,
                 summary.googlePlaceId()
         );
     }
 
-    private VisitedPlaceMarkerInfo toLikedOnlyMarkerInfo(Long placeId, Map<Long, PlaceSummaryInfo> summaries) {
+    private VisitedPlaceMarkerInfo toLikedOnlyMarkerInfo(Long placeId, Map<Long, PlaceSummaryInfo> summaries,
+                                                           Map<Long, String> categoriesByLikedOnlyPlace) {
         PlaceSummaryInfo summary = summaries.get(placeId);
 
         return new VisitedPlaceMarkerInfo(
                 placeId,
                 summary.name() != null ? summary.name() : UNKNOWN_PLACE_NAME,
-                null,
+                categoriesByLikedOnlyPlace.get(placeId),
                 summary.latitude(),
                 summary.longitude(),
                 0L,

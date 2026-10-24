@@ -3,7 +3,8 @@ package kr.chapchap.consumption.domain.repository;
 import kr.chapchap.consumption.domain.entity.CategoryCountRow;
 import kr.chapchap.consumption.domain.entity.Consumption;
 import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
-import kr.chapchap.consumption.domain.entity.PlaceFirstStickerRow;
+import kr.chapchap.consumption.domain.entity.PlaceLatestImageRow;
+import kr.chapchap.consumption.domain.entity.PlaceLatestStickerRow;
 import kr.chapchap.consumption.domain.entity.PlacePopularityRow;
 import kr.chapchap.consumption.domain.entity.PlaceStickerRow;
 import kr.chapchap.consumption.domain.entity.PlaceVisitStatsRow;
@@ -38,7 +39,10 @@ public interface ConsumptionQueryRepository {
 
     List<PlaceCategoryVisitRow> aggregateVisitedPlacesByCategory(Long userId, List<String> categories);
 
-    List<PlaceFirstStickerRow> findFirstStickerItemIdsByPlace(Long userId, List<Long> placeIds);
+    // 가게별 가장 최근 스티커/사진 기록 (홈 지도 핀: 사진 우선, 없으면 스티커)
+    List<PlaceLatestStickerRow> findLatestStickerItemsByPlace(Long userId, List<Long> placeIds);
+
+    List<PlaceLatestImageRow> findLatestImageIdsByPlace(Long userId, List<Long> placeIds);
 
     //  module-recommendation의 가게 추천 좁혀진 placeIds만 대상
     List<PlacePopularityRow> aggregatePopularityByPlaceIds(List<Long> placeIds);
