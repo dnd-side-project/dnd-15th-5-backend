@@ -93,3 +93,7 @@ chapchap:
       reverse-geocoding-uri: https://sgisapi.mods.go.kr/OpenAPI3/addr/rgeocodewgs84.json
       connect-timeout: 3s
       read-timeout: 5s
+    legal-dong:
+      base-uri: https://apis.data.go.kr
+      connect-timeout: 3s
+      read-timeout: 1m

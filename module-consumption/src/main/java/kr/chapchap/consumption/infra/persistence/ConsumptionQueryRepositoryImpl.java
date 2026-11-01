@@ -9,8 +9,11 @@ import jakarta.persistence.Query;
 import kr.chapchap.consumption.domain.entity.CategoryCountRow;
 import kr.chapchap.consumption.domain.entity.Consumption;
 import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
-import kr.chapchap.consumption.domain.entity.PlaceFirstStickerRow;
+import kr.chapchap.consumption.domain.entity.PlaceImageRecordRow;
+import kr.chapchap.consumption.domain.entity.PlaceLatestImageRow;
+import kr.chapchap.consumption.domain.entity.PlaceLatestStickerRow;
 import kr.chapchap.consumption.domain.entity.PlacePopularityRow;
+import kr.chapchap.consumption.domain.entity.PlaceRecentRecordRow;
 import kr.chapchap.consumption.domain.entity.PlaceStickerRow;
 import kr.chapchap.consumption.domain.entity.PlaceVisitStatsRow;
 import kr.chapchap.consumption.domain.entity.QConsumption;
@@ -203,7 +206,7 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
 
     @Override
     @SuppressWarnings("unchecked")
-    public List<PlaceFirstStickerRow> findFirstStickerItemIdsByPlace(Long userId, List<Long> placeIds) {
+    public List<PlaceLatestStickerRow> findLatestStickerItemsByPlace(Long userId, List<Long> placeIds) {
         if (placeIds == null || placeIds.isEmpty()) {
             return List.of();
         }
@@ -212,14 +215,36 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
                 "SELECT DISTINCT ON (place_id) place_id, sticker_item_id "
                         + "FROM consumptions "
                         + "WHERE user_id = :userId AND place_id IN (:placeIds) AND sticker_item_id IS NOT NULL "
-                        + "ORDER BY place_id, purchase_date, purchase_time NULLS LAST, id"
+                        + "ORDER BY place_id, purchase_date DESC, purchase_time DESC NULLS LAST, id DESC"
         );
         query.setParameter("userId", userId);
         query.setParameter("placeIds", placeIds);
 
         List<Object[]> rows = query.getResultList();
         return rows.stream()
-                .map(row -> new PlaceFirstStickerRow(((Number) row[0]).longValue(), ((Number) row[1]).longValue()))
+                .map(row -> new PlaceLatestStickerRow(((Number) row[0]).longValue(), ((Number) row[1]).longValue()))
+                .toList();
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public List<PlaceLatestImageRow> findLatestImageIdsByPlace(Long userId, List<Long> placeIds) {
+        if (placeIds == null || placeIds.isEmpty()) {
+            return List.of();
+        }
+
+        Query query = entityManager.createNativeQuery(
+                "SELECT DISTINCT ON (place_id) place_id, image_id "
+                        + "FROM consumptions "
+                        + "WHERE user_id = :userId AND place_id IN (:placeIds) AND image_id IS NOT NULL "
+                        + "ORDER BY place_id, purchase_date DESC, purchase_time DESC NULLS LAST, id DESC"
+        );
+        query.setParameter("userId", userId);
+        query.setParameter("placeIds", placeIds);
+
+        List<Object[]> rows = query.getResultList();
+        return rows.stream()
+                .map(row -> new PlaceLatestImageRow(((Number) row[0]).longValue(), ((Number) row[1]).longValue()))
                 .toList();
     }
 
@@ -375,6 +400,27 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
     }
 
     @Override
+    public List<PlaceRecentRecordRow> findRecentRecordsByPlace(Long userId, Long placeId, int limit) {
+        QConsumption consumption = QConsumption.consumption;
+
+        return queryFactory
+                .select(Projections.constructor(PlaceRecentRecordRow.class,
+                        consumption.stickerItemId,
+                        consumption.imageId,
+                        consumption.category,
+                        consumption.purchaseDate))
+                .from(consumption)
+                .where(
+                        consumption.userId.eq(userId),
+                        consumption.placeId.eq(placeId)
+                )
+                .orderBy(consumption.purchaseDate.desc(), consumption.purchaseTime.desc().nullsLast(),
+                        consumption.id.desc())
+                .limit(limit)
+                .fetch();
+    }
+
+    @Override
     public List<StickerCountRow> aggregateStickerCountsByPlace(Long userId, Long placeId) {
         QConsumption consumption = QConsumption.consumption;
 
@@ -390,6 +436,25 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
                 )
                 .groupBy(consumption.stickerItemId)
                 .orderBy(consumption.count().desc())
+                .fetch();
+    }
+
+    @Override
+    public List<PlaceImageRecordRow> findAllImageRecordsByPlace(Long userId, Long placeId) {
+        QConsumption consumption = QConsumption.consumption;
+
+        return queryFactory
+                .select(Projections.constructor(PlaceImageRecordRow.class,
+                        consumption.imageId,
+                        consumption.category))
+                .from(consumption)
+                .where(
+                        consumption.userId.eq(userId),
+                        consumption.placeId.eq(placeId),
+                        consumption.imageId.isNotNull()
+                )
+                .orderBy(consumption.purchaseDate.desc(), consumption.purchaseTime.desc().nullsLast(),
+                        consumption.id.desc())
                 .fetch();
     }
 

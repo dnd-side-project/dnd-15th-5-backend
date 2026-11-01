@@ -43,3 +43,5 @@ chapchap:
     sgis:
       consumer-key: local-sgis-consumer-key
       consumer-secret: local-sgis-consumer-secret
+    legal-dong:
+      service-key: local-legal-dong-service-key

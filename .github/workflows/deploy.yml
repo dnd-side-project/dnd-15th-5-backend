@@ -95,6 +95,7 @@ jobs:
           CLOVA_OCR_API_GATEWAY_KEY=${{ secrets.CLOVA_OCR_API_GATEWAY_KEY }}
           SGIS_CONSUMER_KEY=${{ secrets.SGIS_CONSUMER_KEY }}
           SGIS_CONSUMER_SECRET=${{ secrets.SGIS_CONSUMER_SECRET }}
+          LEGAL_DONG_SERVICE_KEY=${{ secrets.LEGAL_DONG_SERVICE_KEY }}
           TZ=Asia/Seoul"
 
           source infra/deploy/ssm-secure-parameter.sh

@@ -3,8 +3,11 @@ package kr.chapchap.consumption.domain.repository;
 import kr.chapchap.consumption.domain.entity.CategoryCountRow;
 import kr.chapchap.consumption.domain.entity.Consumption;
 import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
-import kr.chapchap.consumption.domain.entity.PlaceFirstStickerRow;
+import kr.chapchap.consumption.domain.entity.PlaceImageRecordRow;
+import kr.chapchap.consumption.domain.entity.PlaceLatestImageRow;
+import kr.chapchap.consumption.domain.entity.PlaceLatestStickerRow;
 import kr.chapchap.consumption.domain.entity.PlacePopularityRow;
+import kr.chapchap.consumption.domain.entity.PlaceRecentRecordRow;
 import kr.chapchap.consumption.domain.entity.PlaceStickerRow;
 import kr.chapchap.consumption.domain.entity.PlaceVisitStatsRow;
 import kr.chapchap.consumption.domain.entity.StickerCountRow;
@@ -38,7 +41,10 @@ public interface ConsumptionQueryRepository {
 
     List<PlaceCategoryVisitRow> aggregateVisitedPlacesByCategory(Long userId, List<String> categories);
 
-    List<PlaceFirstStickerRow> findFirstStickerItemIdsByPlace(Long userId, List<Long> placeIds);
+    // 가게별 가장 최근 스티커/사진 기록 (홈 지도 핀: 사진 우선, 없으면 스티커)
+    List<PlaceLatestStickerRow> findLatestStickerItemsByPlace(Long userId, List<Long> placeIds);
+
+    List<PlaceLatestImageRow> findLatestImageIdsByPlace(Long userId, List<Long> placeIds);
 
     //  module-recommendation의 가게 추천 좁혀진 placeIds만 대상
     List<PlacePopularityRow> aggregatePopularityByPlaceIds(List<Long> placeIds);
@@ -56,10 +62,16 @@ public interface ConsumptionQueryRepository {
 
     long countVisits(Long userId, Long placeId, LocalDate from, LocalDate toExclusive);
 
-    // from/toExclusive가 둘 다 null이면 전체기간 (장소 상세용), 아니면 그 기간으로 좁힘 (월간 리포트 1위 장소용)
+    // from/toExclusive가 둘 다 null이면 전체기간, 아니면 그 기간으로 좁힘 (월간 리포트 1위 장소용 - 스티커 기록만)
     List<PlaceStickerRow> findRecentStickersByPlace(Long userId, Long placeId, LocalDate from, LocalDate toExclusive, int limit);
 
+    // 장소 상세 썸네일 줄 전용 - 스티커/사진 기록을 구분 없이 최신순으로 섞어서 조회
+    List<PlaceRecentRecordRow> findRecentRecordsByPlace(Long userId, Long placeId, int limit);
+
     List<StickerCountRow> aggregateStickerCountsByPlace(Long userId, Long placeId);
+
+    // 장소에서 지금까지 모은 사진 전체
+    List<PlaceImageRecordRow> findAllImageRecordsByPlace(Long userId, Long placeId);
 
     List<Consumption> searchPlaceVisitsByCursor(Long userId, Long placeId, LocalDate cursorPurchaseDate,
                                                  LocalTime cursorPurchaseTime, Long cursorId, int fetchSize);

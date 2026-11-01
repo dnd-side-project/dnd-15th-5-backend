@@ -9,7 +9,8 @@ public record PlaceVisitScrollInfo(
         boolean hasNext,
         LocalDate nextCursorPurchaseDate,
         LocalTime nextCursorPurchaseTime,
-        Long nextCursorId
+        Long nextCursorId,
+        String thumbnailUrl
 ) {
 
     public record VisitInfo(Long consumptionId, LocalDate visitedAt, Long amount) {

@@ -8,17 +8,22 @@ import kr.chapchap.consumption.application.info.PlaceDetailInfo.StickerInfo;
 import kr.chapchap.consumption.application.info.PlaceVisitScrollInfo;
 import kr.chapchap.consumption.application.info.PlaceSummaryInfo;
 import kr.chapchap.consumption.application.info.PlaceVisitScrollInfo.VisitInfo;
+import kr.chapchap.consumption.application.port.ConsumptionImageStorage;
 import kr.chapchap.consumption.application.port.PlaceSummaryLookupPort;
 import kr.chapchap.consumption.domain.entity.Consumption;
+import kr.chapchap.consumption.domain.entity.ConsumptionImage;
 import kr.chapchap.consumption.domain.entity.PlaceCategoryVisitRow;
-import kr.chapchap.consumption.domain.entity.PlaceStickerRow;
+import kr.chapchap.consumption.domain.entity.PlaceImageRecordRow;
+import kr.chapchap.consumption.domain.entity.PlaceRecentRecordRow;
 import kr.chapchap.consumption.domain.entity.PlaceVisitStatsRow;
 import kr.chapchap.consumption.domain.entity.StickerCountRow;
 import kr.chapchap.consumption.domain.entity.StickerItem;
+import kr.chapchap.consumption.domain.repository.ConsumptionImageRepository;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
 import kr.chapchap.consumption.domain.service.PlaceVisitCommentGenerator;
 import kr.chapchap.consumption.exception.ConsumptionErrorCode;
 import kr.chapchap.core.exception.BusinessException;
+import kr.chapchap.place.application.info.PlacePhotoInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +33,8 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -43,6 +50,9 @@ public class PlaceDetailQueryService {
     private final StickerQueryService stickerQueryService;
     private final PlaceSummaryLookupPort placeSummaryLookupPort;
     private final PlaceVisitCommentGenerator placeVisitCommentGenerator;
+    private final ConsumptionImageRepository consumptionImageRepository;
+    private final ConsumptionImageStorage consumptionImageStorage;
+    private final PlaceThumbnailBatchLookup placeThumbnailBatchLookup;
     private final Clock clock;
 
     // 장소 상세 (헤더)
@@ -100,10 +110,22 @@ public class PlaceDetailQueryService {
                 hasNext,
                 last != null ? last.getPurchaseDate() : null,
                 last != null ? last.getPurchaseTime() : null,
-                last != null ? last.getId() : null
+                last != null ? last.getId() : null,
+                resolvePlaceThumbnail(command.placeId())
         );
     }
 
+    // 구글 섬네일 조회
+    private String resolvePlaceThumbnail(Long placeId) {
+        String googlePlaceId = placeSummaryLookupPort.findSummaries(List.of(placeId))
+                .getOrDefault(placeId, UNKNOWN_PLACE_SUMMARY)
+                .googlePlaceId();
+        if (googlePlaceId == null || googlePlaceId.isBlank()) {
+            return null;
+        }
+        PlacePhotoInfo thumbnail = placeThumbnailBatchLookup.findThumbnails(Map.of(placeId, googlePlaceId)).get(placeId);
+        return thumbnail != null ? thumbnail.thumbnailUrl() : null;
+    }
 
     private boolean isRegular(Long userId, Long placeId) {
         List<PlaceCategoryVisitRow> top = consumptionQueryRepository.aggregatePlaceRankingByCursor(
@@ -114,29 +136,54 @@ public class PlaceDetailQueryService {
     }
 
     private List<StickerInfo> resolveRecentStickers(Long userId, Long placeId) {
-        List<PlaceStickerRow> rows = consumptionQueryRepository.findRecentStickersByPlace(
-                userId, placeId, null, null, RECENT_STICKER_LIMIT);
-        Map<Long, StickerItem> stickerItems = stickerQueryService.findItems(
-                rows.stream().map(PlaceStickerRow::stickerItemId).toList());
+        List<PlaceRecentRecordRow> rows = consumptionQueryRepository.findRecentRecordsByPlace(
+                userId, placeId, RECENT_STICKER_LIMIT);
+
+        List<Long> stickerItemIds = rows.stream()
+                .map(PlaceRecentRecordRow::stickerItemId).filter(id -> id != null).toList();
+        Map<Long, StickerItem> stickerItems = stickerQueryService.findItems(stickerItemIds);
+
+        List<Long> imageIds = rows.stream()
+                .map(PlaceRecentRecordRow::imageId).filter(id -> id != null).toList();
+        Map<Long, String> imageUrlsById = imageIds.isEmpty() ? Map.of() : consumptionImageRepository
+                .findAllByIdInAndUserId(imageIds, userId).stream()
+                .collect(Collectors.toMap(ConsumptionImage::getId,
+                        image -> consumptionImageStorage.createReadUrl(image.getObjectKey())));
 
         return rows.stream()
                 .map(row -> {
+                    if (row.imageId() != null) {
+                        return new StickerInfo(row.category(), null, imageUrlsById.get(row.imageId()), row.receivedAt());
+                    }
                     StickerItem stickerItem = stickerItems.get(row.stickerItemId());
-                    return new StickerInfo(stickerItem.getCategory(), stickerItem.getName(), row.receivedAt());
+                    return new StickerInfo(row.category(), stickerItem.getName(), null, row.receivedAt());
                 })
                 .toList();
     }
 
-    private List<StickerCountInfo> resolveStickerSummary(Long userId, Long placeId) {
-        List<StickerCountRow> rows = consumptionQueryRepository.aggregateStickerCountsByPlace(userId, placeId);
-        Map<Long, StickerItem> stickerItems = stickerQueryService.findItems(
-                rows.stream().map(StickerCountRow::stickerItemId).toList());
 
-        return rows.stream()
+    private List<StickerCountInfo> resolveStickerSummary(Long userId, Long placeId) {
+        List<StickerCountRow> stickerRows = consumptionQueryRepository.aggregateStickerCountsByPlace(userId, placeId);
+        Map<Long, StickerItem> stickerItems = stickerQueryService.findItems(
+                stickerRows.stream().map(StickerCountRow::stickerItemId).toList());
+
+        List<StickerCountInfo> stickerSummaries = stickerRows.stream()
                 .map(row -> {
                     StickerItem stickerItem = stickerItems.get(row.stickerItemId());
-                    return new StickerCountInfo(stickerItem.getCategory(), stickerItem.getName(), row.count());
+                    return new StickerCountInfo(stickerItem.getCategory(), stickerItem.getName(), null, row.count());
                 })
                 .toList();
+
+        List<PlaceImageRecordRow> imageRows = consumptionQueryRepository.findAllImageRecordsByPlace(userId, placeId);
+        List<Long> imageIds = imageRows.stream().map(PlaceImageRecordRow::imageId).toList();
+        Map<Long, String> imageUrlsById = imageIds.isEmpty() ? Map.of() : consumptionImageRepository
+                .findAllByIdInAndUserId(imageIds, userId).stream()
+                .collect(Collectors.toMap(ConsumptionImage::getId,
+                        image -> consumptionImageStorage.createReadUrl(image.getObjectKey())));
+        List<StickerCountInfo> imageSummaries = imageRows.stream()
+                .map(row -> new StickerCountInfo(row.category(), null, imageUrlsById.get(row.imageId()), 1L))
+                .toList();
+
+        return Stream.concat(stickerSummaries.stream(), imageSummaries.stream()).toList();
     }
 }

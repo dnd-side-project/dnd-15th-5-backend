@@ -375,11 +375,12 @@ class ConsumptionUpdateIntegrationTest {
         assertThat(changed.getImageId()).isEqualTo(image.getId());
         assertThat(images.findById(image.getId()).orElseThrow().getStatus()).isEqualTo(ConsumptionImageStatus.ATTACHED);
         then(imageStorage).shouldHaveNoInteractions();
+        given(imageStorage.createReadUrl(image.getObjectKey())).willReturn("https://example.com/signed-photo");
         mvc.perform(get("/v1/consumptions/visited-places").with(userJwt(userId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.places[0].placeId").value(placeId))
-                .andExpect(jsonPath("$.data.places[0].stickerCategory").isEmpty())
-                .andExpect(jsonPath("$.data.places[0].stickerName").isEmpty());
+                .andExpect(jsonPath("$.data.places[0].stickerName").isEmpty())
+                .andExpect(jsonPath("$.data.places[0].imageUrl").value("https://example.com/signed-photo"));
     }
 
     @ParameterizedTest
