@@ -3,6 +3,7 @@ package kr.chapchap.account.application.service;
 import kr.chapchap.account.application.command.AccountUpdateCommand;
 import kr.chapchap.account.application.event.ProfileImageCleanupEvent;
 import kr.chapchap.account.application.info.AccountInfo;
+import kr.chapchap.account.application.info.NotificationSettingsInfo;
 import kr.chapchap.account.application.port.ProfileImageStorage;
 import kr.chapchap.account.domain.entity.ProfileImageCode;
 import kr.chapchap.account.domain.entity.User;
@@ -46,6 +47,17 @@ public class AccountCommandService {
         User user = getActiveUser(userId);
         user.updateProfile(nickname, ProfileImageCode.from(profileImageCode));
         return AccountInfo.from(user, null);
+    }
+
+    @Transactional
+    public NotificationSettingsInfo updateNotificationSettings(
+            Long userId,
+            Boolean consumptionReminderEnabled,
+            Boolean monthlyReportEnabled
+    ) {
+        User user = getActiveUser(userId);
+        user.updateNotificationSettings(consumptionReminderEnabled, monthlyReportEnabled);
+        return NotificationSettingsInfo.from(user);
     }
 
     private void validateCommand(AccountUpdateCommand command) {

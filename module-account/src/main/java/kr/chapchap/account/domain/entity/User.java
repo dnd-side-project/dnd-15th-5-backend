@@ -55,8 +55,11 @@ public class User extends BaseTimeEntity {
     @Column(name = "push_token", length = 512)
     private String pushToken;
 
-    @Column(name = "push_enabled", nullable = false)
-    private boolean pushEnabled = true;
+    @Column(name = "consumption_reminder_enabled", nullable = false)
+    private boolean consumptionReminderEnabled = true;
+
+    @Column(name = "monthly_report_enabled", nullable = false)
+    private boolean monthlyReportEnabled = true;
 
     @Column(name = "push_token_updated_at")
     private LocalDateTime pushTokenUpdatedAt;
@@ -77,8 +80,19 @@ public class User extends BaseTimeEntity {
         this.pushTokenUpdatedAt = null;
     }
 
-    public void updatePushEnabled(boolean pushEnabled) {
-        this.pushEnabled = pushEnabled;
+    public void updateNotificationSettings(
+            Boolean consumptionReminderEnabled,
+            Boolean monthlyReportEnabled
+    ) {
+        if (consumptionReminderEnabled == null && monthlyReportEnabled == null) {
+            throw new BusinessException(AccountErrorCode.ACCOUNT_UPDATE_VALUE_REQUIRED);
+        }
+        if (consumptionReminderEnabled != null) {
+            this.consumptionReminderEnabled = consumptionReminderEnabled;
+        }
+        if (monthlyReportEnabled != null) {
+            this.monthlyReportEnabled = monthlyReportEnabled;
+        }
     }
 
     public static User create(String nickname) {
