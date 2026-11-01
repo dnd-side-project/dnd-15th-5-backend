@@ -29,3 +29,5 @@ chapchap:
     sgis:
       consumer-key: test-sgis-consumer-key
       consumer-secret: test-sgis-consumer-secret
+    legal-dong:
+      service-key: test-legal-dong-service-key
