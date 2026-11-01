@@ -3,6 +3,7 @@ package kr.chapchap.account;
 import kr.chapchap.account.api.controller.AccountController;
 import kr.chapchap.account.api.response.AuthenticationResponseHandler;
 import kr.chapchap.account.application.info.AccountInfo;
+import kr.chapchap.account.application.info.NotificationSettingsInfo;
 import kr.chapchap.account.domain.entity.ProfileImageCode;
 import kr.chapchap.account.application.info.OAuthClientType;
 import kr.chapchap.account.application.service.AccountCommandService;
@@ -30,6 +31,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.net.URI;
 import java.util.Optional;
@@ -341,6 +343,86 @@ class AccountApiTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("C005"));
 
+        then(accountCommandService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 내_알림_설정을_조회한다() throws Exception {
+        // given
+        given(accountQueryService.getNotificationSettings(USER_ID))
+                .willReturn(new NotificationSettingsInfo(false, true));
+
+        // when & then
+        mockMvc.perform(get("/v1/accounts/me/notification-settings")
+                        .with(jwt().jwt(jwt -> jwt.subject(USER_ID.toString()))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_user"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.consumptionReminderEnabled").value(false))
+                .andExpect(jsonPath("$.data.monthlyReportEnabled").value(true));
+    }
+
+    @Test
+    void 한쪽_설정만_변경하고_두_설정을_반환한다() throws Exception {
+        // given
+        given(accountCommandService.updateNotificationSettings(USER_ID, false, null))
+                .willReturn(new NotificationSettingsInfo(false, true));
+
+        // when & then
+        mockMvc.perform(patch("/v1/accounts/me/notification-settings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"consumptionReminderEnabled\":false}")
+                        .with(jwt().jwt(jwt -> jwt.subject(USER_ID.toString()))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_user"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.consumptionReminderEnabled").value(false))
+                .andExpect(jsonPath("$.data.monthlyReportEnabled").value(true));
+        then(accountCommandService).should().updateNotificationSettings(USER_ID, false, null);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{}", "{\"consumptionReminderEnabled\":null}", "{\"monthlyReportEnabled\":\"invalid\"}"})
+    void 변경_값이_없거나_형식이_틀린_알림_설정은_거절한다(String body) throws Exception {
+        // given
+        // when & then
+        mockMvc.perform(patch("/v1/accounts/me/notification-settings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body)
+                        .with(jwt().jwt(jwt -> jwt.subject(USER_ID.toString()))
+                                .authorities(new SimpleGrantedAuthority("SCOPE_user"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("C001"));
+        then(accountCommandService).shouldHaveNoInteractions();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"GET", "PATCH"})
+    void 비로그인_사용자는_알림_설정에_접근할_수_없다(String method) throws Exception {
+        // given
+        MockHttpServletRequestBuilder request = method.equals("GET")
+                ? get("/v1/accounts/me/notification-settings")
+                : patch("/v1/accounts/me/notification-settings")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"monthlyReportEnabled\":false}");
+
+        // when & then
+        mockMvc.perform(request).andExpect(status().isUnauthorized());
+        then(accountQueryService).shouldHaveNoInteractions();
+        then(accountCommandService).shouldHaveNoInteractions();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"GET", "PATCH"})
+    void 가입_진행_중인_사용자는_알림_설정에_접근할_수_없다(String method) throws Exception {
+        // given
+        MockHttpServletRequestBuilder request = method.equals("GET")
+                ? get("/v1/accounts/me/notification-settings")
+                : patch("/v1/accounts/me/notification-settings")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"monthlyReportEnabled\":false}");
+
+        // when & then
+        mockMvc.perform(request.with(jwt().jwt(jwt -> jwt.subject(USER_ID.toString()))
+                        .authorities(new SimpleGrantedAuthority("SCOPE_signup"))))
+                .andExpect(status().isForbidden());
+        then(accountQueryService).shouldHaveNoInteractions();
         then(accountCommandService).shouldHaveNoInteractions();
     }
 }

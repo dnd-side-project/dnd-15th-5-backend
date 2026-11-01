@@ -3,6 +3,7 @@ package kr.chapchap.notification.application.service;
 import kr.chapchap.notification.application.info.PushMessage;
 import kr.chapchap.notification.application.info.PushSendResult;
 import kr.chapchap.notification.application.info.UserPushTarget;
+import kr.chapchap.notification.application.info.ReminderRecipient;
 import kr.chapchap.notification.application.port.PushSenderPort;
 import kr.chapchap.notification.application.port.UserPushTargetPort;
 import kr.chapchap.notification.domain.entity.Notification;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -20,6 +22,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.LongStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -44,6 +47,9 @@ class PushNotificationServiceTest {
 
     @Mock
     private NotificationRepository notificationRepository;
+
+    @Captor
+    private ArgumentCaptor<List<Notification>> notificationsCaptor;
 
     private PushNotificationService sut;
 
@@ -73,7 +79,7 @@ class PushNotificationServiceTest {
         Notification pending = reportCompletedNotification();
         when(notificationRepository.findByTypeAndPushStatus(NotificationType.REPORT_COMPLETED, PushStatus.PENDING))
                 .thenReturn(List.of(pending));
-        when(userPushTargetPort.findPushTarget(USER_ID))
+        when(userPushTargetPort.findMonthlyReportPushTarget(USER_ID))
                 .thenReturn(Optional.of(new UserPushTarget(USER_ID, "token-1")));
         when(pushSenderPort.sendMulticast(eq(List.of("token-1")), any()))
                 .thenReturn(new PushSendResult(1, 0, List.of()));
@@ -98,7 +104,7 @@ class PushNotificationServiceTest {
         Notification pending = reportCompletedNotification();
         when(notificationRepository.findByTypeAndPushStatus(NotificationType.REPORT_COMPLETED, PushStatus.PENDING))
                 .thenReturn(List.of(pending));
-        when(userPushTargetPort.findPushTarget(USER_ID)).thenReturn(Optional.empty());
+        when(userPushTargetPort.findMonthlyReportPushTarget(USER_ID)).thenReturn(Optional.empty());
 
         // when
         sut.sendPendingReportCompletedPush();
@@ -114,7 +120,7 @@ class PushNotificationServiceTest {
         Notification pending = reportCompletedNotification();
         when(notificationRepository.findByTypeAndPushStatus(NotificationType.REPORT_COMPLETED, PushStatus.PENDING))
                 .thenReturn(List.of(pending));
-        when(userPushTargetPort.findPushTarget(USER_ID))
+        when(userPushTargetPort.findMonthlyReportPushTarget(USER_ID))
                 .thenReturn(Optional.of(new UserPushTarget(USER_ID, "dead-token")));
         when(pushSenderPort.sendMulticast(eq(List.of("dead-token")), any()))
                 .thenReturn(new PushSendResult(0, 1, List.of("dead-token")));
@@ -133,7 +139,7 @@ class PushNotificationServiceTest {
         Notification pending = reportCompletedNotification();
         when(notificationRepository.findByTypeAndPushStatus(NotificationType.REPORT_COMPLETED, PushStatus.PENDING))
                 .thenReturn(List.of(pending));
-        when(userPushTargetPort.findPushTarget(USER_ID))
+        when(userPushTargetPort.findMonthlyReportPushTarget(USER_ID))
                 .thenReturn(Optional.of(new UserPushTarget(USER_ID, "flaky-token")));
         when(pushSenderPort.sendMulticast(eq(List.of("flaky-token")), any()))
                 .thenReturn(new PushSendResult(0, 1, List.of(), List.of("flaky-token")));
@@ -157,7 +163,7 @@ class PushNotificationServiceTest {
 
         when(notificationRepository.findByTypeAndPushStatus(NotificationType.REPORT_COMPLETED, PushStatus.PENDING))
                 .thenReturn(List.of(staleNotification, latestNotification));
-        when(userPushTargetPort.findPushTarget(USER_ID))
+        when(userPushTargetPort.findMonthlyReportPushTarget(USER_ID))
                 .thenReturn(Optional.of(new UserPushTarget(USER_ID, "token-1")));
         when(pushSenderPort.sendMulticast(eq(List.of("token-1")), any()))
                 .thenReturn(new PushSendResult(1, 0, List.of()));
@@ -169,7 +175,7 @@ class PushNotificationServiceTest {
         assertThat(staleNotification.getPushStatus()).isEqualTo(PushStatus.SKIPPED);
         assertThat(latestNotification.getPushStatus()).isEqualTo(PushStatus.SENT);
         verify(pushSenderPort, times(1)).sendMulticast(any(), any());
-        verify(userPushTargetPort, times(1)).findPushTarget(any());
+        verify(userPushTargetPort, times(1)).findMonthlyReportPushTarget(any());
     }
 
     @Test
@@ -189,11 +195,11 @@ class PushNotificationServiceTest {
     @Test
     void 금요일_리마인더는_활성_대상_전체에게_한번에_발송하고_더_없으면_중단한다() {
         // given
-        List<UserPushTarget> targets = List.of(
-                new UserPushTarget(1L, "t1"),
-                new UserPushTarget(2L, "t2")
+        List<ReminderRecipient> targets = List.of(
+                new ReminderRecipient(1L, "t1", true),
+                new ReminderRecipient(2L, "t2", true)
         );
-        when(userPushTargetPort.findActivePushTargets(eq(0L), anyInt())).thenReturn(targets);
+        when(userPushTargetPort.findReminderRecipients(eq(0L), anyInt())).thenReturn(targets);
         when(pushSenderPort.sendMulticast(eq(List.of("t1", "t2")), any()))
                 .thenReturn(new PushSendResult(2, 0, List.of()));
 
@@ -202,12 +208,59 @@ class PushNotificationServiceTest {
 
         // then
         // 이번 청크(2명)가 조회 사이즈(500)보다 적으므로 다음 페이지는 조회하지 않고 종료
-        verify(userPushTargetPort, times(1)).findActivePushTargets(any(), anyInt());
+        verify(userPushTargetPort, times(1)).findReminderRecipients(any(), anyInt());
         verify(notificationRepository).saveAll(anyList());
 
         ArgumentCaptor<PushMessage> messageCaptor = ArgumentCaptor.forClass(PushMessage.class);
         verify(pushSenderPort).sendMulticast(eq(List.of("t1", "t2")), messageCaptor.capture());
         assertThat(messageCaptor.getValue().data().get("screen")).isEqualTo("/record/manual");
+    }
+
+    @Test
+    void 리마인더를_끄거나_토큰이_없어도_알림함에는_남고_허용한_사용자에게만_발송한다() {
+        // given
+        List<ReminderRecipient> recipients = List.of(
+                new ReminderRecipient(1L, "off-token", false),
+                new ReminderRecipient(2L, null, true),
+                new ReminderRecipient(3L, "on-token", true)
+        );
+        when(userPushTargetPort.findReminderRecipients(eq(0L), anyInt())).thenReturn(recipients);
+        when(pushSenderPort.sendMulticast(eq(List.of("on-token")), any()))
+                .thenReturn(new PushSendResult(1, 0, List.of()));
+
+        // when
+        sut.notifyFridayReminderToAll();
+
+        // then
+        verify(notificationRepository).saveAll(notificationsCaptor.capture());
+        assertThat(notificationsCaptor.getValue()).extracting(Notification::getUserId).containsExactly(1L, 2L, 3L);
+        assertThat(notificationsCaptor.getValue()).extracting(Notification::getPushStatus)
+                .containsExactly(PushStatus.SKIPPED, PushStatus.SKIPPED, PushStatus.SENT);
+        verify(pushSenderPort).sendMulticast(eq(List.of("on-token")), any());
+    }
+
+    @Test
+    void 첫_페이지_모두_푸시를_꺼도_다음_페이지의_알림_생성과_발송을_계속한다() {
+        // given
+        List<ReminderRecipient> firstPage = LongStream.rangeClosed(1, 500)
+                .mapToObj(id -> new ReminderRecipient(id, "off-token-" + id, false))
+                .toList();
+        when(userPushTargetPort.findReminderRecipients(0L, 500)).thenReturn(firstPage);
+        when(userPushTargetPort.findReminderRecipients(500L, 500))
+                .thenReturn(List.of(new ReminderRecipient(501L, "on-token", true)));
+        when(pushSenderPort.sendMulticast(eq(List.of("on-token")), any()))
+                .thenReturn(new PushSendResult(1, 0, List.of()));
+
+        // when
+        sut.notifyFridayReminderToAll();
+
+        // then
+        verify(notificationRepository, times(2)).saveAll(notificationsCaptor.capture());
+        assertThat(notificationsCaptor.getAllValues().get(0)).hasSize(500)
+                .allSatisfy(notification -> assertThat(notification.getPushStatus()).isEqualTo(PushStatus.SKIPPED));
+        assertThat(notificationsCaptor.getAllValues().get(1)).singleElement()
+                .satisfies(notification -> assertThat(notification.getUserId()).isEqualTo(501L));
+        verify(pushSenderPort, times(1)).sendMulticast(eq(List.of("on-token")), any());
     }
 
     // id는 @GeneratedValue라 세터가 없어, 저장된 것처럼 흉내내려고 리플렉션으로 직접 채운다.

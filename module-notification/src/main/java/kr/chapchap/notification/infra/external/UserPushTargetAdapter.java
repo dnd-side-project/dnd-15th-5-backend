@@ -4,6 +4,7 @@ import kr.chapchap.account.application.info.PushTargetInfo;
 import kr.chapchap.account.application.service.DeviceTokenCommandService;
 import kr.chapchap.account.application.service.PushTargetQueryService;
 import kr.chapchap.notification.application.info.UserPushTarget;
+import kr.chapchap.notification.application.info.ReminderRecipient;
 import kr.chapchap.notification.application.port.UserPushTargetPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -18,15 +19,19 @@ public class UserPushTargetAdapter implements UserPushTargetPort {
     private final DeviceTokenCommandService deviceTokenCommandService;
 
     @Override
-    public Optional<UserPushTarget> findPushTarget(Long userId) {
-        return pushTargetQueryService.findPushTarget(userId)
+    public Optional<UserPushTarget> findMonthlyReportPushTarget(Long userId) {
+        return pushTargetQueryService.findMonthlyReportPushTarget(userId)
                 .map(this::toUserPushTarget);
     }
 
     @Override
-    public List<UserPushTarget> findActivePushTargets(Long cursorId, int limit) {
-        return pushTargetQueryService.findActivePushTargets(cursorId, limit).stream()
-                .map(this::toUserPushTarget)
+    public List<ReminderRecipient> findReminderRecipients(Long cursorId, int limit) {
+        return pushTargetQueryService.findReminderRecipients(cursorId, limit).stream()
+                .map(recipient -> new ReminderRecipient(
+                        recipient.userId(),
+                        recipient.pushToken(),
+                        recipient.consumptionReminderEnabled()
+                ))
                 .toList();
     }
 
