@@ -101,6 +101,30 @@ class AccountQueryServiceTest {
         then(profileImageStorage).shouldHaveNoInteractions();
     }
 
+    @Test
+    void 없는_사용자의_알림_설정은_조회할_수_없다() {
+        // given
+        given(userRepository.findById(USER_ID)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> accountQueryService.getNotificationSettings(USER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(CommonErrorCode.INVALID_AUTHENTICATION_CREDENTIALS)
+                );
+    }
+
+    @Test
+    void 비활성_사용자의_알림_설정은_조회할_수_없다() {
+        // given
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(User.create(NICKNAME)));
+
+        // when & then
+        assertThatThrownBy(() -> accountQueryService.getNotificationSettings(USER_ID))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED)
+                );
+    }
+
     private User createActiveUser() {
         User user = User.create(NICKNAME);
         ReflectionTestUtils.setField(user, "id", USER_ID);

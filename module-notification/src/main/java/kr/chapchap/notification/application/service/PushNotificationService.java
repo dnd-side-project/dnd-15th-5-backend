@@ -3,6 +3,7 @@ package kr.chapchap.notification.application.service;
 import kr.chapchap.notification.application.info.PushMessage;
 import kr.chapchap.notification.application.info.PushSendResult;
 import kr.chapchap.notification.application.info.UserPushTarget;
+import kr.chapchap.notification.application.info.ReminderRecipient;
 import kr.chapchap.notification.application.port.PushSenderPort;
 import kr.chapchap.notification.application.port.UserPushTargetPort;
 import kr.chapchap.notification.domain.entity.Notification;
@@ -71,7 +72,7 @@ public class PushNotificationService {
         List<UserPushTarget> targets = new ArrayList<>();
 
         for (Notification notification : latestPerUser) {
-            Optional<UserPushTarget> target = userPushTargetPort.findPushTarget(notification.getUserId());
+            Optional<UserPushTarget> target = userPushTargetPort.findMonthlyReportPushTarget(notification.getUserId());
             if (target.isPresent()) {
                 sendable.add(notification);
                 targets.add(target.get());
@@ -117,25 +118,37 @@ public class PushNotificationService {
         Long cursorId = 0L;
 
         while (true) {
-            List<UserPushTarget> targets = userPushTargetPort.findActivePushTargets(cursorId, FETCH_CHUNK_SIZE);
-            if (targets.isEmpty()) {
+            List<ReminderRecipient> recipients = userPushTargetPort.findReminderRecipients(cursorId, FETCH_CHUNK_SIZE);
+            if (recipients.isEmpty()) {
                 break;
             }
 
-            List<Notification> notifications = targets.stream()
-                    .map(target -> Notification.builder()
-                            .userId(target.userId())
-                            .type(NotificationType.FRIDAY_REMINDER)
-                            .title(FRIDAY_REMINDER_TITLE)
-                            .body(FRIDAY_REMINDER_BODY)
-                            .build())
-                    .toList();
+            List<Notification> notifications = new ArrayList<>();
+            List<Notification> sendable = new ArrayList<>();
+            List<UserPushTarget> targets = new ArrayList<>();
+            for (ReminderRecipient recipient : recipients) {
+                Notification notification = Notification.builder()
+                        .userId(recipient.userId())
+                        .type(NotificationType.FRIDAY_REMINDER)
+                        .title(FRIDAY_REMINDER_TITLE)
+                        .body(FRIDAY_REMINDER_BODY)
+                        .build();
+                notifications.add(notification);
+                if (recipient.canReceivePush()) {
+                    sendable.add(notification);
+                    targets.add(new UserPushTarget(recipient.userId(), recipient.pushToken()));
+                } else {
+                    notification.markPushSkipped();
+                }
+            }
             notificationRepository.saveAll(notifications);
 
-            sendAndRecord(notifications, targets, FRIDAY_REMINDER_SCREEN);
+            if (!sendable.isEmpty()) {
+                sendAndRecord(sendable, targets, FRIDAY_REMINDER_SCREEN);
+            }
 
-            cursorId = targets.get(targets.size() - 1).userId();
-            if (targets.size() < FETCH_CHUNK_SIZE) {
+            cursorId = recipients.get(recipients.size() - 1).userId();
+            if (recipients.size() < FETCH_CHUNK_SIZE) {
                 break;
             }
         }

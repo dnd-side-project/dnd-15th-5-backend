@@ -17,5 +17,5 @@ public interface UserRepository {
 
     void delete(User user);
 
-    List<User> findActivePushTargets(Long cursorId, int limit);
+    List<User> findActiveUsers(Long cursorId, int limit);
 }

@@ -42,8 +42,8 @@ public class UserRepositoryAdapter implements UserRepository {
     }
 
     @Override
-    public List<User> findActivePushTargets(Long cursorId, int limit) {
-        return userJpaRepository.findByStatusAndPushTokenIsNotNullAndPushEnabledTrueAndIdGreaterThanOrderByIdAsc(
+    public List<User> findActiveUsers(Long cursorId, int limit) {
+        return userJpaRepository.findByStatusAndIdGreaterThanOrderByIdAsc(
                 UserStatus.ACTIVE, cursorId, PageRequest.of(0, limit));
     }
 }

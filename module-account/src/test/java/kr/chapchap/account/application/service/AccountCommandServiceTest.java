@@ -3,6 +3,7 @@ package kr.chapchap.account.application.service;
 import kr.chapchap.account.application.command.AccountUpdateCommand;
 import kr.chapchap.account.application.event.ProfileImageCleanupEvent;
 import kr.chapchap.account.application.info.AccountInfo;
+import kr.chapchap.account.application.info.NotificationSettingsInfo;
 import kr.chapchap.account.domain.entity.ProfileImageCode;
 import kr.chapchap.account.application.info.OAuthClientType;
 import kr.chapchap.account.application.port.GoogleAuthenticationPort;
@@ -440,6 +441,50 @@ class AccountCommandServiceTest {
         assertThatThrownBy(() -> accountCommandService.updateProfile(USER_ID, "새이름", null))
                 .isInstanceOf(BusinessException.class);
         assertThat(user.getNickname()).isEqualTo(NICKNAME);
+    }
+
+    @Test
+    void 알림_설정을_부분_수정하고_같은_요청을_반복해도_다른_설정과_토큰을_유지한다() {
+        // given
+        User user = createActiveUser(null);
+        user.registerPushToken("ExponentPushToken[test-device]", java.time.LocalDateTime.now());
+        given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
+
+        // when
+        accountCommandService.updateNotificationSettings(USER_ID, false, null);
+        NotificationSettingsInfo result = accountCommandService.updateNotificationSettings(USER_ID, false, null);
+
+        // then
+        assertThat(result).isEqualTo(new NotificationSettingsInfo(false, true));
+        assertThat(user.getPushToken()).isEqualTo("ExponentPushToken[test-device]");
+        then(profileImageStorage).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 변경할_알림_설정이_없으면_거절한다() {
+        // given
+        User user = createActiveUser(null);
+        given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
+
+        // when & then
+        assertThatThrownBy(() -> accountCommandService.updateNotificationSettings(USER_ID, null, null))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(AccountErrorCode.ACCOUNT_UPDATE_VALUE_REQUIRED)
+                );
+        assertThat(user.isConsumptionReminderEnabled()).isTrue();
+        assertThat(user.isMonthlyReportEnabled()).isTrue();
+    }
+
+    @Test
+    void 활성_상태가_아니면_알림_설정을_변경할_수_없다() {
+        // given
+        given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(User.create(NICKNAME)));
+
+        // when & then
+        assertThatThrownBy(() -> accountCommandService.updateNotificationSettings(USER_ID, false, true))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED)
+                );
     }
 
     private User createActiveUser(String profileImageKey) {

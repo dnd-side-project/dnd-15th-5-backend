@@ -9,9 +9,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import kr.chapchap.account.api.request.AccountUpdateRequest;
+import kr.chapchap.account.api.request.NotificationSettingsUpdateRequest;
 import kr.chapchap.account.api.request.DeviceTokenRegisterRequest;
 import kr.chapchap.account.api.request.ProfileUpdateRequest;
 import kr.chapchap.account.api.response.AccountResponse;
+import kr.chapchap.account.api.response.NotificationSettingsResponse;
 import kr.chapchap.account.api.response.AuthenticationResponseHandler;
 import kr.chapchap.account.application.command.RegisterDeviceTokenCommand;
 import kr.chapchap.account.application.info.AccountInfo;
@@ -72,6 +74,39 @@ public class AccountController {
     ) {
         AccountInfo info = accountQueryService.getAccount(userId);
         return ApiResponse.success(AccountResponse.from(info));
+    }
+
+    @Operation(summary = "내 알림 수신 설정 조회")
+    @GetMapping("/me/notification-settings")
+    public ApiResponse<NotificationSettingsResponse> getNotificationSettings(
+            @ChapChapUserId Long userId
+    ) {
+        return ApiResponse.success(NotificationSettingsResponse.from(
+                accountQueryService.getNotificationSettings(userId)
+        ));
+    }
+
+    @Operation(
+            summary = "내 알림 수신 설정 변경",
+            description = """
+                    소비 기록·월간 리포트 푸시 알림을 각각 설정합니다. OFF여도 앱 내 알림함 기록은 유지합니다.
+                    하나 이상의 설정을 전달해야 하며, 미전달 또는 null인 항목은 유지합니다.
+                    값을 반전하지 않고 요청한 상태로 저장하므로 같은 요청을 반복해도 결과가 같습니다.
+                    변경 후 두 설정을 모두 반환합니다. OS 알림 권한과 기기 토큰은 변경하지 않습니다.
+                    """
+    )
+    @PatchMapping("/me/notification-settings")
+    public ApiResponse<NotificationSettingsResponse> updateNotificationSettings(
+            @ChapChapUserId Long userId,
+            @Valid @RequestBody NotificationSettingsUpdateRequest request
+    ) {
+        return ApiResponse.success(NotificationSettingsResponse.from(
+                accountCommandService.updateNotificationSettings(
+                        userId,
+                        request.consumptionReminderEnabled(),
+                        request.monthlyReportEnabled()
+                )
+        ));
     }
 
     @Operation(
