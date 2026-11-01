@@ -27,7 +27,8 @@ public class UserTown extends BaseTimeEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "administrative_dong_code", nullable = false, length = 20)
+
+    @Column(name = "administrative_dong_code", length = 20)
     private String administrativeDongCode;
 
     @Column(name = "administrative_dong_name", nullable = false, length = 100)

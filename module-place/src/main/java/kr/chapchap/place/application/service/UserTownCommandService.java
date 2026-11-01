@@ -26,24 +26,34 @@ public class UserTownCommandService {
 
     public UserTownInfo save(UserTownSaveCommand command) {
         LocalDateTime now = LocalDateTime.now(clock);
-        UserTown userTown = userTownRepository
+        UserTown userTown = command.administrativeDongCode() == null
+                ? userTownRepository.save(toNewUserTown(command, now))
+                : findExistingOrCreate(command, now);
+
+        enforceRecentLimit(command.userId());
+
+        return UserTownInfo.from(userTown);
+    }
+
+    private UserTown findExistingOrCreate(UserTownSaveCommand command, LocalDateTime now) {
+        return userTownRepository
                 .findByUserIdAndAdministrativeDongCode(command.userId(), command.administrativeDongCode())
                 .map(existing -> {
                     existing.touch(command.administrativeDongName(), command.latitude(), command.longitude(), now);
                     return existing;
                 })
-                .orElseGet(() -> userTownRepository.save(UserTown.create(
-                        command.userId(),
-                        command.administrativeDongCode(),
-                        command.administrativeDongName(),
-                        command.latitude(),
-                        command.longitude(),
-                        now
-                )));
+                .orElseGet(() -> userTownRepository.save(toNewUserTown(command, now)));
+    }
 
-        enforceRecentLimit(command.userId());
-
-        return UserTownInfo.from(userTown);
+    private UserTown toNewUserTown(UserTownSaveCommand command, LocalDateTime now) {
+        return UserTown.create(
+                command.userId(),
+                command.administrativeDongCode(),
+                command.administrativeDongName(),
+                command.latitude(),
+                command.longitude(),
+                now
+        );
     }
 
     public void delete(Long userId, Long userTownId) {
