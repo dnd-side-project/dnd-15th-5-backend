@@ -113,7 +113,7 @@ class PlaceLikeIntegrationTest {
                 .andExpect(jsonPath("$.data.places[0].photos[0].googleMapsUri").value("maps-url"))
                 .andExpect(jsonPath("$.data.categories[0]").value("카페"))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
-        assertThat(recommendations.getNearbyRecommendations(userId, 37.5665, 126.9780, 1000).myTownPlaces())
+        assertThat(recommendations.getNearbyRecommendations(userId, 37.5665, 126.9780, 1000).allPlaces())
                 .extracting(RecommendedPlaceInfo::placeId, RecommendedPlaceInfo::category,
                         RecommendedPlaceInfo::visitCount, RecommendedPlaceInfo::liked)
                 .containsExactly(tuple(placeId, "카페", 5L, true));
@@ -134,7 +134,7 @@ class PlaceLikeIntegrationTest {
         assertThat(oldCategory.categories()).containsExactly("쇼핑");
         assertThat(search("쇼핑", null, 5).places()).singleElement()
                 .extracting(LikedPlaceScrollInfo.LikedPlaceInfo::category).isEqualTo("쇼핑");
-        assertThat(recommendations.getNearbyRecommendations(userId, 37.5665, 126.9780, 1000).myTownPlaces())
+        assertThat(recommendations.getNearbyRecommendations(userId, 37.5665, 126.9780, 1000).allPlaces())
                 .extracting(RecommendedPlaceInfo::placeId, RecommendedPlaceInfo::category)
                 .containsExactly(tuple(placeId, "쇼핑"));
     }
