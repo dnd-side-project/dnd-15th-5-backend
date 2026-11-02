@@ -375,9 +375,9 @@ resource "aws_db_subnet_group" "main" {
 }
 
 resource "aws_db_instance" "main" {
-  identifier     = "${var.project_name}-postgres"
+  identifier     = "${var.project_name}-postgres-restored-20261101"
   engine         = "postgres"
-  engine_version = "17"
+  engine_version = "17.9"
 
   instance_class    = "db.t4g.micro"
   allocated_storage = 20
@@ -397,9 +397,10 @@ resource "aws_db_instance" "main" {
   skip_final_snapshot = true
 
   backup_retention_period = 1
+  copy_tags_to_snapshot    = true
 
   tags = {
-    Name = "${var.project_name}-postgres"
+    Name = "${var.project_name}-postgres-restored-20261101"
   }
 }
 
