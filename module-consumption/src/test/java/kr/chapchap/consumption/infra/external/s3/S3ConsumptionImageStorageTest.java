@@ -169,7 +169,7 @@ class S3ConsumptionImageStorageTest {
         });
     }
     @Test
-    void 비공개_사진에_대한_2분짜리_GET_URL을_발급한다() throws Exception {
+    void 비공개_사진에_대한_10분짜리_GET_URL을_발급한다() throws Exception {
         // given
         PresignedGetObjectRequest signed = mock(PresignedGetObjectRequest.class);
         given(signed.url()).willReturn(URI.create("https://example.com/photo?signed=test").toURL());
@@ -182,7 +182,7 @@ class S3ConsumptionImageStorageTest {
         assertThat(url).isEqualTo("https://example.com/photo?signed=test");
         ArgumentCaptor<GetObjectPresignRequest> captor = ArgumentCaptor.forClass(GetObjectPresignRequest.class);
         then(s3Presigner).should().presignGetObject(captor.capture());
-        assertThat(captor.getValue().signatureDuration()).isEqualTo(Duration.ofMinutes(2));
+        assertThat(captor.getValue().signatureDuration()).isEqualTo(Duration.ofMinutes(10));
         assertThat(captor.getValue().getObjectRequest().bucket()).isEqualTo(BUCKET);
         assertThat(captor.getValue().getObjectRequest().key()).isEqualTo(OBJECT_KEY);
         then(s3Client).shouldHaveNoInteractions();

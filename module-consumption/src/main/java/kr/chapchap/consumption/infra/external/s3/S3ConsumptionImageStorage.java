@@ -28,7 +28,7 @@ public class S3ConsumptionImageStorage implements ConsumptionImageStorage {
     private static final String CONSUMPTION_IMAGE_KEY_FORMAT = "consumption-images/%d/%s";
     private static final String CONSUMPTION_IMAGE_PREFIX_FORMAT = "consumption-images/%d/";
 
-    private static final Duration READ_URL_EXPIRATION = Duration.ofMinutes(2);
+    private static final Duration READ_URL_EXPIRATION = Duration.ofMinutes(10);
 
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
