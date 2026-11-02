@@ -56,7 +56,11 @@ public class VisitedPlaceQueryService {
         Set<Long> visitedPlaceIdSet = Set.copyOf(visitedPlaceIds);
 
         Set<Long> likedPlaceIds = placeLikeLookupPort.findLikedPlaceIds(userId); //좋아요
-        List<Long> likedOnlyPlaceIds = likedPlaceIds.stream().filter(placeId -> !visitedPlaceIdSet.contains(placeId)).toList(); //방문x 좋아요
+        List<Long> likedOnlyCandidateIds = likedPlaceIds.stream().filter(placeId -> !visitedPlaceIdSet.contains(placeId)).toList(); //방문x 좋아요
+
+        // 방문X 좋아요도 카테고리 필터를 똑같이 적용한다 (필터링한 카테고리와 다른 좋아요 장소는 제외)
+        Map<Long, String> categoriesByLikedOnlyPlace = resolveLikedOnlyCategories(likedOnlyCandidateIds);
+        List<Long> likedOnlyPlaceIds = filterByCategories(likedOnlyCandidateIds, categoriesByLikedOnlyPlace, categories);
 
         if (rows.isEmpty() && likedOnlyPlaceIds.isEmpty()) {
             return new VisitedPlaceMarkersInfo(List.of(), currentMonth.getMonthValue(), monthlyPlaceCount);
@@ -71,8 +75,6 @@ public class VisitedPlaceQueryService {
                 .map(row -> toMarkerInfo(row, summaries, likedPlaceIds, pinVisualsByPlace))
                 .toList();
 
-        // 방문X 좋아요
-        Map<Long, String> categoriesByLikedOnlyPlace = resolveLikedOnlyCategories(likedOnlyPlaceIds);
         List<VisitedPlaceMarkerInfo> likedOnlyMarkers = likedOnlyPlaceIds.stream()
                 .map(placeId -> toLikedOnlyMarkerInfo(placeId, summaries, categoriesByLikedOnlyPlace))
                 .toList();
@@ -169,6 +171,17 @@ public class VisitedPlaceQueryService {
 
         return popularityQueryService.aggregatePopularityByPlaceIds(likedOnlyPlaceIds).stream()
                 .collect(Collectors.toMap(PlacePopularityInfo::placeId, PlacePopularityInfo::category));
+    }
+
+
+    private List<Long> filterByCategories(List<Long> placeIds, Map<Long, String> categoriesByPlace, List<String> categories) {
+        if (categories == null || categories.isEmpty()) {
+            return placeIds;
+        }
+        Set<String> categorySet = Set.copyOf(categories);
+        return placeIds.stream()
+                .filter(placeId -> categorySet.contains(categoriesByPlace.get(placeId)))
+                .toList();
     }
 
     private void requireAllLocationsPresent(List<Long> placeIds, Map<Long, PlaceSummaryInfo> summaries) {

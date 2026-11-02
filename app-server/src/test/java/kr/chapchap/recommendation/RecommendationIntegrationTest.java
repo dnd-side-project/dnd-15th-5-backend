@@ -14,9 +14,10 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.tuple;
 
 // 별도 rollup 테이블·캐시 없이, module-place(반경 검색)와 module-consumption(인기도 집계)
 // 두 모듈의 Port를 module-recommendation이 실제로 조합해서 올바른 결과를 만드는지 엔드투엔드로 검증한다.
@@ -88,30 +89,45 @@ class RecommendationIntegrationTest {
     }
 
     @Test
-    void 반경_안_장소만_인기순으로_상위_2개까지_반환하고_반경_밖은_제외한다() {
+    void 반경_안_장소만_인기순으로_상위_4개까지_반환하고_반경_밖은_제외한다() {
         // when
         RecommendationInfo info = recommendationQueryService.getNearbyRecommendations(1L, 37.5665, 126.9780, 1000);
 
-        // then — 101(5회), 102(4회)가 1·2등이라 이 둘만 myTownPlaces에 남고, 104(3회)는 3등이라 잘림
-        assertThat(info.myTownPlaces())
+        // then — 105는 유저1 본인이 방문했으므로 제외, 103은 반경 밖이므로 제외. 101·102·104만 남는다
+        assertThat(info.allPlaces())
                 .extracting(RecommendedPlaceInfo::placeId)
-                .containsExactly(101L, 102L)
-                .doesNotContain(103L, 104L);
-        assertThat(info.myTownPlaces())
+                .containsExactly(101L, 102L, 104L)
+                .doesNotContain(103L, 105L);
+        assertThat(info.allPlaces())
                 .extracting(RecommendedPlaceInfo::dongName)
                 .containsOnly("태평로");
     }
 
     @Test
-    void 유저_최다방문_카테고리로_필터링하되_myTownPlaces와_겹치는_장소는_제외한다() {
+    void 카테고리는_스티커_카탈로그_전체를_내려주고_후보가_있는_카테고리만_채워진다() {
         // when
         RecommendationInfo info = recommendationQueryService.getNearbyRecommendations(1L, 37.5665, 126.9780, 1000);
 
-        // then — 유저1의 최근 30일 최다방문 카테고리는 카페(101:5 + 104:3 = 8 > 음식점 102:4)
-        // 카페 중 1등인 101은 이미 myTownPlaces에 있으므로 제외되고, 다음 순위인 104만 남아야 함
-        assertThat(info.sameCategoryPlaces())
-                .extracting(RecommendedPlaceInfo::placeId, RecommendedPlaceInfo::category)
-                .containsExactly(tuple(104L, "카페"));
+        // then — 스티커 카탈로그의 카테고리 전체가 내려오고, 후보가 있는 카페(101, 104)·음식점(102)만 채워진다
+        assertThat(info.categoryPlaces())
+                .extracting(RecommendationInfo.CategoryPlacesInfo::category)
+                .contains("카페", "음식점", "운동");
+
+        List<Long> cafePlaceIds = info.categoryPlaces().stream()
+                .filter(category -> category.category().equals("카페"))
+                .findFirst().orElseThrow()
+                .places().stream()
+                .map(RecommendedPlaceInfo::placeId)
+                .toList();
+        assertThat(cafePlaceIds).containsExactly(101L, 104L);
+
+        List<Long> exercisePlaceIds = info.categoryPlaces().stream()
+                .filter(category -> category.category().equals("운동"))
+                .findFirst().orElseThrow()
+                .places().stream()
+                .map(RecommendedPlaceInfo::placeId)
+                .toList();
+        assertThat(exercisePlaceIds).isEmpty();
     }
 
     @Test
@@ -125,7 +141,7 @@ class RecommendationIntegrationTest {
         RecommendationInfo info = recommendationQueryService.getNearbyRecommendations(1L, 37.5665, 126.9780, 1000);
 
         // then
-        boolean liked102 = info.myTownPlaces().stream()
+        boolean liked102 = info.allPlaces().stream()
                 .filter(place -> place.placeId().equals(102L))
                 .findFirst().orElseThrow()
                 .liked();
@@ -141,12 +157,13 @@ class RecommendationIntegrationTest {
         // when
         RecommendationInfo info = recommendationQueryService.getNearbyRecommendations(1L, 37.5665, 126.9780, 1000);
 
-        // then — 102는 방문했으므로 어떤 결과에도 나오지 않고, 다음 순위인 104가 myTownPlaces로 대신 올라옴
-        assertThat(info.myTownPlaces())
+        // then — 102는 본인이 방문했으므로 모든 결과에서 제외된다
+        assertThat(info.allPlaces())
                 .extracting(RecommendedPlaceInfo::placeId)
                 .containsExactly(101L, 104L)
                 .doesNotContain(102L);
-        assertThat(info.sameCategoryPlaces())
+        assertThat(info.categoryPlaces())
+                .flatExtracting(RecommendationInfo.CategoryPlacesInfo::places)
                 .extracting(RecommendedPlaceInfo::placeId)
                 .doesNotContain(102L);
     }
@@ -183,12 +200,15 @@ class RecommendationIntegrationTest {
     }
 
     @Test
-    void 반경_안에_아무_장소도_없으면_빈_결과를_반환한다() {
+    void 반경_안에_아무_장소도_없으면_전체는_비고_카테고리는_카탈로그_전체가_빈_배열로_내려온다() {
         // when — 완전히 무관한 좌표(북극 근처)
         RecommendationInfo info = recommendationQueryService.getNearbyRecommendations(1L, 80.0, 0.0, 1000);
 
         // then
-        assertThat(info.myTownPlaces()).isEmpty();
-        assertThat(info.sameCategoryPlaces()).isEmpty();
+        assertThat(info.allPlaces()).isEmpty();
+        assertThat(info.categoryPlaces()).isNotEmpty();
+        assertThat(info.categoryPlaces())
+                .flatExtracting(RecommendationInfo.CategoryPlacesInfo::places)
+                .isEmpty();
     }
 }

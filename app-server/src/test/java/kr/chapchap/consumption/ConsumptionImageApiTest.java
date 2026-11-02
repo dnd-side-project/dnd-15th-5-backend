@@ -6,7 +6,10 @@ import kr.chapchap.config.WebMvcConfig;
 import kr.chapchap.consumption.api.controller.ConsumptionImageController;
 import kr.chapchap.consumption.application.command.ConsumptionImageUploadCommand;
 import kr.chapchap.consumption.application.info.ConsumptionImageUploadInfo;
+import kr.chapchap.consumption.application.service.ConsumptionImageQueryService;
 import kr.chapchap.consumption.application.service.ConsumptionImageUploadService;
+import kr.chapchap.consumption.exception.ConsumptionErrorCode;
+import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.core.web.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -24,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -32,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ConsumptionImageApiTest {
     @Autowired private MockMvc mvc;
     @MockitoBean private ConsumptionImageUploadService upload;
+    @MockitoBean private ConsumptionImageQueryService consumptionImageQueryService;
     @MockitoBean private JwtDecoder jwtDecoder;
 
     @Test
@@ -69,5 +74,32 @@ class ConsumptionImageApiTest {
                         .file(new MockMultipartFile("image", "photo.png", "image/png", new byte[]{1})))
                 .andExpect(status().isUnauthorized());
         then(upload).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void imageId로_새_조회_URL을_재발급한다() throws Exception {
+        // given
+        given(consumptionImageQueryService.getReadUrl(1L, 42L)).willReturn("https://cdn.example.com/42?signed=new");
+
+        // when & then
+        mvc.perform(get("/v1/consumptions/images/{imageId}", 42L)
+                        .with(jwt().jwt(token -> token.subject("1")).authorities(new SimpleGrantedAuthority("SCOPE_user"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.imageId").value(42))
+                .andExpect(jsonPath("$.data.imageUrl").value("https://cdn.example.com/42?signed=new"));
+        then(consumptionImageQueryService).should().getReadUrl(1L, 42L);
+    }
+
+    @Test
+    void 본인_소유가_아니거나_없는_imageId는_404를_반환한다() throws Exception {
+        // given
+        given(consumptionImageQueryService.getReadUrl(1L, 999L))
+                .willThrow(new BusinessException(ConsumptionErrorCode.IMAGE_NOT_FOUND));
+
+        // when & then
+        mvc.perform(get("/v1/consumptions/images/{imageId}", 999L)
+                        .with(jwt().jwt(token -> token.subject("1")).authorities(new SimpleGrantedAuthority("SCOPE_user"))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(ConsumptionErrorCode.IMAGE_NOT_FOUND.getCode()));
     }
 }

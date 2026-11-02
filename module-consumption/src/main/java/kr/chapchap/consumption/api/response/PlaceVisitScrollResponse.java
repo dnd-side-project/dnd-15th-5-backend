@@ -12,20 +12,24 @@ public record PlaceVisitScrollResponse(
         boolean hasNext,
         LocalDate nextCursorPurchaseDate,
         LocalTime nextCursorPurchaseTime,
-        Long nextCursorId,
-        String thumbnailUrl
+        Long nextCursorId
 ) {
     public static PlaceVisitScrollResponse from(PlaceVisitScrollInfo info) {
         List<PlaceVisitResponse> visits = info.visits().stream().map(PlaceVisitResponse::from).toList();
         return new PlaceVisitScrollResponse(
                 visits, info.hasNext(), info.nextCursorPurchaseDate(), info.nextCursorPurchaseTime(),
-                info.nextCursorId(), info.thumbnailUrl()
+                info.nextCursorId()
         );
     }
 
-    public record PlaceVisitResponse(Long consumptionId, LocalDate visitedAt, Long amount) {
+    public record PlaceVisitResponse(
+            Long consumptionId, LocalDate visitedAt, LocalTime visitedTime, String category, Long amount,
+            Long stickerItemId, String stickerName, Long imageId, String imageUrl
+    ) {
         public static PlaceVisitResponse from(VisitInfo info) {
-            return new PlaceVisitResponse(info.consumptionId(), info.visitedAt(), info.amount());
+            return new PlaceVisitResponse(
+                    info.consumptionId(), info.visitedAt(), info.visitedTime(), info.category(), info.amount(),
+                    info.stickerItemId(), info.stickerName(), info.imageId(), info.imageUrl());
         }
     }
 }

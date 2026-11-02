@@ -23,7 +23,6 @@ import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
 import kr.chapchap.consumption.domain.service.PlaceVisitCommentGenerator;
 import kr.chapchap.consumption.exception.ConsumptionErrorCode;
 import kr.chapchap.core.exception.BusinessException;
-import kr.chapchap.place.application.info.PlacePhotoInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,7 +51,6 @@ public class PlaceDetailQueryService {
     private final PlaceVisitCommentGenerator placeVisitCommentGenerator;
     private final ConsumptionImageRepository consumptionImageRepository;
     private final ConsumptionImageStorage consumptionImageStorage;
-    private final PlaceThumbnailBatchLookup placeThumbnailBatchLookup;
     private final Clock clock;
 
     // 장소 상세 (헤더)
@@ -99,8 +97,29 @@ public class PlaceDetailQueryService {
         boolean hasNext = fetched.size() > command.size();
         List<Consumption> content = hasNext ? fetched.subList(0, command.size()) : fetched;
 
+        List<Long> stickerItemIds = content.stream()
+                .map(Consumption::getStickerItemId).filter(id -> id != null).toList();
+        Map<Long, StickerItem> stickerItems = stickerQueryService.findItems(stickerItemIds);
+
+        List<Long> imageIds = content.stream()
+                .map(Consumption::getImageId).filter(id -> id != null).toList();
+        Map<Long, String> imageUrlsById = imageIds.isEmpty() ? Map.of() : consumptionImageRepository
+                .findAllByIdInAndUserId(imageIds, command.userId()).stream()
+                .collect(Collectors.toMap(ConsumptionImage::getId,
+                        image -> consumptionImageStorage.createReadUrl(image.getObjectKey())));
+
         List<VisitInfo> visits = content.stream()
-                .map(consumption -> new VisitInfo(consumption.getId(), consumption.getPurchaseDate(), consumption.getAmount()))
+                .map(consumption -> {
+                    StickerItem stickerItem = consumption.getStickerItemId() != null
+                            ? stickerItems.get(consumption.getStickerItemId()) : null;
+                    String imageUrl = consumption.getImageId() != null
+                            ? imageUrlsById.get(consumption.getImageId()) : null;
+                    return new VisitInfo(
+                            consumption.getId(), consumption.getPurchaseDate(), consumption.getPurchaseTime(),
+                            consumption.getCategory(), consumption.getAmount(),
+                            consumption.getStickerItemId(), stickerItem != null ? stickerItem.getName() : null,
+                            consumption.getImageId(), imageUrl);
+                })
                 .toList();
 
         Consumption last = content.isEmpty() ? null : content.get(content.size() - 1);
@@ -110,21 +129,8 @@ public class PlaceDetailQueryService {
                 hasNext,
                 last != null ? last.getPurchaseDate() : null,
                 last != null ? last.getPurchaseTime() : null,
-                last != null ? last.getId() : null,
-                resolvePlaceThumbnail(command.placeId())
+                last != null ? last.getId() : null
         );
-    }
-
-    // 구글 섬네일 조회
-    private String resolvePlaceThumbnail(Long placeId) {
-        String googlePlaceId = placeSummaryLookupPort.findSummaries(List.of(placeId))
-                .getOrDefault(placeId, UNKNOWN_PLACE_SUMMARY)
-                .googlePlaceId();
-        if (googlePlaceId == null || googlePlaceId.isBlank()) {
-            return null;
-        }
-        PlacePhotoInfo thumbnail = placeThumbnailBatchLookup.findThumbnails(Map.of(placeId, googlePlaceId)).get(placeId);
-        return thumbnail != null ? thumbnail.thumbnailUrl() : null;
     }
 
     private boolean isRegular(Long userId, Long placeId) {
@@ -153,10 +159,10 @@ public class PlaceDetailQueryService {
         return rows.stream()
                 .map(row -> {
                     if (row.imageId() != null) {
-                        return new StickerInfo(row.category(), null, imageUrlsById.get(row.imageId()), row.receivedAt());
+                        return new StickerInfo(row.category(), null, row.imageId(), imageUrlsById.get(row.imageId()), row.receivedAt());
                     }
                     StickerItem stickerItem = stickerItems.get(row.stickerItemId());
-                    return new StickerInfo(row.category(), stickerItem.getName(), null, row.receivedAt());
+                    return new StickerInfo(row.category(), stickerItem.getName(), null, null, row.receivedAt());
                 })
                 .toList();
     }
@@ -170,7 +176,7 @@ public class PlaceDetailQueryService {
         List<StickerCountInfo> stickerSummaries = stickerRows.stream()
                 .map(row -> {
                     StickerItem stickerItem = stickerItems.get(row.stickerItemId());
-                    return new StickerCountInfo(stickerItem.getCategory(), stickerItem.getName(), null, row.count());
+                    return new StickerCountInfo(stickerItem.getCategory(), stickerItem.getName(), null, null, row.count());
                 })
                 .toList();
 
@@ -181,7 +187,7 @@ public class PlaceDetailQueryService {
                 .collect(Collectors.toMap(ConsumptionImage::getId,
                         image -> consumptionImageStorage.createReadUrl(image.getObjectKey())));
         List<StickerCountInfo> imageSummaries = imageRows.stream()
-                .map(row -> new StickerCountInfo(row.category(), null, imageUrlsById.get(row.imageId()), 1L))
+                .map(row -> new StickerCountInfo(row.category(), null, row.imageId(), imageUrlsById.get(row.imageId()), 1L))
                 .toList();
 
         return Stream.concat(stickerSummaries.stream(), imageSummaries.stream()).toList();

@@ -26,6 +26,14 @@ public class StickerQueryService {
                 .toList();
     }
 
+
+    public List<String> findAllCategoriesInCatalogOrder() {
+        return stickerItemRepository.findAll(Sort.by("id")).stream()
+                .map(StickerItem::getCategory)
+                .distinct()
+                .toList();
+    }
+
     public Map<Long, StickerItem> findItems(List<Long> stickerItemIds) {
         List<Long> distinctIds = stickerItemIds.stream().distinct().toList();
         if (distinctIds.isEmpty()) {
