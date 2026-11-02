@@ -9,10 +9,12 @@ public record PlaceVisitScrollInfo(
         boolean hasNext,
         LocalDate nextCursorPurchaseDate,
         LocalTime nextCursorPurchaseTime,
-        Long nextCursorId,
-        String thumbnailUrl
+        Long nextCursorId
 ) {
 
-    public record VisitInfo(Long consumptionId, LocalDate visitedAt, Long amount) {
+    public record VisitInfo(
+            Long consumptionId, LocalDate visitedAt, LocalTime visitedTime, String category, Long amount,
+            Long stickerItemId, String stickerName, Long imageId, String imageUrl
+    ) {
     }
 }

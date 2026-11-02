@@ -19,7 +19,6 @@ import kr.chapchap.consumption.domain.entity.StickerItem;
 import kr.chapchap.consumption.domain.repository.ConsumptionImageRepository;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
 import kr.chapchap.consumption.domain.service.PlaceVisitCommentGenerator;
-import kr.chapchap.place.application.info.PlacePhotoInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -65,9 +64,6 @@ class PlaceDetailQueryServiceTest {
     private ConsumptionImageStorage consumptionImageStorage;
 
     @Mock
-    private PlaceThumbnailBatchLookup placeThumbnailBatchLookup;
-
-    @Mock
     private StickerItem stickerItem;
 
     @Mock
@@ -83,7 +79,7 @@ class PlaceDetailQueryServiceTest {
         sut = new PlaceDetailQueryService(
                 consumptionQueryRepository, stickerQueryService, placeSummaryLookupPort,
                 placeVisitCommentGenerator, consumptionImageRepository, consumptionImageStorage,
-                placeThumbnailBatchLookup, fixedClock);
+                fixedClock);
     }
 
     @Test
@@ -184,51 +180,53 @@ class PlaceDetailQueryServiceTest {
     }
 
     @Test
-    void 방문_기록_리스트는_같은_가게의_구글_썸네일_1장을_공통으로_반환한다() {
+    void 방문_기록은_스티커로_등록했으면_스티커_정보를_사진_필드_없이_반환한다() {
         // given
-        Consumption firstVisit = Consumption.create(
+        Consumption stickerVisit = Consumption.create(
                 1L, 101L, LocalDate.of(2026, 8, 10), LocalTime.of(20, 0),
                 5500L, "카페", 3L, null, null);
-        Consumption secondVisit = Consumption.create(
-                1L, 101L, LocalDate.of(2026, 8, 1), LocalTime.of(19, 0),
-                4800L, "카페", 3L, null, null);
         when(consumptionQueryRepository.searchPlaceVisitsByCursor(
                 eq(1L), eq(101L), any(), any(), any(), anyInt()))
-                .thenReturn(List.of(firstVisit, secondVisit));
-        when(placeSummaryLookupPort.findSummaries(List.of(101L))).thenReturn(Map.of(
-                101L, new PlaceSummaryInfo("투썸플레이스", "역삼동", "주소1", 37.5447, 127.0557, "ChIJtest101")
-        ));
-        when(placeThumbnailBatchLookup.findThumbnails(Map.of(101L, "ChIJtest101"))).thenReturn(Map.of(
-                101L, new PlacePhotoInfo("https://cdn.example.com/place-101.jpg", "https://maps.google.com/place-101")
-        ));
+                .thenReturn(List.of(stickerVisit));
+        when(stickerQueryService.findItems(List.of(3L))).thenReturn(Map.of(3L, stickerItem));
+        when(stickerItem.getName()).thenReturn("도넛");
 
         // when
         PlaceVisitScrollInfo result = sut.getVisits(new PlaceVisitSearchCommand(1L, 101L, null, null, null, 5));
 
         // then
-        assertThat(result.visits()).hasSize(2);
-        assertThat(result.thumbnailUrl()).isEqualTo("https://cdn.example.com/place-101.jpg");
-        // 구글 썸네일 조회는 방문 기록 수와 무관하게 가게당 1번만 호출된다
-        org.mockito.Mockito.verify(placeThumbnailBatchLookup, org.mockito.Mockito.times(1))
-                .findThumbnails(Map.of(101L, "ChIJtest101"));
-        org.mockito.Mockito.verifyNoInteractions(consumptionImageRepository, consumptionImageStorage, stickerQueryService);
+        assertThat(result.visits()).hasSize(1);
+        VisitInfo visit = result.visits().getFirst();
+        assertThat(visit.stickerItemId()).isEqualTo(3L);
+        assertThat(visit.stickerName()).isEqualTo("도넛");
+        assertThat(visit.imageId()).isNull();
+        assertThat(visit.imageUrl()).isNull();
+        org.mockito.Mockito.verifyNoInteractions(consumptionImageRepository, consumptionImageStorage);
     }
 
     @Test
-    void 구글_place_id가_없는_가게는_방문_기록_썸네일이_null이다() {
+    void 방문_기록은_사진으로_등록했으면_이미지_정보를_스티커_필드_없이_반환한다() {
         // given
+        Consumption imageVisit = Consumption.create(
+                1L, 101L, LocalDate.of(2026, 8, 10), LocalTime.of(20, 0),
+                5500L, "카페", null, 7L, null);
         when(consumptionQueryRepository.searchPlaceVisitsByCursor(
                 eq(1L), eq(101L), any(), any(), any(), anyInt()))
-                .thenReturn(List.of());
-        when(placeSummaryLookupPort.findSummaries(List.of(101L))).thenReturn(Map.of(
-                101L, new PlaceSummaryInfo("투썸플레이스", "역삼동", "주소1", 37.5447, 127.0557)
-        ));
+                .thenReturn(List.of(imageVisit));
+        when(consumptionImageRepository.findAllByIdInAndUserId(List.of(7L), 1L))
+                .thenReturn(List.of(consumptionImage));
+        when(consumptionImage.getId()).thenReturn(7L);
+        when(consumptionImage.getObjectKey()).thenReturn("consumption-images/7");
+        when(consumptionImageStorage.createReadUrl("consumption-images/7")).thenReturn("https://cdn.example.com/7");
 
         // when
         PlaceVisitScrollInfo result = sut.getVisits(new PlaceVisitSearchCommand(1L, 101L, null, null, null, 5));
 
         // then
-        assertThat(result.thumbnailUrl()).isNull();
-        org.mockito.Mockito.verifyNoInteractions(placeThumbnailBatchLookup);
+        VisitInfo visit = result.visits().getFirst();
+        assertThat(visit.imageId()).isEqualTo(7L);
+        assertThat(visit.imageUrl()).isEqualTo("https://cdn.example.com/7");
+        assertThat(visit.stickerItemId()).isNull();
+        assertThat(visit.stickerName()).isNull();
     }
 }

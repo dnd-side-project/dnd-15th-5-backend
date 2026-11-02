@@ -39,15 +39,13 @@ public record NearbyPlacesResponse(
                     description = "Google Places 대표 사진의 단기 URL(장소당 최대 1장). 사진이 없거나 조회에 실패하면 null",
                     nullable = true
             )
-            String thumbnailUrl,
-            String googleMapsUri,
-            String googlePlaceId
+            String thumbnailUrl
     ) {
         public static RecommendedPlaceItem from(RecommendedPlaceInfo info) {
             return new RecommendedPlaceItem(
                     info.placeId(), info.name(), info.dongName(), info.category(),
                     info.latitude(), info.longitude(), info.visitCount(), info.liked(),
-                    info.thumbnailUrl(), info.googleMapsUri(), info.googlePlaceId());
+                    info.thumbnailUrl());
         }
     }
 }

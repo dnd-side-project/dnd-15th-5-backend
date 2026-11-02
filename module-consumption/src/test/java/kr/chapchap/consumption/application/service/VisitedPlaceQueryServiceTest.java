@@ -310,6 +310,56 @@ class VisitedPlaceQueryServiceTest {
     }
 
     @Test
+    void 좋아요만_한_장소도_카테고리_필터와_다르면_마커에서_제외된다() {
+        // given: 카페로 필터링 중인데, 102L은 좋아요만 했고 카테고리가 편의점/마트라 제외돼야 함
+        when(consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, List.of("카페"))).thenReturn(List.of(
+                new PlaceCategoryVisitRow(101L, "카페", 5L)
+        ));
+        when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of(102L));
+        when(placeSummaryLookupPort.findSummaries(any())).thenReturn(Map.of(
+                101L, new PlaceSummaryInfo("투썸플레이스", "역삼동", "주소1", 37.5447, 127.0557)
+        ));
+        when(consumptionQueryRepository.findLatestImageIdsByPlace(eq(1L), any())).thenReturn(List.of());
+        when(consumptionQueryRepository.findLatestStickerItemsByPlace(eq(1L), any()))
+                .thenReturn(List.of(new PlaceLatestStickerRow(101L, 3L)));
+        when(stickerQueryService.findItems(any())).thenReturn(Map.of(3L, stickerItem));
+        when(popularityQueryService.aggregatePopularityByPlaceIds(List.of(102L))).thenReturn(List.of(
+                new PlacePopularityInfo(102L, "편의점/마트", 1L, LocalDate.of(2026, 7, 23))
+        ));
+        when(consumptionQueryRepository.countDistinctPlacesByUserAndDateRange(eq(1L), any(), any())).thenReturn(0L);
+
+        // when
+        VisitedPlaceMarkersInfo result = sut.getVisitedPlaceMarkers(1L, List.of("카페"));
+
+        // then — 102L(편의점/마트)은 필터와 안 맞아서 빠지고, 101L(카페)만 남는다
+        assertThat(result.markers())
+                .extracting(VisitedPlaceMarkerInfo::placeId)
+                .containsExactly(101L);
+    }
+
+    @Test
+    void 좋아요만_한_장소도_카테고리_필터와_같으면_마커에_포함된다() {
+        // given: 편의점/마트로 필터링 중이고, 102L은 좋아요만 했지만 카테고리가 편의점/마트라 포함돼야 함
+        when(consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, List.of("편의점/마트"))).thenReturn(List.of());
+        when(placeLikeLookupPort.findLikedPlaceIds(1L)).thenReturn(Set.of(102L));
+        when(placeSummaryLookupPort.findSummaries(any())).thenReturn(Map.of(
+                102L, new PlaceSummaryInfo("신논현 헬스장 매점", "신논현동", "주소2", 37.5045, 127.0248)
+        ));
+        when(popularityQueryService.aggregatePopularityByPlaceIds(List.of(102L))).thenReturn(List.of(
+                new PlacePopularityInfo(102L, "편의점/마트", 1L, LocalDate.of(2026, 7, 23))
+        ));
+        when(consumptionQueryRepository.countDistinctPlacesByUserAndDateRange(eq(1L), any(), any())).thenReturn(0L);
+
+        // when
+        VisitedPlaceMarkersInfo result = sut.getVisitedPlaceMarkers(1L, List.of("편의점/마트"));
+
+        // then
+        assertThat(result.markers())
+                .extracting(VisitedPlaceMarkerInfo::placeId)
+                .containsExactly(102L);
+    }
+
+    @Test
     void 현재_월을_month_필드로_반환한다() {
         // given
         when(consumptionQueryRepository.aggregateVisitedPlacesByCategory(1L, null)).thenReturn(List.of());

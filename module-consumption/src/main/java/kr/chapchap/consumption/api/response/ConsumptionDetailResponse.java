@@ -56,7 +56,8 @@ public record ConsumptionDetailResponse(
         @Schema(description = "업로드한 사진 ID, 스티커 기록이면 null", nullable = true)
         Long imageId,
 
-        @Schema(description = "업로드한 사진의 2분간 유효한 조회 URL, 스티커 기록이면 null", nullable = true)
+        @Schema(description = "업로드한 사진의 10분간 유효한 조회 URL, 스티커 기록이면 null. "
+                + "만료되면 imageId로 GET /v1/consumptions/images/{imageId}를 호출해 새 URL을 다시 받으세요.", nullable = true)
         String imageUrl,
 
         @Schema(description = "메모, 미입력 시 null", nullable = true)
