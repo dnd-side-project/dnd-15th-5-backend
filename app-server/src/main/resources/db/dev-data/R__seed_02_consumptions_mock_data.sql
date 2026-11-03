@@ -7,7 +7,7 @@ TRUNCATE TABLE consumptions RESTART IDENTITY CASCADE;
 WITH representative_stickers AS (
     SELECT s.id, s.category
     FROM sticker_item s
-    JOIN (VALUES ('카페', '커피'), ('음식점', '밥'), ('편의점/마트', '쇼핑카트'))
+    JOIN (VALUES ('카페', '커피'), ('음식점', '밥'), ('편의점/마트', '장바구니'))
         AS representative(category, name)
         ON s.category = representative.category AND s.name = representative.name
 )

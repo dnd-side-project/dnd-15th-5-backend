@@ -173,6 +173,87 @@ class StickerCatalogMigrationIntegrationTest {
         )).isZero();
     }
 
+    @Test
+    void 프론트_64종과_이름을_맞추면서_모든_스티커_ID와_기존_기록을_보존한다() {
+        // given
+        Flyway.configure().dataSource(dataSource).locations("classpath:db/migration")
+                .target("28").load().migrate();
+        insertUserAndPlace();
+        Map<String, Map<String, String>> corrections = Map.of(
+                "카페", Map.of("말차", "녹차"),
+                "음식점", Map.of("국수", "라면", "파스타", "스파게티", "식기", "접시", "파에야", "빠에야"),
+                "편의점/마트", Map.of("쇼핑카트", "장바구니", "장바구니", "세탁", "음료", "사과 주스"),
+                "취미/놀거리", Map.of("게임", "게임기"),
+                "쇼핑", Map.of("원피스", "드레스", "안경", "선글라스"),
+                "운동", Map.of("요가", "명상", "축구", "축구공", "테니스", "테니스공"),
+                "미용/뷰티", Map.of("헤어", "헤어컷", "네일", "매니큐어"),
+                "기타", Map.of("위치핀", "압정")
+        );
+        var originalStickers = jdbcTemplate.queryForList("SELECT id, category, name FROM sticker_item");
+        Map<Long, Long> recordStickers = new LinkedHashMap<>();
+        originalStickers.forEach(sticker -> {
+            Long stickerId = ((Number) sticker.get("id")).longValue();
+            recordStickers.put(insertConsumption((String) sticker.get("category"), stickerId), stickerId);
+        });
+
+        // when
+        Flyway.configure().dataSource(dataSource).locations("classpath:db/migration")
+                .target("29").load().migrate();
+
+        // then
+        assertFrontendCatalog();
+        originalStickers.forEach(sticker -> {
+            String category = (String) sticker.get("category");
+            String oldName = (String) sticker.get("name");
+            String expectedName = corrections.get(category).getOrDefault(oldName, oldName);
+            assertThat(findStickerId(category, expectedName)).isEqualTo(sticker.get("id"));
+        });
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM consumptions", Long.class)).isEqualTo(64L);
+        recordStickers.forEach((recordId, stickerId) -> assertThat(jdbcTemplate.queryForMap(
+                "SELECT sticker_item_id, amount, memo FROM consumptions WHERE id = ?", recordId
+        )).containsEntry("sticker_item_id", stickerId)
+                .containsEntry("amount", 5000L)
+                .containsEntry("memo", "기존 기록"));
+    }
+
+    @Test
+    void 이름_정정_후_로컬_시드에도_편의점_기록과_프론트_64종이_유지된다() {
+        // given
+        String[] locations = {"classpath:db/migration", "classpath:db/dev-data"};
+
+        // when
+        Flyway.configure().dataSource(dataSource).locations(locations).target("29").load().migrate();
+
+        // then
+        assertFrontendCatalog();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM consumptions WHERE category = '편의점/마트'", Long.class
+        )).isPositive();
+        assertThat(jdbcTemplate.queryForList("""
+                SELECT DISTINCT s.name FROM consumptions c
+                JOIN sticker_item s ON c.sticker_item_id = s.id
+                WHERE c.category = '편의점/마트'
+                """, String.class)).containsExactly("장바구니");
+    }
+
+    private void assertFrontendCatalog() {
+        assertCatalog();
+        // 프론트 catalog.ts (blob 2cd7561079db3a2b9356bf6aab021cde6cb9c5c1)의 카테고리·이름 계약.
+        Map<String, String> expectedNamesByCategory = Map.of(
+                "카페", "커피|케이크|크루아상|아이스크림|컵케이크|쿠키|버블티|녹차",
+                "음식점", "햄버거|빠에야|피자|접시|라면|밥|스파게티|초밥",
+                "편의점/마트", "사과 주스|사과|통조림|편의점|세탁|우유|장바구니|휴지",
+                "취미/놀거리", "볼링|카메라|영화|관람차|게임기|헤드폰|마이크|팔레트",
+                "쇼핑", "드레스|선물|핸드백|청바지|반지|쇼핑백|운동화|선글라스",
+                "운동", "자전거|명상|근육|달리기|축구공|수영|테니스공|역도",
+                "미용/뷰티", "헤어컷|립스틱|로션|마사지|거울|매니큐어|사우나|반짝임",
+                "기타", "책|알약|자동차|고양이|신용카드|강아지|병원|압정"
+        );
+        expectedNamesByCategory.forEach((category, names) -> assertThat(jdbcTemplate.queryForList(
+                "SELECT name FROM sticker_item WHERE category = ?", String.class, category
+        )).containsExactlyInAnyOrder(names.split("\\|")));
+    }
+
     private void migrate(boolean includeLocalSeeds) {
         String[] locations = includeLocalSeeds
                 ? new String[]{"classpath:db/migration", "classpath:db/dev-data"}
