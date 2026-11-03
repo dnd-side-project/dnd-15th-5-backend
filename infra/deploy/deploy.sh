@@ -90,6 +90,12 @@ declare -x "$TAG_VAR=$TAG"
 # 아직 태그가 안 정해진 쪽(BLUE_TAG 기본값 latest)을 pull하려다 실패하는 걸 방지.
 docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" up -d --no-deps redis caddy
 
+# 설정·토큰 변경도 Compose가 감지하도록 해시 전달
+ALLOY_CONFIG_HASH="$(cat "$APP_DIR/config.alloy" "$APP_DIR/.env.monitoring" | sha256sum | awk '{print $1}')"
+export ALLOY_CONFIG_HASH
+docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" run --rm --no-deps alloy validate /etc/alloy/config.alloy
+docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" up -d --no-deps alloy
+
 docker compose -f "$COMPOSE_FILE" --env-file "$APP_DIR/.env" pull "app-$STANDBY"
 
 if ! DEV_CONTAINER_NAMES="$(docker container ls -a --filter "name=$DEV_CONTAINER" --format '{{.Names}}')"; then

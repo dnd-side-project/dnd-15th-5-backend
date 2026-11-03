@@ -24,7 +24,7 @@
 | Logging | SLF4J, Logback | Spring Boot BOM |
 | Test | JUnit 5, Mockito | Spring Boot BOM |
 | Integration Test | Testcontainers | Spring Boot BOM |
-| Monitoring | Spring Boot Actuator | Spring Boot BOM |
+| Application Metrics | Spring Boot Actuator + Micrometer Prometheus Registry | Spring Boot BOM |
 
 #### 1.2 데이터 저장소
 
@@ -72,6 +72,8 @@
 | Deployment Strategy | Production Blue/Green / Development Single Container Replacement | — |
 | Health Check | Spring Boot Actuator | — |
 | Centralized Logging | Amazon CloudWatch Logs | — |
+| Metrics Collection / Forwarding | Grafana Alloy | 1.21.2 |
+| Metrics Storage / Visualization | Grafana Cloud | Managed |
 | TLS / HTTPS | Caddy Automatic HTTPS | — |
 
 ### 🗺️ 2. 시스템 아키텍처
@@ -110,6 +112,7 @@ flowchart LR
             caddy["Caddy<br/>HTTPS + Reverse Proxy<br/>Frontend Dist"]
             apps["Application Containers<br/>Prod Blue/Green + Dev"]
             redis["Redis Containers<br/>Prod + Dev"]
+            alloy["Grafana Alloy<br/>Host Metrics Collector"]
         end
 
         subgraph managed["AWS Managed Services"]
@@ -122,6 +125,7 @@ flowchart LR
 
     subgraph external["External Services"]
         integrations["CLOVA OCR + Kakao/Google OAuth<br/>Expo Push + Google Places + SGIS"]
+        grafanaCloud["Grafana Cloud<br/>Metrics + Dashboards"]
     end
 
     web -->|"HTTPS"| caddy
@@ -134,6 +138,8 @@ flowchart LR
     apps -->|"Application logs"| cloudwatch
     caddy -->|"Access logs"| cloudwatch
     apps -->|"External API calls"| integrations
+    alloy -->|"Scrape Prod Metrics :9091"| apps
+    alloy -->|"HTTPS Remote Write"| grafanaCloud
 
     actions -.->|"Image Push"| ecr
     actions -.->|"Deploy + Configuration"| ssm
@@ -173,6 +179,14 @@ flowchart LR
 
 - Caddy는 SPA 정적 파일을 제공하고 `/api`와 `/dev/api`를 각 환경의 애플리케이션으로 전달하며 HTTPS를 처리한다.
 - Caddy와 애플리케이션 로그는 Docker `awslogs` 드라이버를 통해 CloudWatch Logs로 전송한다.
+
+**지표 수집**
+
+- 운영 Blue/Green의 JVM·GC·HTTP 지표는 Micrometer가 측정하고 Actuator의 Prometheus 엔드포인트로 노출한다.
+- 같은 EC2의 Alloy 컨테이너가 호스트 CPU·메모리·디스크, 운영 백엔드 지표, Alloy 자체 수집·전송 상태를 60초마다 수집해 Grafana Cloud로 전송한다. Grafana Cloud는 지표 저장과 시각화를 담당한다.
+- 운영 앱은 `prod,monitoring` 프로필을 사용하며 Actuator를 내부 전용 `9091` 포트로 분리한다. 해당 포트는 호스트에 게시하지 않고 Caddy도 연결하지 않는다.
+- 개발 앱은 수집 대상에 포함하지 않는다. 호스트 지표에는 같은 EC2에서 실행되는 개발 앱과 Redis 등의 자원 사용량도 포함된다.
+- Cloud 토큰은 별도 Parameter Store SecureString으로 전달한다. Terraform IAM 반영과 GitHub Secret 등록을 포함한 배포 절차는 [모니터링 운영 가이드](monitoring.md)를 따른다.
 
 ### 🧱 3. 애플리케이션 아키텍처 및 설계 원칙
 
