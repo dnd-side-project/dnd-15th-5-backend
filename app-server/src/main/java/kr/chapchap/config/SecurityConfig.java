@@ -7,6 +7,7 @@ import kr.chapchap.core.exception.CommonErrorCode;
 import kr.chapchap.core.exception.ErrorCode;
 import kr.chapchap.core.web.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -77,6 +78,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(HttpMethod.POST, "/v1/auth/signup/terms")
                         .hasAuthority("SCOPE_signup")
+                        .requestMatchers(EndpointRequest.to("prometheus")).permitAll()
                         .requestMatchers(
                                 "/actuator/health",
                                 "/actuator/health/**",
@@ -85,6 +87,7 @@ public class SecurityConfig {
                                 "/swagger-ui",
                                 "/swagger-ui/**"
                         ).permitAll()
+                        .requestMatchers("/actuator/**").denyAll()
                         .requestMatchers(HttpMethod.GET, "/v1/reports/share/*")
                         .permitAll()
                         .anyRequest().hasAuthority("SCOPE_user")

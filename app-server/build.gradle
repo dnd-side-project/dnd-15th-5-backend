@@ -21,6 +21,8 @@ dependencies {
     implementation platform("software.amazon.awssdk:bom:${libs.versions.aws.sdk.get()}")
     implementation "software.amazon.awssdk:s3"
 
+    runtimeOnly "io.micrometer:micrometer-registry-prometheus"
+
     testImplementation testFixtures(project(":module-core"))
 
     testImplementation "com.tngtech.archunit:archunit-junit5:${libs.versions.archunit.get()}"
