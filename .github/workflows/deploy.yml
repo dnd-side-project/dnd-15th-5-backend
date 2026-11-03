@@ -18,6 +18,7 @@ env:
   APP_DIR: /app/chapchap
   SSM_PARAMETER_KMS_KEY_ID: alias/chapchap-parameter-store
   PROD_APP_ENV_PARAMETER_NAME: /chapchap/prod/deploy/app-env
+  MONITORING_ENV_PARAMETER_NAME: /chapchap/prod/deploy/monitoring-env
 
 jobs:
   deploy:
@@ -25,6 +26,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Check monitoring token
+        env:
+          GRAFANA_CLOUD_API_KEY: ${{ secrets.GRAFANA_CLOUD_API_KEY }}
+        run: |
+          if [ -z "$GRAFANA_CLOUD_API_KEY" ]; then
+            echo "GitHub Secret GRAFANA_CLOUD_API_KEY에 metrics:write 토큰을 등록해주세요."
+            exit 1
+          fi
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -59,14 +69,16 @@ jobs:
           docker build --platform linux/arm64 -t "$ECR_URI:$IMAGE_TAG" .
           docker push "$ECR_URI:$IMAGE_TAG"
 
-      # docker-compose.prod.yml / Caddyfile / .env는 매 배포마다 최신으로 덮어씀.
+      # 설정과 토큰은 매 배포마다 동기화하며, 토큰은 SecureString으로만 전달
       - name: Sync compose & Caddyfile & .env to EC2
         env:
           ECR_URI: ${{ steps.ecr-login.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          GRAFANA_CLOUD_API_KEY: ${{ secrets.GRAFANA_CLOUD_API_KEY }}
         run: |
           COMPOSE_B64=$(base64 -w0 infra/deploy/docker-compose.prod.yml)
           CADDYFILE_B64=$(base64 -w0 infra/deploy/Caddyfile)
+          ALLOY_CONFIG_B64=$(base64 -w0 infra/deploy/config.alloy)
   
           ENV_CONTENT="ECR_IMAGE=$ECR_URI
           SPRING_PROFILES_ACTIVE=prod
@@ -101,12 +113,16 @@ jobs:
           source infra/deploy/ssm-secure-parameter.sh
           printf '%s' "$ENV_CONTENT" \
             | put_secure_parameter "$PROD_APP_ENV_PARAMETER_NAME" "$SSM_PARAMETER_KMS_KEY_ID"
+          printf 'GCLOUD_RW_API_KEY=%s' "$GRAFANA_CLOUD_API_KEY" \
+            | put_secure_parameter "$MONITORING_ENV_PARAMETER_NAME" "$SSM_PARAMETER_KMS_KEY_ID"
 
           SYNC_SCRIPT="$(cat infra/deploy/ssm-secure-parameter.sh)
           mkdir -p \"$APP_DIR\"
           echo \"$COMPOSE_B64\" | base64 -d > \"$APP_DIR/docker-compose.prod.yml\"
           echo \"$CADDYFILE_B64\" | base64 -d > \"$APP_DIR/Caddyfile\"
-          write_secure_parameter_to_file \"$PROD_APP_ENV_PARAMETER_NAME\" \"$APP_DIR/.env\" \"$AWS_REGION\""
+          echo \"$ALLOY_CONFIG_B64\" | base64 -d > \"$APP_DIR/config.alloy\"
+          write_secure_parameter_to_file \"$PROD_APP_ENV_PARAMETER_NAME\" \"$APP_DIR/.env\" \"$AWS_REGION\"
+          write_secure_parameter_to_file \"$MONITORING_ENV_PARAMETER_NAME\" \"$APP_DIR/.env.monitoring\" \"$AWS_REGION\""
 
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \

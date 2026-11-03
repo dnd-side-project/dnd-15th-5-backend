@@ -32,7 +32,8 @@ locals {
   secure_parameter_names = [
     "/${var.project_name}/dev/bootstrap/config",
     "/${var.project_name}/dev/deploy/app-env",
-    "/${var.project_name}/prod/deploy/app-env"
+    "/${var.project_name}/prod/deploy/app-env",
+    "/${var.project_name}/prod/deploy/monitoring-env"
   ]
   secure_parameter_arns = [
     for parameter_name in local.secure_parameter_names :
