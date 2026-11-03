@@ -45,13 +45,15 @@ services:
     image: ${ECR_IMAGE}:${BLUE_TAG:-latest}
     container_name: app-blue
     env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: prod,monitoring
     networks:
       - app-net
     depends_on:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:9091/actuator/health"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -69,13 +71,15 @@ services:
     image: ${ECR_IMAGE}:${GREEN_TAG:-latest}
     container_name: app-green
     env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: prod,monitoring
     networks:
       - app-net
     depends_on:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:9091/actuator/health"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -87,6 +91,35 @@ services:
         awslogs-group: /chapchap/app-server
         awslogs-create-group: "true"
         awslogs-stream: app-green
+    restart: unless-stopped
+
+  alloy:
+    image: grafana/alloy:v1.21.2
+    container_name: alloy
+    env_file: .env.monitoring
+    command:
+      - run
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./config.alloy:/etc/alloy/config.alloy:ro
+      - alloy-data:/var/lib/alloy/data
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro,rslave
+    networks:
+      - app-net
+    mem_limit: 384m
+    cpus: 0.5
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
 
 networks:
@@ -101,3 +134,4 @@ volumes:
   caddy-data:
   caddy-config:
   redis-data:
+  alloy-data:

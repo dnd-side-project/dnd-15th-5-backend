@@ -1,0 +1,98 @@
+// Alloy 자체 지표 제공
+prometheus.exporter.self "alloy_check" {}
+
+discovery.relabel "alloy_check" {
+  targets = prometheus.exporter.self.alloy_check.targets
+
+  rule {
+    target_label = "instance"
+    replacement  = "chapchap-ec2"
+  }
+  rule {
+    target_label = "job"
+    replacement  = "integrations/alloy-check"
+  }
+}
+
+prometheus.scrape "alloy_check" {
+  targets         = discovery.relabel.alloy_check.output
+  scrape_interval = "60s"
+  forward_to      = [prometheus.relabel.alloy_check.receiver]
+}
+
+// 시작 시각·수집 오류·전송 상태 지표만 유지
+prometheus.relabel "alloy_check" {
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+
+  rule {
+    source_labels = ["__name__"]
+    regex         = "(up|alloy_build_info|process_start_time_seconds|prometheus_target_scrapes_.*|prometheus_remote_storage_(samples_pending|samples_failed_total|samples_retried_total|samples_total|queue_highest_sent_timestamp_seconds)|prometheus_remote_write_wal_samples_appended_total)"
+    action        = "keep"
+  }
+}
+
+// EC2 CPU·메모리·디스크 지표 제공
+prometheus.exporter.unix "host" {
+  procfs_path = "/host/proc"
+  sysfs_path  = "/host/sys"
+  rootfs_path = "/host/root"
+  set_collectors = ["cpu", "diskstats", "filesystem", "loadavg", "meminfo", "stat", "time", "uname"]
+
+  // 임시·가상 파일시스템 제외
+  filesystem {
+    fs_types_exclude     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|tmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
+    mount_points_exclude = "^/(dev|proc|run/credentials/.+|sys|var/lib/docker/.+)($|/)"
+    mount_timeout       = "5s"
+  }
+}
+
+// 서버·수집 작업 구분용 라벨 지정
+discovery.relabel "host" {
+  targets = prometheus.exporter.unix.host.targets
+
+  rule {
+    target_label = "instance"
+    replacement  = "chapchap-ec2"
+  }
+  rule {
+    target_label = "job"
+    replacement  = "integrations/node_exporter"
+  }
+}
+
+// EC2 지표 수집
+prometheus.scrape "host" {
+  targets         = discovery.relabel.host.output
+  scrape_interval = "60s"
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+// 운영 Blue/Green 지표 수집 (중지된 슬롯의 up=0은 정상)
+prometheus.scrape "backend" {
+  targets = [
+    {"__address__" = "app-blue:9091", "slot" = "blue"},
+    {"__address__" = "app-green:9091", "slot" = "green"},
+  ]
+  job_name        = "chapchap/backend"
+  metrics_path    = "/actuator/prometheus"
+  scrape_interval = "60s"
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+// Grafana Cloud로 지표 전송
+prometheus.remote_write "grafana_cloud" {
+  external_labels = {"environment" = "prod"}
+
+  endpoint {
+    url = "https://prometheus-prod-49-prod-ap-northeast-0.grafana.net/api/prom/push"
+    basic_auth {
+      username = "3732324"
+      password = sys.env("GCLOUD_RW_API_KEY")
+    }
+  }
+
+  // 전송 대기 지표 임시 보관
+  wal {
+    max_keepalive_time = "2h"
+  }
+}
