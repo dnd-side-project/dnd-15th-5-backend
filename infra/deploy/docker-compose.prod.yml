@@ -96,6 +96,8 @@ services:
   alloy:
     image: grafana/alloy:v1.21.2
     container_name: alloy
+    group_add:
+      - "473"
     labels:
       kr.chapchap.alloy-config-hash: "${ALLOY_CONFIG_HASH:-}"
     env_file: .env.monitoring
