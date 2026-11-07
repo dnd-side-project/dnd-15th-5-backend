@@ -6,10 +6,13 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.chapchap.core.web.auth.ChapChapUserId;
 import kr.chapchap.core.web.response.ApiResponse;
+import kr.chapchap.report.api.response.CategoryDistributionResponse;
 import kr.chapchap.report.api.response.ReportCalendarResponse;
 import kr.chapchap.report.application.command.GetReportCalendarCommand;
+import kr.chapchap.report.application.info.CategoryDistributionInfo;
 import kr.chapchap.report.application.info.ReportCalendarInfo;
 import kr.chapchap.report.application.service.ReportCalendarQueryService;
+import kr.chapchap.report.application.service.ReportCategoryDistributionQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,11 +27,11 @@ import java.time.YearMonth;
 @Tag(name = "Report", description = "리포트 API")
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/v1/reports")
+@RequestMapping("/v2/reports")
 public class ReportCalendarController {
 
     private final ReportCalendarQueryService reportCalendarQueryService;
-
+    private final ReportCategoryDistributionQueryService reportCategoryDistributionQueryService;
     @Operation(
             summary = "리포트 캘린더 조회",
             description = "연월(yyyy-MM) 기준 월별 캘린더, weekAnchor(해당 날짜가 속한 일~토)를 넘기면 주간 캘린더를 조회한다. "
@@ -44,5 +47,16 @@ public class ReportCalendarController {
         ReportCalendarInfo info = reportCalendarQueryService.getCalendar(
                 new GetReportCalendarCommand(userId, yearMonth, weekAnchor));
         return ApiResponse.success(ReportCalendarResponse.from(info));
+    }
+
+
+    @Operation(
+            summary = "카테고리 분포도 조회",
+            description = "오늘 기준 최근 1개월 소비기록의 카테고리별 비율을 내려준다. "
+    )
+    @GetMapping("/category-distribution")
+    public ApiResponse<CategoryDistributionResponse> getCategoryDistribution(@ChapChapUserId Long userId) {
+        CategoryDistributionInfo info = reportCategoryDistributionQueryService.getDistribution(userId);
+        return ApiResponse.success(CategoryDistributionResponse.from(info));
     }
 }
