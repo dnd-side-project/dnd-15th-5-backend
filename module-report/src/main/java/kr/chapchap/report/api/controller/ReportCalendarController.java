@@ -9,13 +9,16 @@ import kr.chapchap.core.web.response.ApiResponse;
 import kr.chapchap.report.api.response.CategoryDistributionResponse;
 import kr.chapchap.report.api.response.ReportCalendarResponse;
 import kr.chapchap.report.api.response.StickerBoardResponse;
+import kr.chapchap.report.api.response.SummaryHighlightResponse;
 import kr.chapchap.report.application.command.GetReportCalendarCommand;
 import kr.chapchap.report.application.info.CategoryDistributionInfo;
 import kr.chapchap.report.application.info.ReportCalendarInfo;
 import kr.chapchap.report.application.info.StickerBoardInfo;
+import kr.chapchap.report.application.info.SummaryHighlightInfo;
 import kr.chapchap.report.application.service.ReportCalendarQueryService;
 import kr.chapchap.report.application.service.ReportCategoryDistributionQueryService;
 import kr.chapchap.report.application.service.ReportStickerBoardQueryService;
+import kr.chapchap.report.application.service.ReportSummaryQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,6 +39,7 @@ public class ReportCalendarController {
     private final ReportCalendarQueryService reportCalendarQueryService;
     private final ReportCategoryDistributionQueryService reportCategoryDistributionQueryService;
     private final ReportStickerBoardQueryService reportStickerBoardQueryService;
+    private final ReportSummaryQueryService reportSummaryQueryService;
 
     @Operation(
             summary = "리포트 캘린더 조회",
@@ -76,5 +80,16 @@ public class ReportCalendarController {
     ) {
         StickerBoardInfo info = reportStickerBoardQueryService.getStickerBoard(userId, yearMonth);
         return ApiResponse.success(StickerBoardResponse.from(info));
+    }
+
+    @Operation(
+            summary = "상단 핵심요약 카드 조회",
+            description = "방문 기록에서 발견된 특징 1개를 반환한다. 하루 동안은 동일 카드를 유지하고, "
+                    + "다음날은 이전에 노출한 유형을 제외하고 순환 노출한다. 기록이 부족하면 기본 안내 문구를 반환한다."
+    )
+    @GetMapping("/summary-highlight")
+    public ApiResponse<SummaryHighlightResponse> getSummaryHighlight(@ChapChapUserId Long userId) {
+        SummaryHighlightInfo info = reportSummaryQueryService.getSummaryHighlight(userId);
+        return ApiResponse.success(SummaryHighlightResponse.from(info));
     }
 }
