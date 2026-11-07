@@ -3,6 +3,7 @@ package kr.chapchap.consumption.application.service;
 import kr.chapchap.consumption.application.command.ConsumptionSearchCommand;
 import kr.chapchap.consumption.application.info.AcquiredStickerInfo;
 import kr.chapchap.consumption.application.info.ConsumptionActivityInfo;
+import kr.chapchap.consumption.application.info.ConsumptionCalendarRecordInfo;
 import kr.chapchap.consumption.application.info.ConsumptionDetailInfo;
 import kr.chapchap.consumption.application.info.ConsumptionInfo;
 import kr.chapchap.consumption.application.info.ConsumptionScrollInfo;
@@ -12,6 +13,7 @@ import kr.chapchap.consumption.application.port.PlaceSummaryLookupPort;
 import kr.chapchap.consumption.domain.entity.Consumption;
 import kr.chapchap.consumption.domain.entity.ConsumptionImage;
 import kr.chapchap.consumption.domain.entity.PlaceStickerRow;
+import kr.chapchap.consumption.domain.entity.PlaceVisitOrderRow;
 import kr.chapchap.consumption.domain.entity.StickerItem;
 import kr.chapchap.consumption.domain.repository.ConsumptionImageRepository;
 import kr.chapchap.consumption.domain.repository.ConsumptionQueryRepository;
@@ -25,10 +27,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -151,6 +156,34 @@ public class ConsumptionQueryService {
         return consumptionQueryRepository.findAllByUserAndDateRange(userId, from, toExclusive).stream()
                 .map(ConsumptionActivityInfo::from)
                 .toList();
+    }
+
+    // 리포트 캘린더용 - 기간 내 전체 소비기록
+    public List<ConsumptionCalendarRecordInfo> getActivitiesForCalendar(Long userId, LocalDate from, LocalDate toExclusive) {
+        return consumptionQueryRepository.findAllByUserAndDateRange(userId, from, toExclusive).stream()
+                .map(ConsumptionCalendarRecordInfo::from)
+                .toList();
+    }
+
+    //  이전 전체 방문을 날짜순으로 정렬
+    public Map<Long, Integer> getVisitOrdinals(Long userId, List<Long> placeIds, LocalDate toExclusive) {
+        List<PlaceVisitOrderRow> rows = consumptionQueryRepository.findVisitOrderRowsByPlaces(userId, placeIds, toExclusive);
+
+        Map<Long, List<PlaceVisitOrderRow>> rowsByPlace = rows.stream()
+                .collect(Collectors.groupingBy(PlaceVisitOrderRow::placeId, LinkedHashMap::new, Collectors.toList()));
+
+        Map<Long, Integer> ordinalsByConsumptionId = new HashMap<>();
+        rowsByPlace.values().forEach(placeRows -> {
+            List<PlaceVisitOrderRow> sorted = placeRows.stream()
+                    .sorted(Comparator.comparing(PlaceVisitOrderRow::purchaseDate)
+                            .thenComparing(PlaceVisitOrderRow::purchaseTime, Comparator.nullsFirst(Comparator.naturalOrder()))
+                            .thenComparing(PlaceVisitOrderRow::consumptionId))
+                    .toList();
+            for (int i = 0; i < sorted.size(); i++) {
+                ordinalsByConsumptionId.put(sorted.get(i).consumptionId(), i + 1);
+            }
+        });
+        return ordinalsByConsumptionId;
     }
 
     public List<Long> getActiveUserIds(LocalDate from, LocalDate toExclusive) {

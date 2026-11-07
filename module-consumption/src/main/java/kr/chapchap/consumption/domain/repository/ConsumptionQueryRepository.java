@@ -9,6 +9,7 @@ import kr.chapchap.consumption.domain.entity.PlaceLatestStickerRow;
 import kr.chapchap.consumption.domain.entity.PlacePopularityRow;
 import kr.chapchap.consumption.domain.entity.PlaceRecentRecordRow;
 import kr.chapchap.consumption.domain.entity.PlaceStickerRow;
+import kr.chapchap.consumption.domain.entity.PlaceVisitOrderRow;
 import kr.chapchap.consumption.domain.entity.PlaceVisitStatsRow;
 import kr.chapchap.consumption.domain.entity.StickerCountRow;
 
@@ -77,4 +78,7 @@ public interface ConsumptionQueryRepository {
                                                  LocalTime cursorPurchaseTime, Long cursorId, int fetchSize);
 
     List<PlaceStickerRow> findRecentStickerRowsByUser(Long userId, LocalDate from, LocalDate toExclusive);
+
+    //  방문 이력
+    List<PlaceVisitOrderRow> findVisitOrderRowsByPlaces(Long userId, List<Long> placeIds, LocalDate toExclusive);
 }

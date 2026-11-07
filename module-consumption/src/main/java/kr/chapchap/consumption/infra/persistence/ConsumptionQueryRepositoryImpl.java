@@ -15,6 +15,7 @@ import kr.chapchap.consumption.domain.entity.PlaceLatestStickerRow;
 import kr.chapchap.consumption.domain.entity.PlacePopularityRow;
 import kr.chapchap.consumption.domain.entity.PlaceRecentRecordRow;
 import kr.chapchap.consumption.domain.entity.PlaceStickerRow;
+import kr.chapchap.consumption.domain.entity.PlaceVisitOrderRow;
 import kr.chapchap.consumption.domain.entity.PlaceVisitStatsRow;
 import kr.chapchap.consumption.domain.entity.QConsumption;
 import kr.chapchap.consumption.domain.entity.StickerCountRow;
@@ -498,6 +499,31 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
                 )
                 .orderBy(consumption.purchaseDate.desc(), consumption.purchaseTime.desc().nullsLast(),
                         consumption.id.desc())
+                .fetch();
+    }
+
+    @Override
+    public List<PlaceVisitOrderRow> findVisitOrderRowsByPlaces(Long userId, List<Long> placeIds, LocalDate toExclusive) {
+        if (placeIds == null || placeIds.isEmpty()) {
+            return List.of();
+        }
+
+        QConsumption consumption = QConsumption.consumption;
+
+        return queryFactory
+                .select(Projections.constructor(PlaceVisitOrderRow.class,
+                        consumption.id,
+                        consumption.placeId,
+                        consumption.purchaseDate,
+                        consumption.purchaseTime))
+                .from(consumption)
+                .where(
+                        consumption.userId.eq(userId),
+                        consumption.placeId.in(placeIds),
+                        consumption.purchaseDate.lt(toExclusive)
+                )
+                .orderBy(consumption.placeId.asc(), consumption.purchaseDate.asc(),
+                        consumption.purchaseTime.asc().nullsFirst(), consumption.id.asc())
                 .fetch();
     }
 }
