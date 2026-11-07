@@ -33,7 +33,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
@@ -131,7 +131,7 @@ class MonthlyReportQueryServiceTest {
         when(consumptionActivityPort.findActivities(eq(USER_ID), any(), any())).thenReturn(List.of(
                 new ConsumptionActivity(101L, "카페", LocalDate.of(2026, 7, 3), null)
         ));
-        when(placeStickerLookupPort.findRecentVisuals(eq(USER_ID), eq(101L), any(), any(), anyInt()))
+        when(placeStickerLookupPort.findRecentVisuals(eq(USER_ID), eq(101L), any(), any(), isNull()))
                 .thenReturn(List.of(
                         new ConsumptionVisualSummary(1L, "도넛", null, null),
                         new ConsumptionVisualSummary(2L, "아이스", null, null)

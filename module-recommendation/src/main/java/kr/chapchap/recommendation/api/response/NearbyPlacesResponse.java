@@ -8,12 +8,14 @@ import kr.chapchap.recommendation.application.info.RecommendedPlaceInfo;
 import java.util.List;
 
 public record NearbyPlacesResponse(
+        String currentDongName,
         List<RecommendedPlaceItem> allPlaces,
         List<CategoryPlacesResponse> categoryPlaces
 ) {
 
     public static NearbyPlacesResponse from(RecommendationInfo info) {
         return new NearbyPlacesResponse(
+                info.currentDongName(),
                 info.allPlaces().stream().map(RecommendedPlaceItem::from).toList(),
                 info.categoryPlaces().stream().map(CategoryPlacesResponse::from).toList()
         );

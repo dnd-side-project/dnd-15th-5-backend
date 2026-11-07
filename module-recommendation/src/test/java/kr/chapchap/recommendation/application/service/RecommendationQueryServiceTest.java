@@ -5,6 +5,7 @@ import kr.chapchap.recommendation.application.info.NearbyPlaceInfo;
 import kr.chapchap.recommendation.application.info.PlacePopularityInfo;
 import kr.chapchap.recommendation.application.info.RecommendationInfo;
 import kr.chapchap.recommendation.application.port.CategoryCatalogLookupPort;
+import kr.chapchap.recommendation.application.port.CurrentDongLookupPort;
 import kr.chapchap.recommendation.application.port.PlaceLikeLookupPort;
 import kr.chapchap.recommendation.application.port.PlaceRadiusLookupPort;
 import kr.chapchap.recommendation.application.port.PopularityLookupPort;
@@ -49,6 +50,9 @@ class RecommendationQueryServiceTest {
     private CategoryCatalogLookupPort categoryCatalogLookupPort;
 
     @Mock
+    private CurrentDongLookupPort currentDongLookupPort;
+
+    @Mock
     private PlacePhotoService placePhotoService;
 
     private RecommendationQueryService sut;
@@ -57,7 +61,8 @@ class RecommendationQueryServiceTest {
     void setUp() {
         sut = new RecommendationQueryService(
                 placeRadiusLookupPort, popularityLookupPort,
-                placeLikeLookupPort, visitedPlaceLookupPort, categoryCatalogLookupPort, placePhotoService, fixedClock);
+                placeLikeLookupPort, visitedPlaceLookupPort, categoryCatalogLookupPort, currentDongLookupPort,
+                placePhotoService, fixedClock);
         when(categoryCatalogLookupPort.findAllCategories()).thenReturn(List.of("카페", "음식점", "운동"));
     }
 
