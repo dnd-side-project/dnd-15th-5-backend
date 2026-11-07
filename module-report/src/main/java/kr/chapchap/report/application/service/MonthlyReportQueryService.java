@@ -3,6 +3,7 @@ package kr.chapchap.report.application.service;
 import kr.chapchap.core.exception.BusinessException;
 import kr.chapchap.report.application.command.GetMonthlyReportCommand;
 import kr.chapchap.report.application.info.ConsumptionActivity;
+import kr.chapchap.report.application.info.ConsumptionVisualSummary;
 import kr.chapchap.report.application.info.MonthlyReportInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.AdjacentPersonaInfo;
 import kr.chapchap.report.application.info.MonthlyReportInfo.CategoryStatInfo;
@@ -48,7 +49,6 @@ public class MonthlyReportQueryService {
 
     private static final int NO_DAY_OF_WEEK = 0;
     private static final int TOP_PLACE_RANK = 1;
-    private static final int TOP_PLACE_STICKER_LIMIT = 5;
 
     private final ReportRepository reportRepository;
     private final ReportCategoryStatRepository reportCategoryStatRepository;
@@ -167,7 +167,7 @@ public class MonthlyReportQueryService {
                             placeRank.getVisitCount(),
                             placeRank.getFirstVisitedDate(),
                             isTopPlace ? findCategory(command, placeRank.getPlaceId()) : null,
-                            isTopPlace ? findStickerNames(command, placeRank.getPlaceId()) : List.of()
+                            isTopPlace ? findVisuals(command, placeRank.getPlaceId()) : List.of()
                     );
                 })
                 .toList();
@@ -185,12 +185,13 @@ public class MonthlyReportQueryService {
                 .orElse(null);
     }
 
-    private List<String> findStickerNames(GetMonthlyReportCommand command, Long placeId) {
+    private List<ConsumptionVisualSummary> findVisuals(GetMonthlyReportCommand command, Long placeId) {
         LocalDate monthStart = command.yearMonth().atDay(1);
         LocalDate monthEndExclusive = command.yearMonth().plusMonths(1).atDay(1);
 
-        return placeStickerLookupPort.findRecentStickerNames(
-                command.userId(), placeId, monthStart, monthEndExclusive, TOP_PLACE_STICKER_LIMIT);
+        // 5개 넘으면 "+n"은 프론트가 visitCount - visuals.size()로 계산(백엔드는 더보기 대비 전체 반환)
+        return placeStickerLookupPort.findRecentVisuals(
+                command.userId(), placeId, monthStart, monthEndExclusive, null);
     }
 
     private List<TownRankInfo> toTownRankInfos(List<ReportTownRank> townRanks) {

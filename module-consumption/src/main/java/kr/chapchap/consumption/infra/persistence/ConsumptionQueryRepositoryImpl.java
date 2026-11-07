@@ -3,6 +3,7 @@ package kr.chapchap.consumption.infra.persistence;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -376,28 +377,31 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
 
     @Override
     public List<PlaceStickerRow> findRecentStickersByPlace(Long userId, Long placeId, LocalDate from,
-                                                             LocalDate toExclusive, int limit) {
+                                                             LocalDate toExclusive, Integer limit) {
         QConsumption consumption = QConsumption.consumption;
 
         BooleanBuilder condition = new BooleanBuilder()
                 .and(consumption.userId.eq(userId))
-                .and(consumption.placeId.eq(placeId))
-                .and(consumption.stickerItemId.isNotNull());
+                .and(consumption.placeId.eq(placeId));
         if (from != null && toExclusive != null) {
             condition.and(consumption.purchaseDate.goe(from))
                     .and(consumption.purchaseDate.lt(toExclusive));
         }
 
-        return queryFactory
+        JPAQuery<PlaceStickerRow> query = queryFactory
                 .select(Projections.constructor(PlaceStickerRow.class,
+                        consumption.id,
                         consumption.stickerItemId,
+                        consumption.imageId,
                         consumption.purchaseDate))
                 .from(consumption)
                 .where(condition)
                 .orderBy(consumption.purchaseDate.desc(), consumption.purchaseTime.desc().nullsLast(),
-                        consumption.id.desc())
-                .limit(limit)
-                .fetch();
+                        consumption.id.desc());
+        if (limit != null) {
+            query.limit(limit);
+        }
+        return query.fetch();
     }
 
     @Override
@@ -488,7 +492,9 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
 
         return queryFactory
                 .select(Projections.constructor(PlaceStickerRow.class,
+                        consumption.id,
                         consumption.stickerItemId,
+                        consumption.imageId,
                         consumption.purchaseDate))
                 .from(consumption)
                 .where(

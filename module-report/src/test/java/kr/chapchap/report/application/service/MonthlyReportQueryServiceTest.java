@@ -2,6 +2,7 @@ package kr.chapchap.report.application.service;
 
 import kr.chapchap.report.application.command.GetMonthlyReportCommand;
 import kr.chapchap.report.application.info.ConsumptionActivity;
+import kr.chapchap.report.application.info.ConsumptionVisualSummary;
 import kr.chapchap.report.application.info.MonthlyReportInfo;
 import kr.chapchap.report.application.port.ConsumptionActivityPort;
 import kr.chapchap.report.application.port.PlaceStickerLookupPort;
@@ -130,8 +131,11 @@ class MonthlyReportQueryServiceTest {
         when(consumptionActivityPort.findActivities(eq(USER_ID), any(), any())).thenReturn(List.of(
                 new ConsumptionActivity(101L, "카페", LocalDate.of(2026, 7, 3), null)
         ));
-        when(placeStickerLookupPort.findRecentStickerNames(eq(USER_ID), eq(101L), any(), any(), anyInt()))
-                .thenReturn(List.of("도넛", "아이스"));
+        when(placeStickerLookupPort.findRecentVisuals(eq(USER_ID), eq(101L), any(), any(), anyInt()))
+                .thenReturn(List.of(
+                        new ConsumptionVisualSummary(1L, "도넛", null, null),
+                        new ConsumptionVisualSummary(2L, "아이스", null, null)
+                ));
 
         // when
         MonthlyReportInfo info = sut.getMonthlyReport(new GetMonthlyReportCommand(USER_ID, YEAR_MONTH));
@@ -145,7 +149,9 @@ class MonthlyReportQueryServiceTest {
         assertThat(info.placeRanks().get(0).placeId()).isEqualTo(101L);
         assertThat(info.placeRanks().get(0).placeName()).isEqualTo("투썸 플레이스 뚝섬지점");
         assertThat(info.placeRanks().get(0).category()).isEqualTo("카페");
-        assertThat(info.placeRanks().get(0).stickerNames()).containsExactly("도넛", "아이스");
+        assertThat(info.placeRanks().get(0).visuals())
+                .extracting(ConsumptionVisualSummary::stickerName)
+                .containsExactly("도넛", "아이스");
         assertThat(info.townRanks()).hasSize(1);
         assertThat(info.summary().totalVisitCount()).isEqualTo(24);
     }

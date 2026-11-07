@@ -36,6 +36,7 @@ public class ReportCalendarController {
     private final ReportCalendarQueryService reportCalendarQueryService;
     private final ReportCategoryDistributionQueryService reportCategoryDistributionQueryService;
     private final ReportStickerBoardQueryService reportStickerBoardQueryService;
+
     @Operation(
             summary = "리포트 캘린더 조회",
             description = "연월(yyyy-MM) 기준 월별 캘린더, weekAnchor(해당 날짜가 속한 일~토)를 넘기면 주간 캘린더를 조회한다. "

@@ -5,6 +5,7 @@ import kr.chapchap.consumption.application.info.AcquiredStickerInfo;
 import kr.chapchap.consumption.application.info.ConsumptionActivityInfo;
 import kr.chapchap.consumption.application.info.ConsumptionCalendarRecordInfo;
 import kr.chapchap.consumption.application.info.ConsumptionDetailInfo;
+import kr.chapchap.consumption.application.info.ConsumptionVisualInfo;
 import kr.chapchap.consumption.application.info.ConsumptionInfo;
 import kr.chapchap.consumption.application.info.ConsumptionScrollInfo;
 import kr.chapchap.consumption.application.info.PlaceSummaryInfo;
@@ -51,6 +52,7 @@ public class ConsumptionQueryService {
     private final PlaceSummaryLookupPort placeSummaryLookupPort;
     private final PlaceThumbnailBatchLookup placeThumbnailBatchLookup;
     private final StickerQueryService stickerQueryService;
+    private final ConsumptionVisualBatchResolver consumptionVisualBatchResolver;
 
     public ConsumptionDetailInfo getDetail(Long userId, Long consumptionId) {
         Consumption consumption = consumptionRepository.findByIdAndUserId(consumptionId, userId)
@@ -207,19 +209,16 @@ public class ConsumptionQueryService {
                 .toList();
     }
 
-    // 월간 리포트 1위 장소용 - 특정 장소+기간으로 좁힌 최근 스티커 이름 (최신순)
-    public List<String> findRecentStickerNamesByPlace(Long userId, Long placeId, LocalDate from, LocalDate toExclusive, int limit) {
+    // 월간 리포트 1위 장소용 - 특정 장소+기간으로 좁힌 최근 방문 비주얼(스티커 또는 사진, 최신순)
+    public List<ConsumptionVisualInfo> findRecentVisualsByPlace(Long userId, Long placeId, LocalDate from, LocalDate toExclusive, Integer limit) {
         List<PlaceStickerRow> rows = consumptionQueryRepository.findRecentStickersByPlace(userId, placeId, from, toExclusive, limit);
-        List<Long> stickerItemIds = rows.stream().map(PlaceStickerRow::stickerItemId).toList();
-        return resolveStickerNamesInOrder(stickerItemIds);
-    }
+        List<Long> consumptionIds = rows.stream().map(PlaceStickerRow::consumptionId).toList();
+        Map<Long, ConsumptionVisualInfo> visualsByConsumptionId =
+                consumptionVisualBatchResolver.resolveByConsumptionIds(userId, consumptionIds);
 
-    private List<String> resolveStickerNamesInOrder(List<Long> stickerItemIds) {
-        Map<Long, String> namesById = stickerQueryService.findNames(stickerItemIds);
-
-        return stickerItemIds.stream()
-                .map(namesById::get)
-                .filter(name -> name != null)
+        return consumptionIds.stream()
+                .map(visualsByConsumptionId::get)
+                .filter(visual -> visual != null)
                 .toList();
     }
 }
