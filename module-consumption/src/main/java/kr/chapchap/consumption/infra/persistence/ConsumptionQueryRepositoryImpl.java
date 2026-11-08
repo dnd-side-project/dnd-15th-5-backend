@@ -3,6 +3,7 @@ package kr.chapchap.consumption.infra.persistence;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -15,6 +16,7 @@ import kr.chapchap.consumption.domain.entity.PlaceLatestStickerRow;
 import kr.chapchap.consumption.domain.entity.PlacePopularityRow;
 import kr.chapchap.consumption.domain.entity.PlaceRecentRecordRow;
 import kr.chapchap.consumption.domain.entity.PlaceStickerRow;
+import kr.chapchap.consumption.domain.entity.PlaceVisitOrderRow;
 import kr.chapchap.consumption.domain.entity.PlaceVisitStatsRow;
 import kr.chapchap.consumption.domain.entity.QConsumption;
 import kr.chapchap.consumption.domain.entity.StickerCountRow;
@@ -375,28 +377,31 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
 
     @Override
     public List<PlaceStickerRow> findRecentStickersByPlace(Long userId, Long placeId, LocalDate from,
-                                                             LocalDate toExclusive, int limit) {
+                                                             LocalDate toExclusive, Integer limit) {
         QConsumption consumption = QConsumption.consumption;
 
         BooleanBuilder condition = new BooleanBuilder()
                 .and(consumption.userId.eq(userId))
-                .and(consumption.placeId.eq(placeId))
-                .and(consumption.stickerItemId.isNotNull());
+                .and(consumption.placeId.eq(placeId));
         if (from != null && toExclusive != null) {
             condition.and(consumption.purchaseDate.goe(from))
                     .and(consumption.purchaseDate.lt(toExclusive));
         }
 
-        return queryFactory
+        JPAQuery<PlaceStickerRow> query = queryFactory
                 .select(Projections.constructor(PlaceStickerRow.class,
+                        consumption.id,
                         consumption.stickerItemId,
+                        consumption.imageId,
                         consumption.purchaseDate))
                 .from(consumption)
                 .where(condition)
                 .orderBy(consumption.purchaseDate.desc(), consumption.purchaseTime.desc().nullsLast(),
-                        consumption.id.desc())
-                .limit(limit)
-                .fetch();
+                        consumption.id.desc());
+        if (limit != null) {
+            query.limit(limit);
+        }
+        return query.fetch();
     }
 
     @Override
@@ -487,7 +492,9 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
 
         return queryFactory
                 .select(Projections.constructor(PlaceStickerRow.class,
+                        consumption.id,
                         consumption.stickerItemId,
+                        consumption.imageId,
                         consumption.purchaseDate))
                 .from(consumption)
                 .where(
@@ -498,6 +505,31 @@ public class ConsumptionQueryRepositoryImpl implements ConsumptionQueryRepositor
                 )
                 .orderBy(consumption.purchaseDate.desc(), consumption.purchaseTime.desc().nullsLast(),
                         consumption.id.desc())
+                .fetch();
+    }
+
+    @Override
+    public List<PlaceVisitOrderRow> findVisitOrderRowsByPlaces(Long userId, List<Long> placeIds, LocalDate toExclusive) {
+        if (placeIds == null || placeIds.isEmpty()) {
+            return List.of();
+        }
+
+        QConsumption consumption = QConsumption.consumption;
+
+        return queryFactory
+                .select(Projections.constructor(PlaceVisitOrderRow.class,
+                        consumption.id,
+                        consumption.placeId,
+                        consumption.purchaseDate,
+                        consumption.purchaseTime))
+                .from(consumption)
+                .where(
+                        consumption.userId.eq(userId),
+                        consumption.placeId.in(placeIds),
+                        consumption.purchaseDate.lt(toExclusive)
+                )
+                .orderBy(consumption.placeId.asc(), consumption.purchaseDate.asc(),
+                        consumption.purchaseTime.asc().nullsFirst(), consumption.id.asc())
                 .fetch();
     }
 }

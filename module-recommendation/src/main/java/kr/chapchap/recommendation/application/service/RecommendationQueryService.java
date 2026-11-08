@@ -7,6 +7,7 @@ import kr.chapchap.recommendation.application.info.RecommendationInfo.CategoryPl
 import kr.chapchap.recommendation.application.info.RecommendedPlaceDetailInfo;
 import kr.chapchap.recommendation.application.info.RecommendedPlaceInfo;
 import kr.chapchap.recommendation.application.port.CategoryCatalogLookupPort;
+import kr.chapchap.recommendation.application.port.CurrentDongLookupPort;
 import kr.chapchap.recommendation.application.port.PlaceLikeLookupPort;
 import kr.chapchap.recommendation.application.port.PlaceRadiusLookupPort;
 import kr.chapchap.recommendation.application.port.PopularityLookupPort;
@@ -47,6 +48,7 @@ public class RecommendationQueryService {
     private final PlaceLikeLookupPort placeLikeLookupPort;
     private final VisitedPlaceLookupPort visitedPlaceLookupPort;
     private final CategoryCatalogLookupPort categoryCatalogLookupPort;
+    private final CurrentDongLookupPort currentDongLookupPort;
     private final PlacePhotoService placePhotoService;
     private final Clock clock;
 
@@ -54,17 +56,18 @@ public class RecommendationQueryService {
         validateCoordinate(latitude, longitude);
         validateRadius(radiusMeters);
 
+        String currentDongName = resolveCurrentDongName(latitude, longitude);
         List<String> allCategories = categoryCatalogLookupPort.findAllCategories();
 
         List<NearbyPlaceInfo> candidates = placeRadiusLookupPort.findWithinRadius(latitude, longitude, radiusMeters);
         if (candidates.isEmpty()) {
-            return new RecommendationInfo(List.of(), emptyCategoryPlaces(allCategories));
+            return new RecommendationInfo(currentDongName, List.of(), emptyCategoryPlaces(allCategories));
         }
 
         List<Long> placeIds = candidates.stream().map(NearbyPlaceInfo::placeId).toList();
         List<PlacePopularityInfo> popularityRows = popularityLookupPort.aggregateByPlaceIds(placeIds);
         if (popularityRows.isEmpty()) {
-            return new RecommendationInfo(List.of(), emptyCategoryPlaces(allCategories));
+            return new RecommendationInfo(currentDongName, List.of(), emptyCategoryPlaces(allCategories));
         }
 
         Map<Long, NearbyPlaceInfo> placesById = candidates.stream()
@@ -102,6 +105,7 @@ public class RecommendationQueryService {
 
         Map<Long, PlacePhotoInfo> thumbnails = resolveThumbnails(allPlaces);
         return new RecommendationInfo(
+                currentDongName,
                 applyPhotos(allPlaces, thumbnails),
                 categoryPlaces.stream()
                         .map(category -> new CategoryPlacesInfo(category.category(), applyPhotos(category.places(), thumbnails)))
@@ -111,6 +115,15 @@ public class RecommendationQueryService {
 
     private List<CategoryPlacesInfo> emptyCategoryPlaces(List<String> allCategories) {
         return allCategories.stream().map(category -> new CategoryPlacesInfo(category, List.of())).toList();
+    }
+
+    // 동네 이름은 부가 정보라, SGIS 조회 실패해도 추천 자체는 계속 내려준다(동네 이름만 null)
+    private String resolveCurrentDongName(double latitude, double longitude) {
+        try {
+            return currentDongLookupPort.findFullName(latitude, longitude);
+        } catch (RuntimeException exception) {
+            return null;
+        }
     }
 
     public RecommendedPlaceDetailInfo getPlaceDetail(Long placeId) {
@@ -134,7 +147,7 @@ public class RecommendationQueryService {
                 .orElse(null);
 
         return new RecommendedPlaceDetailInfo(
-                place.placeId(), place.name(), category, place.dongName(),
+                place.placeId(), place.googlePlaceId(), place.name(), category, place.dongName(), place.roadAddress(),
                 place.latitude(), place.longitude(), thumbnailUrls, googleMapsUri
         );
     }

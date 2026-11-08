@@ -35,7 +35,7 @@ public record MonthlyReportInfo(
 
 
     public record PlaceRankInfo(int rank, Long placeId, String placeName, int visitCount, LocalDate firstVisitedDate,
-                                 String category, List<String> stickerNames) {
+                                 String category, List<ConsumptionVisualSummary> visuals) {
     }
 
     public record TownRankInfo(int rank, String townName, int visitCount) {

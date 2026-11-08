@@ -9,6 +9,7 @@ import kr.chapchap.consumption.domain.entity.PlaceLatestStickerRow;
 import kr.chapchap.consumption.domain.entity.PlacePopularityRow;
 import kr.chapchap.consumption.domain.entity.PlaceRecentRecordRow;
 import kr.chapchap.consumption.domain.entity.PlaceStickerRow;
+import kr.chapchap.consumption.domain.entity.PlaceVisitOrderRow;
 import kr.chapchap.consumption.domain.entity.PlaceVisitStatsRow;
 import kr.chapchap.consumption.domain.entity.StickerCountRow;
 
@@ -63,7 +64,7 @@ public interface ConsumptionQueryRepository {
     long countVisits(Long userId, Long placeId, LocalDate from, LocalDate toExclusive);
 
     // from/toExclusive가 둘 다 null이면 전체기간, 아니면 그 기간으로 좁힘 (월간 리포트 1위 장소용 - 스티커 기록만)
-    List<PlaceStickerRow> findRecentStickersByPlace(Long userId, Long placeId, LocalDate from, LocalDate toExclusive, int limit);
+    List<PlaceStickerRow> findRecentStickersByPlace(Long userId, Long placeId, LocalDate from, LocalDate toExclusive, Integer limit);
 
     // 장소 상세 썸네일 줄 전용 - 스티커/사진 기록을 구분 없이 최신순으로 섞어서 조회
     List<PlaceRecentRecordRow> findRecentRecordsByPlace(Long userId, Long placeId, int limit);
@@ -77,4 +78,7 @@ public interface ConsumptionQueryRepository {
                                                  LocalTime cursorPurchaseTime, Long cursorId, int fetchSize);
 
     List<PlaceStickerRow> findRecentStickerRowsByUser(Long userId, LocalDate from, LocalDate toExclusive);
+
+    //  방문 이력
+    List<PlaceVisitOrderRow> findVisitOrderRowsByPlaces(Long userId, List<Long> placeIds, LocalDate toExclusive);
 }

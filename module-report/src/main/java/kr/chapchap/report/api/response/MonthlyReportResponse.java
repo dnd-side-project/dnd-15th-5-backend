@@ -1,5 +1,6 @@
 package kr.chapchap.report.api.response;
 
+import kr.chapchap.report.application.info.ConsumptionVisualSummary;
 import kr.chapchap.report.application.info.MonthlyReportInfo;
 
 import java.math.BigDecimal;
@@ -78,12 +79,19 @@ public record MonthlyReportResponse(
     }
 
     public record PlaceRankResponse(int rank, Long placeId, String placeName, int visitCount, String firstVisitedDate,
-                                     String category, List<String> stickerNames) {
+                                     String category, List<VisualResponse> visuals) {
 
         public static PlaceRankResponse from(MonthlyReportInfo.PlaceRankInfo info) {
             String firstVisitedDate = info.firstVisitedDate() != null ? DATE_FORMAT.format(info.firstVisitedDate()) : null;
             return new PlaceRankResponse(info.rank(), info.placeId(), info.placeName(), info.visitCount(), firstVisitedDate,
-                    info.category(), info.stickerNames());
+                    info.category(), info.visuals().stream().map(VisualResponse::from).toList());
+        }
+    }
+
+    public record VisualResponse(Long stickerItemId, String stickerName, Long imageId, String imageUrl) {
+
+        public static VisualResponse from(ConsumptionVisualSummary info) {
+            return new VisualResponse(info.stickerItemId(), info.stickerName(), info.imageId(), info.imageUrl());
         }
     }
 
