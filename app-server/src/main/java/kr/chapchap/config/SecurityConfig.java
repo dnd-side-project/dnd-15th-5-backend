@@ -10,9 +10,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -28,7 +31,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            Environment environment
     ) throws Exception {
         http
                 .cors(withDefaults())
@@ -68,6 +72,10 @@ public class SecurityConfig {
                                 "/v1/oauth/google/callback"
                         )
                         .permitAll()
+                        .requestMatchers(HttpMethod.POST, "/v1/auth/dev/token")
+                        .access((authentication, context) -> new AuthorizationDecision(
+                                environment.acceptsProfiles(Profiles.of("local | dev"))
+                        ))
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/v1/auth/social/exchange",

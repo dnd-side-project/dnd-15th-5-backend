@@ -129,7 +129,7 @@ jobs:
 
           ENV_CONTENT=$(printf '%s\n' \
             "ECR_IMAGE=$ECR_URI" \
-            "SPRING_PROFILES_ACTIVE=prod" \
+            "SPRING_PROFILES_ACTIVE=prod,dev" \
             "CORS_ALLOWED_ORIGIN_PATTERNS=$CORS_ALLOWED_ORIGIN_PATTERNS" \
             "DB_HOST=$DB_HOST" \
             "DB_PORT=5432" \
