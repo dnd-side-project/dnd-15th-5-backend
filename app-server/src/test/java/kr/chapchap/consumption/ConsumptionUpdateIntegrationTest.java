@@ -404,7 +404,7 @@ class ConsumptionUpdateIntegrationTest {
     }
 
     @Test
-    void 수정에서도_카테고리_일치와_금액과_메모와_이미지_선택을_검증한다() throws Exception {
+    void 수정에서도_카테고리_유효성과_금액과_메모와_이미지_선택을_검증한다() throws Exception {
         // given
         Long id = create(null, null);
         List<Map<String, Object>> invalidBodies = new java.util.ArrayList<>();
@@ -418,9 +418,6 @@ class ConsumptionUpdateIntegrationTest {
         Map<String, Object> emptySelection = body(null, null);
         emptySelection.put("stickerItemId", null);
         invalidBodies.add(emptySelection);
-        Map<String, Object> wrongCategory = body(null, null);
-        wrongCategory.put("category", "운동");
-        invalidBodies.add(wrongCategory);
 
         // when & then
         for (Map<String, Object> body : invalidBodies) {
@@ -430,6 +427,37 @@ class ConsumptionUpdateIntegrationTest {
         }
         assertThat(consumptions.findById(id).orElseThrow().getCategory()).isEqualTo("카페");
         assertThat(consumptions.findById(id).orElseThrow().getAmount()).isEqualTo(5500L);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void 스티커와_다른_소비_카테고리로_등록하거나_수정해도_선택한_스티커를_유지한다(boolean updateExisting) throws Exception {
+        // given
+        Long existingId = updateExisting ? create(null, null) : null;
+        Map<String, Object> body = body(null, null);
+        body.put("category", "쇼핑");
+
+        // when
+        var request = updateExisting
+                ? put("/v1/consumptions/{id}", existingId)
+                : post("/v1/consumptions");
+        var result = mvc.perform(request.with(userJwt(userId))
+                        .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsBytes(body)))
+                .andExpect(status().is(updateExisting ? 200 : 201))
+                .andReturn();
+        Long id = updateExisting ? existingId
+                : mapper.readTree(result.getResponse().getContentAsByteArray()).path("data").path("consumptionId").asLong();
+
+        // then
+        Consumption saved = consumptions.findById(id).orElseThrow();
+        assertThat(saved.getCategory()).isEqualTo("쇼핑");
+        assertThat(saved.getStickerItemId()).isEqualTo(stickerId);
+        mvc.perform(get("/v1/consumptions/{id}", id).with(userJwt(userId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.category").value("쇼핑"))
+                .andExpect(jsonPath("$.data.stickerItemId").value(stickerId))
+                .andExpect(jsonPath("$.data.stickerCategory").value("카페"))
+                .andExpect(jsonPath("$.data.stickerName").value("커피"));
     }
 
     @Test

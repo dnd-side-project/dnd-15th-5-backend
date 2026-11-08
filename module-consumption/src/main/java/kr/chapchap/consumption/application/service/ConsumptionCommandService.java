@@ -130,9 +130,6 @@ public class ConsumptionCommandService {
         }
         StickerItem sticker = stickerItemRepository.findById(command.stickerItemId())
                 .orElseThrow(() -> new BusinessException(ConsumptionErrorCode.STICKER_NOT_FOUND));
-        if (!sticker.getCategory().equals(command.category())) {
-            throw new BusinessException(ConsumptionErrorCode.STICKER_CATEGORY_MISMATCH);
-        }
         return sticker;
     }
 

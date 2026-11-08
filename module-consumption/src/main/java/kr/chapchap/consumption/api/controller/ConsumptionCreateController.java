@@ -40,7 +40,7 @@ public class ConsumptionCreateController {
 
                     신규 장소라면 도로명주소를 SGIS로 조회해 행정동을 저장합니다.
 
-                    stickerItemId와 imageId 중 하나만 전달합니다. 스티커와 category는 일치해야 합니다.
+                    stickerItemId와 imageId 중 하나만 전달합니다. 소비 카테고리와 관계없이 스티커를 선택할 수 있습니다.
                     amount와 memo는 생략할 수 있으며, 메모는 최대 1,000자입니다.
                     receiptImageId는 영수증 OCR을 사용한 경우에만 전달하며, 사진·스티커 선택과 별개입니다.
                     """
@@ -53,7 +53,7 @@ public class ConsumptionCreateController {
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
-                    description = "요청 값이 유효하지 않음 (C001, CONSUMPTION010, CONSUMPTION025)",
+                    description = "요청 값이 유효하지 않음 (C001, CONSUMPTION010)",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class))
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(

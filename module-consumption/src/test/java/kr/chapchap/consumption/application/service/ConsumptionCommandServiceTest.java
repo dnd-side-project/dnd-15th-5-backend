@@ -134,15 +134,23 @@ class ConsumptionCommandServiceTest {
     }
 
     @Test
-    void 스티커와_카테고리가_다르면_저장하지_않는다() {
+    void 스티커와_소비_카테고리가_달라도_선택한_값을_저장한다() {
         // given
         StickerItem sticker = stickerItem(7L, "운동", "근육");
         given(stickerItemRepository.findById(7L)).willReturn(Optional.of(sticker));
-        // when & then
-        assertThatThrownBy(() -> createService().create(createCommand(null), PLACE_ID))
-                .isInstanceOfSatisfying(BusinessException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(ConsumptionErrorCode.STICKER_CATEGORY_MISMATCH));
-        then(consumptionRepository).shouldHaveNoInteractions();
+        given(consumptionRepository.save(any(Consumption.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+
+        // when
+        ConsumptionCreateInfo result = createService().create(createCommand(null), PLACE_ID);
+
+        // then
+        ArgumentCaptor<Consumption> captor = ArgumentCaptor.forClass(Consumption.class);
+        then(consumptionRepository).should().save(captor.capture());
+        assertThat(captor.getValue().getCategory()).isEqualTo("카페");
+        assertThat(captor.getValue().getStickerItemId()).isEqualTo(7L);
+        assertThat(result.stickerCategory()).isEqualTo("운동");
+        assertThat(result.stickerName()).isEqualTo("근육");
     }
 
     @Test
