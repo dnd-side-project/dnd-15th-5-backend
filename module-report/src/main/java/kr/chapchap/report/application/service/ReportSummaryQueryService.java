@@ -44,7 +44,7 @@ public class ReportSummaryQueryService {
         }
 
         SummaryCandidateInfo selected = selectCandidate(userId, today, result.candidates());
-        return new SummaryHighlightInfo(selected.type(), selected.mainCopy(), selected.subCopy());
+        return new SummaryHighlightInfo(selected.type().name(), selected.mainCopy(), selected.subCopy());
     }
 
     private SummaryCandidateInfo selectCandidate(Long userId, LocalDate today, List<SummaryCandidateInfo> candidates) {
