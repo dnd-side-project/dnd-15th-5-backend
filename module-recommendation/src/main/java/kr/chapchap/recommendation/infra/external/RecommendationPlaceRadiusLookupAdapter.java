@@ -21,7 +21,7 @@ public class RecommendationPlaceRadiusLookupAdapter implements PlaceRadiusLookup
     public List<NearbyPlaceInfo> findWithinRadius(double latitude, double longitude, double radiusMeters) {
         return placeQueryService.findWithinRadius(latitude, longitude, radiusMeters).stream()
                 .map(info -> new NearbyPlaceInfo(
-                        info.placeId(), info.name(), info.dongName(), info.latitude(), info.longitude(),
+                        info.placeId(), info.name(), info.dongName(), null, info.latitude(), info.longitude(),
                         info.googlePlaceId()))
                 .toList();
     }
@@ -34,7 +34,7 @@ public class RecommendationPlaceRadiusLookupAdapter implements PlaceRadiusLookup
             return Optional.empty();
         }
         return Optional.of(new NearbyPlaceInfo(
-                placeId, summary.name(), summary.dongName(), summary.latitude(), summary.longitude(),
+                placeId, summary.name(), summary.dongName(), summary.address(), summary.latitude(), summary.longitude(),
                 summary.googlePlaceId()));
     }
 }

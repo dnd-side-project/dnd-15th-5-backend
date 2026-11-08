@@ -147,7 +147,7 @@ public class RecommendationQueryService {
                 .orElse(null);
 
         return new RecommendedPlaceDetailInfo(
-                place.placeId(), place.name(), category, place.dongName(),
+                place.placeId(), place.googlePlaceId(), place.name(), category, place.dongName(), place.roadAddress(),
                 place.latitude(), place.longitude(), thumbnailUrls, googleMapsUri
         );
     }

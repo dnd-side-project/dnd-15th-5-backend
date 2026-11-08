@@ -70,8 +70,8 @@ class RecommendationQueryServiceTest {
     void 반경_안_장소의_googlePlaceId를_결과에_그대로_담는다() {
         // given
         when(placeRadiusLookupPort.findWithinRadius(37.5665, 126.9780, 1000)).thenReturn(List.of(
-                new NearbyPlaceInfo(101L, "투썸플레이스", "역삼동", 37.5447, 127.0557, "ChIJtest101"),
-                new NearbyPlaceInfo(102L, "국밥집", "역삼동", 37.4999, 127.0364, null)
+                new NearbyPlaceInfo(101L, "투썸플레이스", "역삼동", null, 37.5447, 127.0557, "ChIJtest101"),
+                new NearbyPlaceInfo(102L, "국밥집", "역삼동", null, 37.4999, 127.0364, null)
         ));
         when(popularityLookupPort.aggregateByPlaceIds(any())).thenReturn(List.of(
                 new PlacePopularityInfo(101L, "카페", 5L, LocalDate.of(2026, 8, 1)),
@@ -102,8 +102,8 @@ class RecommendationQueryServiceTest {
     void 전체는_카테고리별_추천을_합친_것이다() {
         // given
         when(placeRadiusLookupPort.findWithinRadius(37.5665, 126.9780, 1000)).thenReturn(List.of(
-                new NearbyPlaceInfo(101L, "투썸플레이스", "역삼동", 37.5447, 127.0557, "ChIJtest101"),
-                new NearbyPlaceInfo(102L, "국밥집", "역삼동", 37.4999, 127.0364, null)
+                new NearbyPlaceInfo(101L, "투썸플레이스", "역삼동", null, 37.5447, 127.0557, "ChIJtest101"),
+                new NearbyPlaceInfo(102L, "국밥집", "역삼동", null, 37.4999, 127.0364, null)
         ));
         when(popularityLookupPort.aggregateByPlaceIds(any())).thenReturn(List.of(
                 new PlacePopularityInfo(101L, "카페", 5L, LocalDate.of(2026, 8, 1)),
@@ -126,8 +126,8 @@ class RecommendationQueryServiceTest {
     void 카테고리는_후보가_없어도_카탈로그_전체_목록을_빈_배열로_내려준다() {
         // given
         when(placeRadiusLookupPort.findWithinRadius(37.5665, 126.9780, 1000)).thenReturn(List.of(
-                new NearbyPlaceInfo(101L, "투썸플레이스", "역삼동", 37.5447, 127.0557, "ChIJtest101"),
-                new NearbyPlaceInfo(102L, "국밥집", "역삼동", 37.4999, 127.0364, null)
+                new NearbyPlaceInfo(101L, "투썸플레이스", "역삼동", null, 37.5447, 127.0557, "ChIJtest101"),
+                new NearbyPlaceInfo(102L, "국밥집", "역삼동", null, 37.4999, 127.0364, null)
         ));
         when(popularityLookupPort.aggregateByPlaceIds(any())).thenReturn(List.of(
                 new PlacePopularityInfo(101L, "카페", 5L, LocalDate.of(2026, 8, 1)),
