@@ -405,6 +405,10 @@ resource "aws_db_instance" "main" {
   backup_retention_period = 1
   copy_tags_to_snapshot    = true
 
+  lifecycle {
+    prevent_destroy = true
+  }
+
   tags = {
     Name = "${var.project_name}-postgres"
   }
