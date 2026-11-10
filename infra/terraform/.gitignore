@@ -1,4 +1,6 @@
 .terraform/
+.terraform-new-account/
+*.tfplan
 *.tfstate
 *.tfstate.*
 terraform.tfvars

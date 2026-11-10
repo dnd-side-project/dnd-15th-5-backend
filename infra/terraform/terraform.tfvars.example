@@ -1,1 +1,2 @@
-db_password = "비밀번호"
+# DB 사용자와 비밀번호는 스냅샷에서 복원
+db_snapshot_identifier = "chapchap-migrated-20261110"

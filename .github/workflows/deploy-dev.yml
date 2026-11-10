@@ -156,8 +156,8 @@ jobs:
             "SGIS_CONSUMER_SECRET=$SGIS_CONSUMER_SECRET" \
             "LEGAL_DONG_SERVICE_KEY=$LEGAL_DONG_SERVICE_KEY" \
             "FIREBASE_SERVICE_ACCOUNT_JSON=$FIREBASE_SERVICE_ACCOUNT_JSON" \
-            "CHAPCHAP_ACCOUNT_PROFILE_IMAGE_BUCKET=chapchap-dev-profile-images" \
-            "CHAPCHAP_CONSUMPTION_RECEIPT_IMAGE_BUCKET=chapchap-dev-receipt-images" \
+            "CHAPCHAP_ACCOUNT_PROFILEIMAGE_BUCKET=chapchap-dev-profile-images-631121070981" \
+            "CHAPCHAP_CONSUMPTION_RECEIPTIMAGE_BUCKET=chapchap-dev-receipt-images-631121070981" \
             "TZ=Asia/Seoul")
 
           source infra/deploy/ssm-secure-parameter.sh

@@ -11,6 +11,7 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
+  allowed_account_ids = ["631121070981"]
 
   default_tags {
     tags = {
@@ -179,7 +180,7 @@ data "aws_ami" "amazon_linux" {
 
   filter {
     name   = "name"
-    values = ["al2023-ami-*-arm64"]
+    values = ["al2023-ami-2023.*-arm64"]
   }
 }
 
@@ -366,6 +367,11 @@ resource "aws_eip" "app" {
 
 
 # RDS — PostgreSQL
+data "aws_db_snapshot" "migration" {
+  db_snapshot_identifier = var.db_snapshot_identifier
+  snapshot_type          = "manual"
+}
+
 resource "aws_db_subnet_group" "main" {
   name       = "${var.project_name}-db-subnet-group"
   subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
@@ -376,18 +382,17 @@ resource "aws_db_subnet_group" "main" {
 }
 
 resource "aws_db_instance" "main" {
-  identifier     = "${var.project_name}-postgres-restored-20261101"
+  identifier     = "${var.project_name}-postgres"
   engine         = "postgres"
   engine_version = "17.9"
+
+  # prod/dev DB와 사용자·비밀번호는 새 계정에 복사한 스냅샷에서 복원한다.
+  snapshot_identifier = data.aws_db_snapshot.migration.id
 
   instance_class    = "db.t4g.micro"
   allocated_storage = 20
   storage_type      = "gp3"
   storage_encrypted = true
-
-  db_name  = "chapchap"
-  username = "chapchap"
-  password = var.db_password
 
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [aws_security_group.rds.id]
@@ -400,8 +405,12 @@ resource "aws_db_instance" "main" {
   backup_retention_period = 1
   copy_tags_to_snapshot    = true
 
+  lifecycle {
+    prevent_destroy = true
+  }
+
   tags = {
-    Name = "${var.project_name}-postgres-restored-20261101"
+    Name = "${var.project_name}-postgres"
   }
 }
 
@@ -410,7 +419,7 @@ resource "aws_db_instance" "main" {
 
 
 resource "aws_s3_bucket" "receipts" {
-  bucket = "${var.project_name}-receipt-images"
+  bucket = "${var.project_name}-receipt-images-${data.aws_caller_identity.current.account_id}"
 
   tags = {
     Name = "${var.project_name}-receipt-images"
@@ -427,7 +436,7 @@ resource "aws_s3_bucket_public_access_block" "receipts" {
 }
 
 resource "aws_s3_bucket" "profiles" {
-  bucket = "${var.project_name}-profile-images"
+  bucket = "${var.project_name}-profile-images-${data.aws_caller_identity.current.account_id}"
 
   tags = {
     Name = "${var.project_name}-profile-images"
@@ -444,7 +453,7 @@ resource "aws_s3_bucket_public_access_block" "profiles" {
 }
 
 resource "aws_s3_bucket" "receipts_dev" {
-  bucket = "${var.project_name}-dev-receipt-images"
+  bucket = "${var.project_name}-dev-receipt-images-${data.aws_caller_identity.current.account_id}"
 
   tags = {
     Name        = "${var.project_name}-dev-receipt-images"
@@ -462,7 +471,7 @@ resource "aws_s3_bucket_public_access_block" "receipts_dev" {
 }
 
 resource "aws_s3_bucket" "profiles_dev" {
-  bucket = "${var.project_name}-dev-profile-images"
+  bucket = "${var.project_name}-dev-profile-images-${data.aws_caller_identity.current.account_id}"
 
   tags = {
     Name        = "${var.project_name}-dev-profile-images"
@@ -681,7 +690,7 @@ resource "aws_iam_role_policy" "github_actions_ssm_deploy" {
 # 프론트엔드 정적 배포 (S3 + SSM)
 # 프론트 빌드 산출물(dist) 저장용 — public 아님, EC2가 IAM 권한으로 내려받음
 resource "aws_s3_bucket" "frontend_dist" {
-  bucket = "${var.project_name}-frontend-dist"
+  bucket = "${var.project_name}-frontend-dist-${data.aws_caller_identity.current.account_id}"
 
   tags = {
     Name = "${var.project_name}-frontend-dist"
