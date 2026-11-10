@@ -108,6 +108,8 @@ jobs:
           SGIS_CONSUMER_KEY=${{ secrets.SGIS_CONSUMER_KEY }}
           SGIS_CONSUMER_SECRET=${{ secrets.SGIS_CONSUMER_SECRET }}
           LEGAL_DONG_SERVICE_KEY=${{ secrets.LEGAL_DONG_SERVICE_KEY }}
+          CHAPCHAP_ACCOUNT_PROFILE_IMAGE_BUCKET=chapchap-profile-images-631121070981
+          CHAPCHAP_CONSUMPTION_RECEIPT_IMAGE_BUCKET=chapchap-receipt-images-631121070981
           TZ=Asia/Seoul"
 
           source infra/deploy/ssm-secure-parameter.sh

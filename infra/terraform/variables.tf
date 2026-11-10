@@ -34,8 +34,14 @@ variable "private_subnet_cidr_b" {
   default     = "10.0.3.0/24"
 }
 
-variable "db_password" {
-  description = "RDS 비밀번호"
+variable "db_snapshot_identifier" {
+  description = "RDS 복원에 사용할 스냅샷 이름"
   type        = string
-  sensitive   = true
+  default     = "chapchap-migrated-20261110"
+  nullable    = false
+
+  validation {
+    condition     = can(regex("^[A-Za-z][A-Za-z0-9-]{0,254}$", var.db_snapshot_identifier))
+    error_message = "올바른 스냅샷 이름을 입력하세요. ARN은 사용할 수 없습니다."
+  }
 }
