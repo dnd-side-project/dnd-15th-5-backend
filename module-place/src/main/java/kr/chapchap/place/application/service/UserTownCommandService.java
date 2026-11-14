@@ -42,13 +42,13 @@ public class UserTownCommandService {
                 .orElseGet(() -> userTownRepository.save(toNewUserTown(command, now)));
     }
 
-
     private UserTown findExistingByNameOrCreate(UserTownSaveCommand command, LocalDateTime now) {
-        return userTownRepository
-                .findByUserIdAndAdministrativeDongCodeIsNullAndAdministrativeDongName(
-                        command.userId(), command.administrativeDongName())
-                .map(existing -> touch(existing, command, now))
-                .orElseGet(() -> userTownRepository.save(toNewUserTown(command, now)));
+        List<UserTown> existingTowns = userTownRepository
+                .findByUserIdAndAdministrativeDongCodeIsNullAndAdministrativeDongNameOrderBySelectedAtDesc(
+                        command.userId(), command.administrativeDongName());
+        return existingTowns.isEmpty()
+                ? userTownRepository.save(toNewUserTown(command, now))
+                : touch(existingTowns.get(0), command, now);
     }
 
     private UserTown touch(UserTown existing, UserTownSaveCommand command, LocalDateTime now) {

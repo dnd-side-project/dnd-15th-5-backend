@@ -12,7 +12,7 @@
             <webhookUrl>${DISCORD_ALERT_WEBHOOK_URL:-}</webhookUrl>
             <environment>${SPRING_PROFILES_ACTIVE:-unknown}</environment>
             <applicationName>👾ChapChap Backend</applicationName>
-            <dedupeWindowSeconds>60</dedupeWindowSeconds>
+            <dedupeWindowSeconds>1200</dedupeWindowSeconds>
             <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
                 <level>ERROR</level>
             </filter>

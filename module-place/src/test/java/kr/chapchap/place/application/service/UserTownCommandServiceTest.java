@@ -46,9 +46,9 @@ class UserTownCommandServiceTest {
                 1L, null, "서울특별시 동대문구 답십리동 80-2", 37.57, 127.06, LocalDateTime.now().minusDays(1));
         UserTownSaveCommand command = new UserTownSaveCommand(
                 1L, null, "서울특별시 동대문구 답십리동 80-2", 37.575678501604735, 127.06165473228577);
-        when(userTownRepository.findByUserIdAndAdministrativeDongCodeIsNullAndAdministrativeDongName(
+        when(userTownRepository.findByUserIdAndAdministrativeDongCodeIsNullAndAdministrativeDongNameOrderBySelectedAtDesc(
                 1L, "서울특별시 동대문구 답십리동 80-2"))
-                .thenReturn(Optional.of(existing));
+                .thenReturn(List.of(existing));
         when(userTownRepository.findByUserIdOrderBySelectedAtDesc(1L)).thenReturn(List.of(existing));
 
         // when
@@ -61,13 +61,35 @@ class UserTownCommandServiceTest {
     }
 
     @Test
+    void 행정동_코드가_없고_같은_이름으로_중복_저장된_기존_동네가_여럿이면_가장_최근_것만_갱신한다() {
+        // given: 이번 수정 이전에 쌓인 중복 데이터 상황을 재현
+        UserTown older = UserTown.create(
+                1L, null, "서울특별시 동대문구 답십리동 80-2", 37.57, 127.06, LocalDateTime.now().minusDays(3));
+        UserTown newer = UserTown.create(
+                1L, null, "서울특별시 동대문구 답십리동 80-2", 37.571, 127.061, LocalDateTime.now().minusDays(1));
+        UserTownSaveCommand command = new UserTownSaveCommand(
+                1L, null, "서울특별시 동대문구 답십리동 80-2", 37.575678501604735, 127.06165473228577);
+        when(userTownRepository.findByUserIdAndAdministrativeDongCodeIsNullAndAdministrativeDongNameOrderBySelectedAtDesc(
+                1L, "서울특별시 동대문구 답십리동 80-2"))
+                .thenReturn(List.of(newer, older));
+        when(userTownRepository.findByUserIdOrderBySelectedAtDesc(1L)).thenReturn(List.of(newer, older));
+
+        // when
+        UserTownInfo result = sut.save(command);
+
+        // then: 예외 없이 가장 최근 것(newer)만 갱신되고, 새로 저장하지 않는다
+        verify(userTownRepository, never()).save(any());
+        assertThat(result.latitude()).isEqualTo(37.575678501604735);
+    }
+
+    @Test
     void 행정동_코드가_없고_같은_이름의_기존_동네도_없으면_새로_저장한다() {
         // given
         UserTownSaveCommand command = new UserTownSaveCommand(
                 1L, null, "서울특별시 강남구 역삼동", 37.5, 127.03);
-        when(userTownRepository.findByUserIdAndAdministrativeDongCodeIsNullAndAdministrativeDongName(
+        when(userTownRepository.findByUserIdAndAdministrativeDongCodeIsNullAndAdministrativeDongNameOrderBySelectedAtDesc(
                 1L, "서울특별시 강남구 역삼동"))
-                .thenReturn(Optional.empty());
+                .thenReturn(List.of());
         when(userTownRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(userTownRepository.findByUserIdOrderBySelectedAtDesc(1L)).thenReturn(List.of());
 
@@ -95,6 +117,6 @@ class UserTownCommandServiceTest {
         // then
         verify(userTownRepository, never()).save(any());
         verify(userTownRepository, never())
-                .findByUserIdAndAdministrativeDongCodeIsNullAndAdministrativeDongName(any(), any());
+                .findByUserIdAndAdministrativeDongCodeIsNullAndAdministrativeDongNameOrderBySelectedAtDesc(any(), any());
     }
 }

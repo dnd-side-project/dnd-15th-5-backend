@@ -37,6 +37,19 @@ class RequestContextMdcFilterTest {
     }
 
     @Test
+    void OAuth_콜백의_code와_state_쿼리값은_가려지고_나머지는_그대로_남는다() throws Exception {
+        // given
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/v1/oauth/google/callback");
+        request.setQueryString("code=SENSITIVE_AUTH_CODE&state=xyz789&lang=ko");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        // when & then
+        filter.doFilter(request, response, (req, res) ->
+                assertThat(MDC.get(RequestContextMdcFilter.REQUEST_CONTEXT_MDC_KEY))
+                        .isEqualTo("GET /v1/oauth/google/callback?code=***&state=***&lang=ko"));
+    }
+
+    @Test
     void 필터_실행이_끝나면_MDC가_정리된다() throws Exception {
         // given
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/places");

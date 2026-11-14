@@ -17,7 +17,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-
 public class DiscordWebhookAppender extends AppenderBase<ILoggingEvent> {
 
     private static final int DESCRIPTION_MAX_LENGTH = 1800;
@@ -84,18 +83,22 @@ public class DiscordWebhookAppender extends AppenderBase<ILoggingEvent> {
 
     @Override
     protected void append(ILoggingEvent event) {
-        if (!isStarted() || isDuplicateWithinWindow(event)) {
+        if (!isStarted() || shouldSuppress(event)) {
             return;
         }
         String payload = buildPayload(event);
         executor.submit(() -> send(payload));
     }
 
-    private boolean isDuplicateWithinWindow(ILoggingEvent event) {
+    private boolean shouldSuppress(ILoggingEvent event) {
         String key = event.getLevel() + "|" + event.getLoggerName() + "|" + event.getFormattedMessage();
         Instant now = Instant.now();
-        Instant previous = lastSentAt.put(key, now);
-        return previous != null && previous.plusSeconds(dedupeWindowSeconds).isAfter(now);
+        Instant previous = lastSentAt.get(key);
+        if (previous != null && previous.plusSeconds(dedupeWindowSeconds).isAfter(now)) {
+            return true;
+        }
+        lastSentAt.put(key, now);
+        return false;
     }
 
     private void send(String payload) {

@@ -111,7 +111,7 @@ public class GlobalExceptionHandler {
         String causeName = e.getCause() != null ? e.getCause().getClass().getSimpleName() : null;
 
         if (isServerSideFailure) {
-            log.error("[{}] BusinessException: {} (cause={})", errorCode.getCode(), e.getMessage(), causeName, e.getCause());
+            log.error("[{}] BusinessException: {} (cause={})", errorCode.getCode(), e.getMessage(), causeName, e);
         } else if (causeName != null) {
             log.warn("[{}] BusinessException: {} (cause={})", errorCode.getCode(), e.getMessage(), causeName);
         } else {
