@@ -435,6 +435,15 @@ resource "aws_s3_bucket_public_access_block" "receipts" {
   restrict_public_buckets = true
 }
 
+resource "aws_s3_bucket_cors_configuration" "receipts" {
+  bucket = aws_s3_bucket.receipts.id
+
+  cors_rule {
+    allowed_methods = ["GET"]
+    allowed_origins = ["https://chapchap.kr"]
+  }
+}
+
 resource "aws_s3_bucket" "profiles" {
   bucket = "${var.project_name}-profile-images-${data.aws_caller_identity.current.account_id}"
 
