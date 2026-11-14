@@ -7,9 +7,32 @@
         </encoder>
     </appender>
 
+    <springProfile name="prod">
+        <appender name="DISCORD" class="kr.chapchap.core.logging.DiscordWebhookAppender">
+            <webhookUrl>${DISCORD_ALERT_WEBHOOK_URL:-}</webhookUrl>
+            <environment>${SPRING_PROFILES_ACTIVE:-unknown}</environment>
+            <applicationName>👾ChapChap Backend</applicationName>
+            <dedupeWindowSeconds>60</dedupeWindowSeconds>
+            <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+                <level>ERROR</level>
+            </filter>
+        </appender>
+    </springProfile>
+
     <root level="info">
         <appender-ref ref="STDOUT"/>
     </root>
+
+    <springProfile name="prod">
+        <logger name="kr.chapchap.core.web.exception.GlobalExceptionHandler" additivity="false">
+            <appender-ref ref="STDOUT"/>
+            <appender-ref ref="DISCORD"/>
+        </logger>
+        <logger name="kr.chapchap.report.application.service.MonthlyReportAggregationService" additivity="false">
+            <appender-ref ref="STDOUT"/>
+            <appender-ref ref="DISCORD"/>
+        </logger>
+    </springProfile>
 
     <springProfile name="local">
         <logger name="kr.chapchap" level="debug" additivity="false">

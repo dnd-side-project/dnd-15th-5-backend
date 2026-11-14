@@ -129,12 +129,24 @@ public class MonthlyReportAggregationService {
                     succeeded++;
                 } catch (Exception exception) {
                     BusinessException businessException = new BusinessException(ReportErrorCode.MONTHLY_REPORT_AGGREGATION_FAILED, exception);
-                    log.error("[{}] {} userId={}, yearMonth={}",
+                    log.warn("[{}] {} userId={}, yearMonth={}",
                             businessException.getErrorCode().getCode(),
                             businessException.getErrorCode().getMessage(),
                             userId, yearMonth, businessException);
                     failedUserIds.add(userId);
                 }
+            }
+
+            if (!failedUserIds.isEmpty()) {
+                log.error(
+                        "[{}] {} yearMonth={}, failedCount={}, totalCount={}, failedUserIdsSample={}",
+                        ReportErrorCode.MONTHLY_REPORT_AGGREGATION_FAILED.getCode(),
+                        ReportErrorCode.MONTHLY_REPORT_AGGREGATION_FAILED.getMessage(),
+                        yearMonth,
+                        failedUserIds.size(),
+                        targetUserIds.size(),
+                        failedUserIds.stream().limit(5).toList()
+                );
             }
 
             return new MonthlyReportAggregationResultInfo(yearMonth, true, targetUserIds.size(), succeeded, failedUserIds);
