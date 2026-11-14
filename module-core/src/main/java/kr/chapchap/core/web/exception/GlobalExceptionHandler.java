@@ -29,13 +29,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Object>> handleBusinessException(BusinessException e) {
         ErrorCode errorCode = e.getErrorCode();
-        if (e.getCause() == null) {
-            log.warn("[{}] BusinessException: {}", errorCode.getCode(), e.getMessage());
-        } else {
-            log.warn(
-                    "[{}] BusinessException: {} (cause={})", errorCode.getCode(), e.getMessage(), e.getCause().getClass().getSimpleName()
-            );
-        }
+        logBusinessException(errorCode, e);
         ApiResponse<Object> body = e.getData() != null
                 ? ApiResponse.failWithData(errorCode, e.getData())
                 : ApiResponse.fail(errorCode, e.getMessage());
@@ -110,5 +104,18 @@ public class GlobalExceptionHandler {
         log.error("Unhandled exception occurred", e);
         return ResponseEntity.status(CommonErrorCode.INTERNAL_SERVER_ERROR.getStatus())
                 .body(ApiResponse.fail(CommonErrorCode.INTERNAL_SERVER_ERROR));
+    }
+
+    private void logBusinessException(ErrorCode errorCode, BusinessException e) {
+        boolean isServerSideFailure = errorCode.getStatus().is5xxServerError();
+        String causeName = e.getCause() != null ? e.getCause().getClass().getSimpleName() : null;
+
+        if (isServerSideFailure) {
+            log.error("[{}] BusinessException: {} (cause={})", errorCode.getCode(), e.getMessage(), causeName, e);
+        } else if (causeName != null) {
+            log.warn("[{}] BusinessException: {} (cause={})", errorCode.getCode(), e.getMessage(), causeName);
+        } else {
+            log.warn("[{}] BusinessException: {}", errorCode.getCode(), e.getMessage());
+        }
     }
 }
