@@ -27,22 +27,33 @@ public class UserTownCommandService {
     public UserTownInfo save(UserTownSaveCommand command) {
         LocalDateTime now = LocalDateTime.now(clock);
         UserTown userTown = command.administrativeDongCode() == null
-                ? userTownRepository.save(toNewUserTown(command, now))
-                : findExistingOrCreate(command, now);
+                ? findExistingByNameOrCreate(command, now)
+                : findExistingByCodeOrCreate(command, now);
 
         enforceRecentLimit(command.userId());
 
         return UserTownInfo.from(userTown);
     }
 
-    private UserTown findExistingOrCreate(UserTownSaveCommand command, LocalDateTime now) {
+    private UserTown findExistingByCodeOrCreate(UserTownSaveCommand command, LocalDateTime now) {
         return userTownRepository
                 .findByUserIdAndAdministrativeDongCode(command.userId(), command.administrativeDongCode())
-                .map(existing -> {
-                    existing.touch(command.administrativeDongName(), command.latitude(), command.longitude(), now);
-                    return existing;
-                })
+                .map(existing -> touch(existing, command, now))
                 .orElseGet(() -> userTownRepository.save(toNewUserTown(command, now)));
+    }
+
+
+    private UserTown findExistingByNameOrCreate(UserTownSaveCommand command, LocalDateTime now) {
+        return userTownRepository
+                .findByUserIdAndAdministrativeDongCodeIsNullAndAdministrativeDongName(
+                        command.userId(), command.administrativeDongName())
+                .map(existing -> touch(existing, command, now))
+                .orElseGet(() -> userTownRepository.save(toNewUserTown(command, now)));
+    }
+
+    private UserTown touch(UserTown existing, UserTownSaveCommand command, LocalDateTime now) {
+        existing.touch(command.administrativeDongName(), command.latitude(), command.longitude(), now);
+        return existing;
     }
 
     private UserTown toNewUserTown(UserTownSaveCommand command, LocalDateTime now) {

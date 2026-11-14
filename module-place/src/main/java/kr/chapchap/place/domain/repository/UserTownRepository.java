@@ -10,6 +10,10 @@ public interface UserTownRepository extends JpaRepository<UserTown, Long> {
 
     Optional<UserTown> findByUserIdAndAdministrativeDongCode(Long userId, String administrativeDongCode);
 
+    Optional<UserTown> findByUserIdAndAdministrativeDongCodeIsNullAndAdministrativeDongName(
+            Long userId, String administrativeDongName
+    );
+
     List<UserTown> findByUserIdOrderBySelectedAtDesc(Long userId);
 
     Optional<UserTown> findByIdAndUserId(Long id, Long userId);
