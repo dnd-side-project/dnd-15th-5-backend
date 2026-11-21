@@ -37,7 +37,7 @@ public class PushNotificationService {
 
     private static final String FRIDAY_REMINDER_TITLE = "지갑 속에 잠자는 영수증이 있나요?";
     private static final String FRIDAY_REMINDER_BODY = "3초 안에 찰칵! 이번 주 나의 단골 매장 순위를 업데이트 해보세요.";
-    private static final String FRIDAY_REMINDER_SCREEN = "/record/manual";
+    private static final String FRIDAY_REMINDER_SCREEN = "/record";
 
     private static final int FETCH_CHUNK_SIZE = 500;
 

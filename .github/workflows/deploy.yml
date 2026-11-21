@@ -75,6 +75,7 @@ jobs:
           ECR_URI: ${{ steps.ecr-login.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           GRAFANA_CLOUD_API_KEY: ${{ secrets.GRAFANA_CLOUD_API_KEY }}
+          DISCORD_ALERT_WEBHOOK_URL: ${{ secrets.DISCORD_ALERT_WEBHOOK_URL }}
         run: |
           COMPOSE_B64=$(base64 -w0 infra/deploy/docker-compose.prod.yml)
           CADDYFILE_B64=$(base64 -w0 infra/deploy/Caddyfile)
@@ -108,6 +109,7 @@ jobs:
           SGIS_CONSUMER_KEY=${{ secrets.SGIS_CONSUMER_KEY }}
           SGIS_CONSUMER_SECRET=${{ secrets.SGIS_CONSUMER_SECRET }}
           LEGAL_DONG_SERVICE_KEY=${{ secrets.LEGAL_DONG_SERVICE_KEY }}
+          DISCORD_ALERT_WEBHOOK_URL=$DISCORD_ALERT_WEBHOOK_URL
           CHAPCHAP_ACCOUNT_PROFILEIMAGE_BUCKET=chapchap-profile-images-631121070981
           CHAPCHAP_CONSUMPTION_RECEIPTIMAGE_BUCKET=chapchap-receipt-images-631121070981
           TZ=Asia/Seoul"

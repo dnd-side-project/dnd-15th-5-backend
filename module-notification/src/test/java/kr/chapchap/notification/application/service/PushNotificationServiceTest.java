@@ -213,7 +213,7 @@ class PushNotificationServiceTest {
 
         ArgumentCaptor<PushMessage> messageCaptor = ArgumentCaptor.forClass(PushMessage.class);
         verify(pushSenderPort).sendMulticast(eq(List.of("t1", "t2")), messageCaptor.capture());
-        assertThat(messageCaptor.getValue().data().get("screen")).isEqualTo("/record/manual");
+        assertThat(messageCaptor.getValue().data().get("screen")).isEqualTo("/record");
     }
 
     @Test

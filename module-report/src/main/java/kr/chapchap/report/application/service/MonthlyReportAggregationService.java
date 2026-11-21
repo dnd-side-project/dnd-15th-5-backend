@@ -110,7 +110,7 @@ public class MonthlyReportAggregationService {
         }
 
         try {
-            List<Long> targetUserIds = consumptionActivityPort.findActiveUserIds(yearMonth.atDay(1), yearMonth.plusMonths(1).atDay(1));
+            List<Long> targetUserIds = findTargetUserIds(yearMonth);
             List<Long> failedUserIds = new ArrayList<>();
             int succeeded = 0;
 
@@ -129,12 +129,24 @@ public class MonthlyReportAggregationService {
                     succeeded++;
                 } catch (Exception exception) {
                     BusinessException businessException = new BusinessException(ReportErrorCode.MONTHLY_REPORT_AGGREGATION_FAILED, exception);
-                    log.error("[{}] {} userId={}, yearMonth={}",
+                    log.warn("[{}] {} userId={}, yearMonth={}",
                             businessException.getErrorCode().getCode(),
                             businessException.getErrorCode().getMessage(),
                             userId, yearMonth, businessException);
                     failedUserIds.add(userId);
                 }
+            }
+
+            if (!failedUserIds.isEmpty()) {
+                log.error(
+                        "[{}] {} yearMonth={}, failedCount={}, totalCount={}, failedUserIdsSample={}",
+                        ReportErrorCode.MONTHLY_REPORT_AGGREGATION_FAILED.getCode(),
+                        ReportErrorCode.MONTHLY_REPORT_AGGREGATION_FAILED.getMessage(),
+                        yearMonth,
+                        failedUserIds.size(),
+                        targetUserIds.size(),
+                        failedUserIds.stream().limit(5).toList()
+                );
             }
 
             return new MonthlyReportAggregationResultInfo(yearMonth, true, targetUserIds.size(), succeeded, failedUserIds);
@@ -143,6 +155,16 @@ public class MonthlyReportAggregationService {
         }
     }
 
+
+    private List<Long> findTargetUserIds(YearMonth yearMonth) {
+        try {
+            return consumptionActivityPort.findActiveUserIds(yearMonth.atDay(1), yearMonth.plusMonths(1).atDay(1));
+        } catch (RuntimeException exception) {
+            log.error("[{}] 월간 리포트 대상 유저 조회에 실패했습니다. yearMonth={}",
+                    ReportErrorCode.MONTHLY_REPORT_AGGREGATION_FAILED.getCode(), yearMonth, exception);
+            throw exception;
+        }
+    }
 
     // 리포트를 실제로 저장했으면 true, 소비 활동이 없어 건너뛰었으면 false를 반환한다.
     private boolean aggregateForUser(Long userId, YearMonth yearMonth) {
