@@ -123,7 +123,6 @@ jobs:
           SGIS_CONSUMER_KEY: ${{ secrets.SGIS_CONSUMER_KEY }}
           SGIS_CONSUMER_SECRET: ${{ secrets.SGIS_CONSUMER_SECRET }}
           LEGAL_DONG_SERVICE_KEY: ${{ secrets.LEGAL_DONG_SERVICE_KEY }}
-          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
         run: |
           COMPOSE_B64=$(base64 -w0 infra/deploy/docker-compose.dev.yml)
 
@@ -155,7 +154,6 @@ jobs:
             "SGIS_CONSUMER_KEY=$SGIS_CONSUMER_KEY" \
             "SGIS_CONSUMER_SECRET=$SGIS_CONSUMER_SECRET" \
             "LEGAL_DONG_SERVICE_KEY=$LEGAL_DONG_SERVICE_KEY" \
-            "FIREBASE_SERVICE_ACCOUNT_JSON=$FIREBASE_SERVICE_ACCOUNT_JSON" \
             "CHAPCHAP_ACCOUNT_PROFILEIMAGE_BUCKET=chapchap-dev-profile-images-631121070981" \
             "CHAPCHAP_CONSUMPTION_RECEIPTIMAGE_BUCKET=chapchap-dev-receipt-images-631121070981" \
             "TZ=Asia/Seoul")
