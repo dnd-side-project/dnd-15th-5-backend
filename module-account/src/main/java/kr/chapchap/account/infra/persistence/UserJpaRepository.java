@@ -18,6 +18,12 @@ interface UserJpaRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.id = :id")
     Optional<User> findByIdForUpdate(@Param("id") Long id);
 
+    @Query("SELECT u FROM User u WHERE u.pushToken = :pushToken AND u.id <> :currentUserId")
+    Optional<User> findOtherPushTokenOwner(
+            @Param("currentUserId") Long currentUserId,
+            @Param("pushToken") String pushToken
+    );
+
     @Query("""
             SELECT u.id
             FROM User u

@@ -17,9 +17,10 @@ import java.time.LocalDateTime;
 public class DeviceTokenCommandService {
     private final UserRepository userRepository;
 
-    public void registerToken(RegisterDeviceTokenCommand command){
+    public void registerToken(RegisterDeviceTokenCommand command) {
         User user = userRepository.findById(command.userId())
-                .orElseThrow(()->new BusinessException(AccountErrorCode.ACCOUNT_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(AccountErrorCode.ACCOUNT_NOT_FOUND));
+        userRepository.releasePushTokenFromOtherUser(user.getId(), command.pushToken());
         user.registerPushToken(command.pushToken(), LocalDateTime.now());
         userRepository.save(user);
     }

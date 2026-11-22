@@ -27,6 +27,14 @@ public class UserRepositoryAdapter implements UserRepository {
     }
 
     @Override
+    public void releasePushTokenFromOtherUser(Long currentUserId, String pushToken) {
+        userJpaRepository.findOtherPushTokenOwner(currentUserId, pushToken).ifPresent(owner -> {
+            owner.clearPushToken();
+            userJpaRepository.flush();
+        });
+    }
+
+    @Override
     public List<Long> findWithdrawnUserIds() {
         return userJpaRepository.findIdsByStatus(UserStatus.WITHDRAWN);
     }

@@ -11,6 +11,8 @@ public interface UserRepository {
 
     Optional<User> findByIdForUpdate(Long id);
 
+    void releasePushTokenFromOtherUser(Long currentUserId, String pushToken);
+
     List<Long> findWithdrawnUserIds();
 
     User save(User user);

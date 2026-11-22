@@ -1,8 +1,10 @@
 package kr.chapchap.account;
 
+import kr.chapchap.account.application.command.RegisterDeviceTokenCommand;
 import kr.chapchap.account.application.info.NotificationSettingsInfo;
 import kr.chapchap.account.application.service.AccountCommandService;
 import kr.chapchap.account.application.service.AccountQueryService;
+import kr.chapchap.account.application.service.DeviceTokenCommandService;
 import kr.chapchap.account.application.service.PushTargetQueryService;
 import kr.chapchap.account.domain.entity.User;
 import kr.chapchap.account.domain.repository.UserRepository;
@@ -14,6 +16,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -40,6 +43,8 @@ class NotificationSettingsPersistenceIntegrationTest {
     private AccountCommandService accountCommandService;
     @Autowired
     private AccountQueryService accountQueryService;
+    @Autowired
+    private DeviceTokenCommandService deviceTokenCommandService;
     @Autowired
     private PushTargetQueryService pushTargetQueryService;
     @Autowired
@@ -106,6 +111,32 @@ class NotificationSettingsPersistenceIntegrationTest {
         assertThat(jdbcTemplate.queryForList("SELECT push_status FROM notifications", String.class))
                 .containsOnly("SKIPPED");
         verify(pushSenderPort, times(0)).sendMulticast(any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void 이전_계정의_탈퇴_여부와_관계없이_기기_토큰을_옮기고_같은_계정에_다시_등록할_수_있다(boolean withdrawn) {
+        // given
+        String token = "ExpoPushToken[shared-device]";
+        User previous = saveUser(true, token);
+        if (withdrawn) {
+            previous.withdraw(LocalDateTime.now());
+            userRepository.save(previous);
+        }
+        User current = saveUser(true, null);
+        RegisterDeviceTokenCommand command = new RegisterDeviceTokenCommand(current.getId(), token);
+
+        // when
+        deviceTokenCommandService.registerToken(command);
+        deviceTokenCommandService.registerToken(command);
+
+        // then
+        User previousAfterRegistration = userRepository.findById(previous.getId()).orElseThrow();
+        assertThat(previousAfterRegistration.getPushToken()).isNull();
+        assertThat(previousAfterRegistration.getPushTokenUpdatedAt()).isNull();
+        User currentAfterRegistration = userRepository.findById(current.getId()).orElseThrow();
+        assertThat(currentAfterRegistration.getPushToken()).isEqualTo(token);
+        assertThat(currentAfterRegistration.getPushTokenUpdatedAt()).isNotNull();
     }
 
     private User saveUser(boolean active, String token) {
